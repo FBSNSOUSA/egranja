@@ -1,0 +1,379 @@
+Com certeza. Preparei o documento completo e consolidado para a especificação do aplicativo **eGranja**.
+
+Esta versão foi estruturada para servir como uma fonte única de verdade ("single source of truth"), detalhando todos os aspectos funcionais, técnicos e de design. O formato foi pensado para ser claro tanto para uma equipe de desenvolvimento humana quanto para uma inteligência artificial encarregada da implementação, com requisitos explícitos e exemplos concretos.
+
+-----
+
+## **Especificação de Sistema e Requisitos: eGranja v2.0**
+
+**Status:** Final e Consolidado
+**Data:** 03 de Agosto de 2025
+
+### **1. Visão Geral do Produto**
+
+  * **Nome do Projeto:** eGranja.
+  * **Objetivo:** Desenvolver um aplicativo móvel (Flutter) com backend (Ruby on Rails) para o gerenciamento de aviários de corte. O sistema deve priorizar a simplicidade, o funcionamento offline e a usabilidade para usuários rurais.
+  * **Plataformas:** Android (prioritário), com iOS/web como opcionais futuros.
+  * **Diferenciais Chave:**
+      * **Operação Offline-First:** Funcionalidades críticas como registro de mortalidade, pesagens e consumo de ração devem funcionar sem conexão com a internet, com sincronização automática posterior.
+      * **Controle Completo de Ração:** Gerenciamento de recebimentos, consumo, sobras de lotes anteriores e cálculo preciso dos índices de desempenho ICA e IEA.
+      * **Comunicação Integrada:** Funcionalidade para enviar relatórios de pesagem e mortalidade via WhatsApp Web para contatos pré-salvos.
+  * **Identidade Visual:** As cores predominantes do aplicativo são vermelho, branco e azul.
+  * **Idioma:** Português (Brasil).
+
+### **2. Personas e User Stories**
+
+#### **Personas**
+
+  * **Aviarista Rural:** Precisa de uma ferramenta ágil para registrar dados diários (mortalidade, consumo) diretamente no campo, mesmo com conexão de internet instável.
+  * **Técnico de Campo:** Analisa a evolução de peso, mortalidade e conversão alimentar para otimizar o manejo e tomar decisões técnicas.
+  * **Administrador:** Monitora os indicadores de desempenho de múltiplos lotes e compartilha relatórios com supervisores via WhatsApp.
+
+### **3. Princípios de Design e Experiência do Usuário (UX)**
+
+  * **Clareza e Acessibilidade:** A interface deve usar textos legíveis (tamanho mínimo de 16sp) e títulos destacados. Os botões devem ser grandes e o espaçamento entre elementos, generoso, para facilitar o toque. O contraste de cores (vermelho/azul sobre branco) deve ser adequado.
+  * **Feedback Imediato:** O usuário deve receber confirmações visuais claras para suas ações (ex: "Salvo com sucesso", "Erro de conexão"). Um indicador visual deve mostrar o status da conexão (online/offline) e a existência de dados pendentes de sincronização.
+  * **Navegação Intuitiva:** Os fluxos devem ser simples e diretos. Por exemplo, a pré-visualização de mensagens antes do envio pelo WhatsApp garante que o usuário saiba exatamente o que está compartilhando.
+
+### **4. Requisitos Funcionais e Fluxos de Tela**
+
+#### **4.1. Autenticação e Sessão**
+
+  * **Tela de Login:**
+      * Campos para "Login" e "Senha".
+      * Validação de campos vazios e credenciais inválidas. A mensagem de erro deve ser "Usuário ou senha incorretos.".
+      * Em caso de sucesso, a API retorna um token JWT que é persistido no dispositivo. O usuário é então navegado para a tela Home.
+      * Se um token válido já estiver armazenado, a tela de login deve ser pulada automaticamente.
+
+#### **4.2. Tela Home**
+
+  * Um cabeçalho exibe o nome do usuário logado.
+  * Um menu lateral (drawer) contém as opções "Home" e "Sair".
+  * O corpo da tela exibe uma lista de lotes do usuário. Cada card de lote deve mostrar:
+      * Nome do Aviário (Galpão).
+      * Data de alojamento.
+      * Tipo (Fêmea/Macho/Misto).
+      * Quantidade de aves.
+      * Dias desde o alojamento.
+      * Último peso médio registrado (ou "—" se não houver).
+      * Indicador de mortalidade recente (ex: “3 aves mortas nos ultimos 2 dias”).
+  * Um Botão Flutuante (FAB) com `+` inicia o fluxo de "Cadastro de Novo Lote".
+  * O toque em um card de lote navega para a tela de "Detalhes do Lote".
+
+#### **4.3. Tela de Cadastro de Novo Lote**
+
+  * Formulário com os seguintes campos obrigatórios:
+      * **Aviário:** Dropdown com a lista de galpões disponíveis (ex: galpao1, galpao3, galpao4).
+      * **Data de Alojamento:** Seletor de data, com o dia atual como padrão.
+      * **Data Prevista de Abate:** Data calculada (hoje + 25 dias), mas editável.
+      * **Quantidade:** Campo para número inteiro, maior que zero.
+      * **Tipo:** Dropdown com as opções "Fêmea", "Macho", "Misto".
+  * Ao salvar, se offline, os dados são armazenados localmente para sincronização posterior. Se online, a API é chamada e a tela Home é atualizada com o novo lote.
+
+#### **4.4. Tela de Detalhes do Lote**
+
+Esta tela é organizada em abas (tabs).
+
+  * **Aba 1: Resumo**
+
+      * Funciona como um dashboard do lote, exibindo os principais indicadores de desempenho calculados:
+          * Dias desde o alojamento.
+          * Último peso médio.
+          * Mortalidade acumulada (com filtros por período: hoje, 7 dias, total).
+          * **Índice de Conversão Alimentar (ICA)** e **Índice de Eficiência Alimentar (IEA)**, calculados em tempo real com base no peso e no consumo de ração.
+      * Deve exibir um gráfico de linha ou barras para a evolução da mortalidade ao longo do tempo.
+
+  * **Aba 2: Pesagens**
+
+      * Exibe uma lista de pesagens realizadas. Cada card mostra a data, quantidade total de aves pesadas, peso total e peso médio.
+      * Cada card de pesagem possui um botão "Enviar via WhatsApp" e um histórico de envios anteriores.
+      * Um FAB com `+` abre a tela de "Nova Pesagem".
+
+  * **Aba 3: Mortalidade**
+
+      * Exibe uma lista de registros de mortalidade. Cada card mostra a data, a quantidade de aves mortas e a observação (se houver).
+      * Cada card possui um botão "Enviar via WhatsApp" e um histórico de envios.
+      * Um FAB com `+` abre a tela de "Novo Registro de Mortalidade".
+
+  * **Aba 4: Controle de Ração**
+
+      * Esta aba é dedicada ao gerenciamento da ração do lote.
+      * **Histórico:** Exibe uma lista dos recebimentos de ração com data, quantidade (kg), tipo e fornecedor.
+      * **Saldos:** Mostra o saldo de ração acumulado, considerando o saldo inicial, os recebimentos e o consumo.
+      * Um FAB com `+` abre o formulário de "Adicionar Novo Recebimento".
+
+#### **4.5. Fluxos de Registro de Dados**
+
+  * **Fluxo de Nova Pesagem:**
+
+    1.  A tela abre com uma linha para registro de uma amostra, com campos para quantidade de aves e peso total da amostra (em kg, com máscara 0,000). O peso médio da amostra é calculado automaticamente.
+    2.  Um botão `+` permite adicionar novas linhas (amostras).
+    3.  Um rodapé exibe o peso médio total, recalculado a cada nova amostra.
+    4.  O botão "Finalizar Pesagem" consolida os dados, cria os registros (`pesagem` e `pesagem_items`) e os salva (localmente ou via API).
+
+  * **Fluxo de Novo Registro de Mortalidade:**
+
+      * Formulário simples com os campos:
+          * **Data:** Padrão "hoje".
+          * **Quantidade:** Número inteiro maior que zero.
+          * **Observação:** Campo de texto opcional.
+
+  * **Fluxo de Novo Recebimento de Ração:**
+
+      * Formulário rápido com os campos:
+          * **Data:** Padrão "hoje".
+          * **Quantidade em kg:** Campo numérico com máscara decimal (0,000).
+          * **Tipo de ração:** Dropdown com opções pré-definidas (ex: Inicial, Crescimento, Finalização).
+          * **Fornecedor:** Campo de texto opcional.
+
+#### **4.6. Fluxo de Envio via WhatsApp Web**
+
+1.  O clique no botão "Enviar via WhatsApp" em um card de pesagem ou mortalidade abre um modal.
+2.  O modal permite selecionar um número de telefone salvo para o lote ou adicionar um novo.
+3.  Uma pré-visualização da mensagem formatada é exibida.
+4.  O botão "Abrir WhatsApp Web" gera e abre um link no formato `https://web.whatsapp.com/send?phone=<numero>&text=<texto_urlencoded>`.
+5.  Após o envio manual pelo usuário no WhatsApp, ele confirma a ação no app e um registro de `WhatsappSendHistory` é criado no backend.
+
+### **5. Requisitos Não-Funcionais**
+
+  * **Sincronização Offline:** Registros de lotes, pesagens, mortalidade e ração criados offline devem ser adicionados a uma fila de operações pendentes. A sincronização deve ocorrer automaticamente quando a conectividade for restaurada.
+  * **Autorização:** O acesso aos dados (lotes, pesagens, etc.) é restrito ao usuário autenticado. Um usuário só pode ver e gerenciar os lotes que lhe pertencem.
+  * **Segurança:**
+      * Senhas devem ser tratadas com bcrypt no backend, via `has_secure_password`.
+      * A comunicação com a API deve ser exclusivamente via HTTPS.
+      * O token JWT deve ser assinado e ter um tempo de expiração definido.
+  * **Tratamento de Erros:**
+      * **Falha de Rede:** O aplicativo deve salvar a operação localmente e exibir um aviso não bloqueante.
+      * **Validação de Dados:** Mensagens de erro devem ser exibidas de forma clara e inline nos formulários.
+      * **Sessão Expirada:** O usuário deve ser redirecionado para a tela de login.
+
+### **6. Especificação Técnica**
+
+#### **6.1. Arquitetura**
+
+  * **Frontend:** Flutter.
+      * **Armazenamento Local:** SQLite ou Hive para dados e fila de sincronização.
+  * **Backend:** Ruby on Rails.
+      * **API:** RESTful, com prefixo `/api/v1`.
+      * **Autenticação:** JWT.
+  * **Banco de Dados:** PostgreSQL na nuvem.
+
+#### **6.2. Modelo de Dados (PostgreSQL / Rails)**
+
+```ruby
+// Tabela de Usuários
+create_table :usuarios, id: :uuid do |t|
+  t.string :login, null: false, index: { unique: true }
+  t.string :password_digest, null: false
+  t.string :nome
+  t.timestamps
+end
+
+// Tabela de Galpões
+create_table :galpaos, id: :uuid do |t|
+  t.string :nome, null: false, index: { unique: true }
+  t.timestamps
+end
+
+// Tabela de Lotes
+create_table :lotes, id: :uuid do |t|
+  t.references :usuario, type: :uuid, foreign_key: true
+  t.references :galpao, type: :uuid, foreign_key: true
+  t.date :data_alojamento, null: false
+  t.date :data_prevista_abate, null: false
+  t.integer :quantidade, null: false
+  t.string :tipo, null: false  // 'Fêmea','Macho','Misto'
+  t.timestamps
+end
+
+// Tabela de Pesagens
+create_table :pesagens, id: :uuid do |t|
+  t.references :lote, type: :uuid, foreign_key: true
+  t.date :data, null: false
+  t.integer :quantidade_total, null: false
+  t.decimal :peso_total, precision: 12, scale: 3, null: false
+  t.decimal :peso_medio, precision: 12, scale: 3, null: false
+  t.timestamps
+end
+
+// Tabela de Itens de Pesagem (Amostras)
+create_table :pesagem_items, id: :uuid do |t|
+  t.references :pesagem, type: :uuid, foreign_key: true
+  t.integer :quantidade, null: false
+  t.decimal :peso, precision: 12, scale: 3, null: false
+  t.decimal :peso_medio, precision: 12, scale: 3, null: false
+  t.timestamps
+end
+
+// Tabela de Mortalidade
+create_table :mortalidades, id: :uuid do |t|
+  t.references :lote, type: :uuid, foreign_key: true
+  t.date :data, null: false
+  t.integer :quantidade, null: false
+  t.text :observacao
+  t.timestamps
+end
+
+// Tabela de Recebimentos de Ração
+create_table :feed_receipts, id: :uuid do |t|
+  t.references :lote, type: :uuid, foreign_key: true, null: true
+  t.decimal :quantidade_kg, precision: 12, scale: 3, null: false
+  t.date :data_recebimento, null: false
+  t.string :fornecedor
+  t.string :origem, null: false, default: 'compra' // 'compra', 'remanescente_anterior', 'sobra_final'
+  t.timestamps
+end
+
+// Tabela de Consumo de Ração
+create_table :feed_consumptions, id: :uuid do |t|
+  t.references :lote, type: :uuid, foreign_key: true
+  t.date :data, null: false
+  t.decimal :quantidade_kg, precision: 12, scale: 3, null: false
+  t.timestamps
+end
+
+// Tabela de Destinatários do WhatsApp
+create_table :whatsapp_recipients, id: :uuid do |t|
+  t.references :lote, type: :uuid, foreign_key: true
+  t.string :numero, null: false
+  t.string :nome_opcional
+  t.timestamps
+end
+add_index :whatsapp_recipients, [:lote_id, :numero], unique: true
+
+// Tabela de Histórico de Envios via WhatsApp
+create_table :whatsapp_send_histories, id: :uuid do |t|
+  t.references :whatsapp_recipient, type: :uuid, foreign_key: true
+  t.references :pesagem, type: :uuid, foreign_key: true, null: true
+  t.references :mortalidade, type: :uuid, foreign_key: true, null: true
+  t.text :mensagem
+  t.string :status  // 'enviado', 'falha'
+  t.string :tipo_envio  // 'pesagem' ou 'mortalidade'
+  t.text :erro_opcional
+  t.timestamps
+end
+```
+
+#### **6.3. Cálculos de Desempenho**
+
+  * **Ganho de Peso Médio por Ave (kg):** `(peso_medio_atual_g - 40) / 1000`.
+      * Assume-se um peso inicial padrão de 40g para o pinto de um dia.
+  * **Consumo Real de Ração por Ave (kg):** `consumo_bruto_kg / quantidade_de_aves_do_lote`.
+      * `consumo_bruto_kg` é a soma de todos os `feed_receipts` (incluindo sobras) menos eventuais `sobra_final`.
+  * **Índice de Conversão Alimentar (ICA):** `consumo_medio_por_ave_kg / ganho_peso_medio_kg`.
+  * **Índice de Eficiência Alimentar (IEA):** `ganho_peso_medio_kg / consumo_medio_por_ave_kg`.
+
+#### **6.4. Endpoints da API REST (Prefixo: `/api/v1`)**
+
+*(Abaixo estão os principais endpoints. A implementação deve seguir os payloads de exemplo fornecidos na especificação original.)*
+
+  * `POST /api/v1/login`: Autentica o usuário e retorna um token JWT.
+  * `GET /api/v1/lotes`: Lista os lotes do usuário autenticado.
+  * `POST /api/v1/lotes`: Cria um novo lote.
+  * `GET /api/v1/lotes/{id}`: Retorna detalhes de um lote específico.
+  * `GET /api/v1/lotes/{lote_id}/pesagens`: Lista as pesagens de um lote.
+  * `POST /api/v1/lotes/{lote_id}/pesagens`: Cria uma nova pesagem.
+  * `GET /api/v1/lotes/{lote_id}/mortalidades`: Lista os registros de mortalidade de um lote.
+  * `POST /api/v1/lotes/{lote_id}/mortalidades`: Cria um novo registro de mortalidade.
+  * `POST /api/v1/lotes/{lote_id}/feed_receipts`: Registra um recebimento de ração.
+  * `POST /api/v1/lotes/{lote_id}/feed_consumptions`: Registra um consumo de ração.
+  * `GET /api/v1/lotes/{lote_id}/ica_iea`: Retorna os índices ICA e IEA calculados para o lote.
+  * `GET /api/v1/lotes/{lote_id}/whatsapp_recipients`: Lista os destinatários de WhatsApp de um lote.
+  * `POST /api/v1/lotes/{lote_id}/whatsapp_recipients`: Adiciona um novo destinatário.
+  * `POST /api/v1/lotes/{lote_id}/pesagens/{pesagem_id}/enviar_whatsapp`: Registra um envio de relatório de pesagem.
+  * `POST /api/v1/lotes/{lote_id}/mortalidades/{mortalidade_id}/enviar_whatsapp`: Registra um envio de relatório de mortalidade.
+
+### **7. Diretrizes de Implementação e DevOps**
+
+#### **7.1. Estrutura do Repositório**
+
+  * **Frontend (Flutter):**
+
+    ```
+    egranja/
+    ├── lib/
+    │   ├── main.dart
+    │   └── src/
+    │       ├── auth/
+    │       ├── models/
+    │       ├── services/
+    │       ├── pages/
+    │       └── widgets/
+    ├── pubspec.yaml
+    └── README.md
+    ```
+
+  * **Backend (Rails):**
+
+    ```
+    backend/
+    ├── app/
+    │   ├── controllers/api/v1/
+    │   ├── models/
+    │   └── serializers/
+    ├── config/
+    │   └── routes.rb
+    ├── db/
+    └── Gemfile
+    ```
+
+#### **7.2. Dependências**
+
+  * **Flutter:**
+
+    ```yaml
+    dependencies:
+      flutter_secure_storage: ^8.0.0
+      connectivity_plus: ^4.0.0
+      sqflite: ^2.0.0
+      path_provider: ^2.0.0
+      fl_chart: ^0.55.0
+      dio: ^5.0.0
+      provider: ^6.0.0
+      intl: ^0.18.0
+    ```
+
+  * **Rails:**
+
+    ```ruby
+    gem 'rails', '~> 7.0'
+    gem 'pg', '~> 1.5'
+    gem 'jwt'
+    gem 'bcrypt', '~> 3.1.7'
+    gem 'active_model_serializers'
+    gem 'rack-cors'
+    ```
+
+#### **7.3. Instruções do README**
+
+O arquivo `README.md` deve ser escrito em português do Brasil, sem caracteres especiais, e conter seções sobre: objetivo do projeto, requisitos de ambiente (Flutter, Rails, etc.), como instalar dependências (`flutter pub get`, `bundle install`), como rodar o backend e o app, e como testar as funcionalidades-chave como offline e envio via WhatsApp.
+
+#### **7.4. SQL de Carga Inicial**
+
+```sql
+-- Inserir galpões iniciais
+INSERT INTO galpaos (id, nome, created_at, updated_at) VALUES (gen_random_uuid(), 'galpao1', now(), now());
+INSERT INTO galpaos (id, nome, created_at, updated_at) VALUES (gen_random_uuid(), 'galpao3', now(), now());
+INSERT INTO galpaos (id, nome, created_at, updated_at) VALUES (gen_random_uuid(), 'galpao4', now(), now());
+
+-- Inserir usuário de exemplo (a senha 'senha123' deve ser convertida para um hash bcrypt no backend antes da inserção)
+INSERT INTO usuarios (id, login, password_digest, nome, created_at, updated_at)
+VALUES (gen_random_uuid(), 'aviarista', '<hash_bcrypt_da_senha>', 'Joao da Silva', now(), now());
+```
+
+### **8. Critérios de Aceite**
+
+  * [ ] O login com token persistido pula a tela de login em inicializações futuras do app.
+  * [ ] Lotes, pesagens e registros de mortalidade podem ser criados offline e são sincronizados com sucesso quando a conexão é restabelecida.
+  * [ ] Os gráficos na tela de resumo do lote exibem corretamente a evolução do peso e da mortalidade.
+  * [ ] Os índices ICA e IEA são recalculados e atualizados na tela após um novo registro de pesagem ou de consumo de ração.
+  * [ ] O fluxo de envio via WhatsApp Web funciona corretamente tanto para pesagem quanto para mortalidade.
+  * [ ] Novos números de telefone usados no envio via WhatsApp são salvos como `WhatsappRecipient` e podem ser reutilizados.
+  * [ ] O histórico de envios diferencia claramente entre envios de pesagem e de mortalidade.
+
+### **9. Pontos de Extensão Futura**
+
+  * Implementação de alertas automáticos para picos de mortalidade.
+  * Criação de um dashboard web agregado para administradores.
+  * Análise de correlação entre variáveis (ex: peso x mortalidade x temperatura).
+  * Integração com a API oficial do WhatsApp Business para envios automatizados.
