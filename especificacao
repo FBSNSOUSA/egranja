@@ -1,22 +1,40 @@
 ## **Especificacao de Sistema e Requisitos: eGranja v2.0**
 
-**Status:** Revisado pelo Arquiteto de Software
+**Status:** Revisao completa -- Analise de Negocios + Arquitetura de Software
 **Data:** 07 de Marco de 2026
-**Revisao:** v2.1 - Migracao para Go + React Native com melhorias arquiteturais
+**Revisao:** v3.0 -- Refinamento de negocios com pesquisa tecnica avicola
 
 ---
 
 ### **1. Visao Geral do Produto**
 
-  * **Nome do Projeto:** eGranja.
-  * **Objetivo:** Desenvolver um aplicativo movel multiplataforma com React Native e backend em Go para o gerenciamento de aviarios de corte. O sistema deve priorizar a simplicidade, o funcionamento offline e a usabilidade para usuarios rurais.
+  * **Nome do Projeto:** eGranja
+  * **Objetivo:** Aplicativo movel multiplataforma (React Native) com backend em Go para gestao completa de aviarios de corte. O sistema prioriza simplicidade, operacao offline-first, orientacao tecnica ao produtor e comunicacao direta produtor-tecnico.
   * **Plataformas:** Android (prioritario) e iOS. Futuramente, dashboard web administrativo.
+  * **Publico-alvo prioritario:**
+      * Produtores integrados que querem mais controle alem do app da integradora
+      * Produtores independentes que nao possuem nenhuma ferramenta digital
+      * Pequenos/medios produtores que nao podem pagar ERPs corporativos
+      * Tecnicos e extensionistas que acompanham multiplas granjas
   * **Diferenciais Chave:**
-      * **Operacao Offline-First:** Funcionalidades criticas como registro de mortalidade, pesagens e consumo de racao devem funcionar sem conexao com a internet, com sincronizacao automatica posterior.
-      * **Controle Completo de Racao:** Gerenciamento de recebimentos, consumo, sobras de lotes anteriores e calculo preciso dos indices de desempenho ICA e IEA.
-      * **Comunicacao Integrada:** Envio de relatorios de pesagem e mortalidade via WhatsApp para contatos pre-salvos.
-  * **Identidade Visual:** As cores predominantes do aplicativo sao vermelho (#D32F2F), branco (#FFFFFF) e azul (#1565C0).
+      * **Operacao Offline-First:** Registro de mortalidade, pesagens e consumo de racao funcionam sem internet, com sincronizacao automatica posterior.
+      * **Orientacao Ativa ao Produtor:** Comparacao automatica com benchmarks das linhagens (Cobb 500, Ross 308), alertas de desvio e recomendacoes de manejo embutidas -- funcionalidade inexistente nos apps acessiveis do mercado brasileiro.
+      * **Comunicacao Direta Produtor-Tecnico:** Chat integrado com envio de fotos, audio e solicitacoes formais do tecnico, eliminando a necessidade de usar WhatsApp pessoal para diligencias.
+      * **Controle Completo de Racao:** Recebimentos, consumo, sobras, transferencia entre lotes e calculo preciso de todos os indices zootecnicos.
+      * **Compartilhamento via WhatsApp:** Relatorios formatados de pesagem, mortalidade e resumo diario enviados via deep link.
+      * **Integracao IoT (futuro proximo):** Preparado para receber dados de sensores (temperatura, umidade, amonia, peso automatico, consumo de agua).
+  * **Identidade Visual:** Vermelho (#D32F2F), branco (#FFFFFF) e azul (#1565C0).
   * **Idioma:** Portugues (Brasil).
+
+#### **1.1. Analise Competitiva**
+
+O eGranja preenche um vazio no mercado brasileiro entre:
+- Apps gratuitos mas muito basicos (Custo Facil da Embrapa)
+- ERPs caros e complexos para agroindustrias (Vilesoft, SAG, SIGA)
+- Apps das integradoras exclusivos para seus integrados (BRF AgroBRF, Seara SuperAgroTech)
+- Plataformas IoT que exigem hardware caro (Agrisolus)
+
+**Nenhum app acessivel no Brasil oferece:** benchmarks Cobb/Ross embutidos com comparacao automatica, orientacao ativa de manejo, comunicacao produtor-tecnico integrada e chat com fotos.
 
 ---
 
@@ -24,28 +42,40 @@
 
 #### **Personas**
 
-  * **Aviarista Rural:** Precisa de uma ferramenta agil para registrar dados diarios (mortalidade, consumo) diretamente no campo, mesmo com conexao de internet instavel.
-  * **Tecnico de Campo:** Analisa a evolucao de peso, mortalidade e conversao alimentar para otimizar o manejo e tomar decisoes tecnicas.
-  * **Administrador:** Monitora os indicadores de desempenho de multiplos lotes e compartilha relatorios com supervisores via WhatsApp.
+  * **Aviarista Rural (Jose, 45 anos):** Produtor integrado com 2 galpoes de 15.000 aves cada. Smartphone Android basico. Internet instavel (3G/4G rural). Precisa registrar mortalidade e pesagem no campo rapidamente. Prefere falar (audio) a digitar.
+  * **Tecnico de Campo (Ana, 32 anos):** Acompanha 20 granjas simultaneamente. Precisa ver indicadores de todos os lotes, solicitar fotos de diligencia, dar orientacoes remotamente e receber alertas de anomalias.
+  * **Administrador/Proprietario (Carlos, 55 anos):** Dona de 3 propriedades com 8 galpoes no total. Quer visao consolidada de desempenho, comparativo entre lotes e exportacao de relatorios para a integradora.
 
-#### **User Stories Principais** *(NOVO)*
+#### **User Stories**
 
   * US-01: Como aviarista, quero registrar mortalidade mesmo sem internet, para nao perder dados no campo.
-  * US-02: Como tecnico, quero ver ICA/IEA atualizados em tempo real, para tomar decisoes de manejo.
-  * US-03: Como administrador, quero enviar relatorios de pesagem via WhatsApp, para compartilhar resultados rapidamente.
-  * US-04: Como aviarista, quero ver um alerta quando a mortalidade estiver acima do normal, para agir rapidamente.
+  * US-02: Como tecnico, quero ver ICA/IEA/IEP atualizados em tempo real, para tomar decisoes de manejo.
+  * US-03: Como aviarista, quero enviar relatorios de pesagem via WhatsApp, para compartilhar resultados com o tecnico.
+  * US-04: Como aviarista, quero ver alertas quando a mortalidade ou peso estiverem fora do padrao, para agir rapidamente.
   * US-05: Como usuario, quero que o app lembre minhas credenciais, para nao precisar fazer login toda vez.
-  * US-06: Como tecnico, quero visualizar graficos de evolucao de peso e mortalidade, para acompanhar tendencias.
+  * US-06: Como tecnico, quero visualizar graficos comparando peso real vs padrao da linhagem, para identificar problemas.
   * US-07: Como aviarista, quero finalizar um lote e registrar sobras de racao, para transferi-las ao proximo lote.
+  * US-08: Como tecnico, quero solicitar fotos do galpao pelo app, para avaliar condicoes remotamente sem visita presencial.
+  * US-09: Como tecnico, quero enviar orientacoes e alertas ao produtor pelo app, para comunicacao rastreavel por lote.
+  * US-10: Como aviarista, quero um checklist diario de manejo, para nao esquecer tarefas criticas.
+  * US-11: Como administrador, quero comparar desempenho entre lotes e galpoes, para identificar melhores praticas.
+  * US-12: Como aviarista, quero ver a projecao de peso e data ideal de abate, para planejar a logistica.
+  * US-13: Como tecnico, quero registrar anotacoes de visita tecnica no app, para manter historico rastreavel.
+  * US-14: Como aviarista, quero registrar consumo de agua e ver a relacao agua/racao, para detectar problemas sanitarios.
+  * US-15: Como administrador, quero exportar o relatorio de fechamento de lote em PDF, para entregar a integradora.
 
 ---
 
 ### **3. Principios de Design e Experiencia do Usuario (UX)**
 
-  * **Clareza e Acessibilidade:** A interface deve usar textos legiveis (tamanho minimo de 16sp) e titulos destacados. Os botoes devem ser grandes (minimo 48dp de area tocavel) e o espacamento entre elementos, generoso, para facilitar o toque. O contraste de cores (vermelho/azul sobre branco) deve atender WCAG AA.
-  * **Feedback Imediato:** O usuario deve receber confirmacoes visuais claras para suas acoes (ex: "Salvo com sucesso", "Erro de conexao"). Um indicador visual persistente deve mostrar o status da conexao (online/offline) e a quantidade de operacoes pendentes de sincronizacao.
-  * **Navegacao Intuitiva:** Os fluxos devem ser simples e diretos. A pre-visualizacao de mensagens antes do envio pelo WhatsApp garante que o usuario saiba exatamente o que esta compartilhando.
-  * **Design System:** *(NOVO)* Utilizar um tema centralizado com as cores, tipografia e componentes reutilizaveis (botoes, cards, inputs, modais) para garantir consistencia visual em todo o app.
+  * **Clareza e Acessibilidade:** Textos legiveis (minimo 16sp), botoes grandes (minimo 48dp), espacamento generoso, contraste WCAG AA. Interface otimizada para uso no campo com maos sujas/luvas.
+  * **Feedback Imediato:** Confirmacoes visuais claras (toast/snackbar). Indicador persistente de status online/offline com contagem de operacoes pendentes.
+  * **Navegacao Intuitiva:** Fluxos simples e diretos. Maximo 3 toques para qualquer acao principal.
+  * **Design System:** Tema centralizado com cores, tipografia e componentes reutilizaveis.
+  * **Cores semanticas para indicadores:**
+      * Verde: dentro do esperado (ex: peso acima de 95% do benchmark)
+      * Amarelo: atencao (ex: peso entre 90-95% do benchmark)
+      * Vermelho: critico (ex: peso abaixo de 90% ou mortalidade > 0,5%/dia)
 
 ---
 
@@ -55,205 +85,485 @@
 
   * **Tela de Login:**
       * Campos para "Login" e "Senha".
-      * Validacao de campos vazios e credenciais invalidas. A mensagem de erro deve ser "Usuario ou senha incorretos.".
-      * Em caso de sucesso, a API retorna um **access token JWT** (expiracao: 24h) e um **refresh token** (expiracao: 30 dias). Ambos sao persistidos de forma segura no dispositivo.
-      * Se um token valido ja estiver armazenado, a tela de login deve ser pulada automaticamente.
-      * *(NOVO)* Se o access token expirar, o app tenta renovar automaticamente usando o refresh token. Se o refresh token tambem estiver expirado, redireciona para o login.
+      * Validacao de campos vazios e credenciais invalidas. Mensagem: "Usuario ou senha incorretos.".
+      * Em caso de sucesso, a API retorna **access token JWT** (24h) e **refresh token** (30 dias), persistidos com react-native-keychain.
+      * Token valido armazenado: pula login automaticamente.
+      * Access token expirado: renovacao automatica via refresh token. Refresh expirado: redireciona para login.
+  * **Perfil do usuario:**
+      * Tipo: `produtor` ou `tecnico`.
+      * Tecnicos podem ser vinculados a multiplos produtores/granjas.
 
-#### **4.2. Tela Home**
+#### **4.2. Tela Home (Produtor)**
 
-  * Um cabecalho exibe o nome do usuario logado e um indicador de status online/offline.
-  * Um menu lateral (drawer) contem as opcoes "Home", "Lotes Finalizados" *(NOVO)* e "Sair".
-  * O corpo da tela exibe uma lista de lotes **ativos** do usuario. Cada card de lote deve mostrar:
-      * Nome do Aviario (Galpao).
-      * Data de alojamento.
-      * Tipo (Femea/Macho/Misto).
-      * Quantidade de aves **vivas** (quantidade original - mortalidade acumulada). *(MELHORIA)*
-      * Dias desde o alojamento.
-      * Ultimo peso medio registrado (ou "-" se nao houver).
-      * Indicador de mortalidade recente (ex: "3 aves mortas nos ultimos 2 dias").
-      * *(NOVO)* Badge de alerta se mortalidade diaria > 0.5% do lote.
-  * Um Botao Flutuante (FAB) com `+` inicia o fluxo de "Cadastro de Novo Lote".
-  * O toque em um card de lote navega para a tela de "Detalhes do Lote".
-  * *(NOVO)* Pull-to-refresh para sincronizar dados manualmente.
+  * Cabecalho: nome do usuario + indicador online/offline + badge de mensagens nao lidas.
+  * Menu lateral (drawer): "Home", "Lotes Finalizados", "Mensagens", "Checklist Diario", "Configuracoes", "Sair".
+  * Lista de lotes **ativos**. Cada card mostra:
+      * Nome do Aviario (Galpao)
+      * Data de alojamento e dias de vida
+      * Tipo (Femea/Macho/Misto) e linhagem
+      * Aves vivas (quantidade original - mortalidade acumulada)
+      * Ultimo peso medio + indicador visual (verde/amarelo/vermelho vs benchmark)
+      * Mortalidade recente (ex: "5 mortes ontem - 0,03%")
+      * Badge de alerta se mortalidade diaria > 0,5% ou peso < 90% do padrao
+  * FAB `+` para "Cadastro de Novo Lote".
+  * Toque no card navega para "Detalhes do Lote".
+  * Pull-to-refresh para sincronizar.
 
-#### **4.3. Tela de Cadastro de Novo Lote**
+#### **4.3. Tela Home (Tecnico)**
 
-  * Formulario com os seguintes campos obrigatorios:
-      * **Aviario:** Dropdown com a lista de galpoes disponiveis (ex: galpao1, galpao3, galpao4).
-      * **Data de Alojamento:** Seletor de data, com o dia atual como padrao.
-      * **Data Prevista de Abate:** Data calculada (hoje + 42 dias), mas editavel. *(CORRECAO: ciclo padrao de frango de corte e 42 dias, nao 25)*
-      * **Quantidade:** Campo para numero inteiro, maior que zero.
-      * **Tipo:** Dropdown com as opcoes "Femea", "Macho", "Misto".
-      * *(NOVO)* **Linhagem:** Campo de texto opcional (ex: Cobb 500, Ross 308).
-      * *(NOVO)* **Peso Inicial (g):** Padrao 40g, editavel. Usado no calculo de ganho de peso.
-  * Ao salvar, se offline, os dados sao armazenados localmente para sincronizacao posterior. Se online, a API e chamada e a tela Home e atualizada com o novo lote.
+  * Visao consolidada de **todas as granjas/produtores** vinculados.
+  * Lista de lotes ativos agrupados por produtor, com indicadores resumidos.
+  * Filtros: por produtor, por status de alerta, por galpao.
+  * Acesso rapido a lotes com alertas ativos (mortalidade alta, peso baixo, etc.).
+  * Botao para "Nova Solicitacao" (pedido de fotos/dados ao produtor).
 
-#### **4.4. Tela de Detalhes do Lote**
+#### **4.4. Tela de Cadastro de Novo Lote**
 
-Esta tela e organizada em abas (tabs).
+  * Campos obrigatorios:
+      * **Aviario:** Dropdown de galpoes disponiveis.
+      * **Data de Alojamento:** Seletor de data, padrao hoje.
+      * **Data Prevista de Abate:** Calculada (hoje + 42 dias), editavel.
+      * **Quantidade:** Numero inteiro > 0. Validar contra capacidade do galpao.
+      * **Tipo:** "Femea", "Macho", "Misto".
+  * Campos opcionais:
+      * **Linhagem:** Dropdown com "Cobb 500", "Ross 308", "Hubbard", "Outra". Quando selecionada, ativa comparacao automatica com benchmarks.
+      * **Peso Inicial (g):** Padrao 42g (Cobb 500) ou 42g (Ross 308), editavel.
+  * Se offline: salva localmente. Se online: chama API e atualiza Home.
 
-  * **Aba 1: Resumo**
+#### **4.5. Tela de Detalhes do Lote**
 
-      * Funciona como um dashboard do lote, exibindo os principais indicadores de desempenho calculados:
-          * Dias desde o alojamento.
-          * Ultimo peso medio.
-          * Aves vivas (quantidade original - mortalidade acumulada). *(MELHORIA)*
-          * Mortalidade acumulada (com filtros por periodo: hoje, 7 dias, total) e **percentual de mortalidade**. *(MELHORIA)*
-          * **Indice de Conversao Alimentar (ICA)** e **Indice de Eficiencia Alimentar (IEA)**, calculados em tempo real.
-          * *(NOVO)* **Ganho de Peso Diario (GPD):** peso_medio_atual / dias_de_alojamento.
-          * *(NOVO)* **Indice de Eficiencia Produtiva (IEP):** ((100 - % mortalidade) x peso_medio_kg x 100) / (idade_dias x ICA). Metrica padrao da industria avicola.
-      * Deve exibir graficos para:
-          * Evolucao da mortalidade ao longo do tempo (barras).
-          * Evolucao do peso medio ao longo do tempo (linha). *(NOVO)*
+Organizada em **5 abas**:
+
+  * **Aba 1: Resumo (Dashboard)**
+
+      * Indicadores calculados com cores semanticas (verde/amarelo/vermelho):
+          * Dias de vida
+          * Aves vivas e % mortalidade acumulada
+          * Ultimo peso medio vs peso padrao da linhagem (com % de desvio)
+          * GPD (Ganho de Peso Diario) em g/dia
+          * ICA (Indice de Conversao Alimentar)
+          * IEA (Indice de Eficiencia Alimentar)
+          * IEP (Indice de Eficiencia Produtiva) -- com classificacao: < 260 ruim, 260-350 regular, 350-400 bom, > 400 excelente
+          * Viabilidade (%)
+          * Saldo de racao em estoque (kg e dias restantes estimados)
+          * Consumo de agua do dia e relacao agua/racao
+      * Graficos:
+          * Evolucao do peso medio vs curva padrao da linhagem (linha dupla)
+          * Evolucao da mortalidade diaria e acumulada (barras + linha)
+          * Evolucao da conversao alimentar por semana (linha)
+      * Projecao:
+          * "Ao ritmo atual (GPD Xg), o lote atingira Y kg em Z dias (DD/MM/AAAA)"
 
   * **Aba 2: Pesagens**
 
-      * Exibe uma lista de pesagens realizadas, ordenada por data decrescente. Cada card mostra a data, quantidade total de aves pesadas, peso total e peso medio.
-      * Cada card de pesagem possui um botao "Enviar via WhatsApp" e um historico de envios anteriores.
-      * Um FAB com `+` abre a tela de "Nova Pesagem".
+      * Lista de pesagens (data decrescente). Cada card: data, idade, qtd pesada, peso total, peso medio, peso padrao linhagem, desvio %, uniformidade (CV%).
+      * Botao "Enviar via WhatsApp" em cada card + historico de envios.
+      * FAB `+` para "Nova Pesagem".
 
   * **Aba 3: Mortalidade**
 
-      * Exibe uma lista de registros de mortalidade, ordenada por data decrescente. Cada card mostra a data, a quantidade de aves mortas e a observacao (se houver).
-      * Cada card possui um botao "Enviar via WhatsApp" e um historico de envios.
-      * Um FAB com `+` abre a tela de "Novo Registro de Mortalidade".
+      * Lista de registros (data decrescente). Cada card: data, quantidade, causa, % do dia, observacao.
+      * Botao "Enviar via WhatsApp" + historico.
+      * FAB `+` para "Novo Registro".
+      * Resumo no topo: mortes hoje, ultimos 7 dias, total. Com % e indicador visual.
 
-  * **Aba 4: Controle de Racao**
+  * **Aba 4: Racao**
 
-      * Esta aba e dedicada ao gerenciamento da racao do lote.
-      * **Historico:** Exibe uma lista dos recebimentos de racao com data, quantidade (kg), tipo e fornecedor.
-      * **Saldos:** Mostra o saldo de racao acumulado, considerando o saldo inicial, os recebimentos e o consumo.
-      * *(NOVO)* **Consumo por Ave:** Exibe o consumo medio por ave calculado automaticamente.
-      * Um FAB com `+` abre o formulario de "Adicionar Novo Recebimento".
+      * **Recebimentos:** Lista com data, tipo, quantidade (kg), fornecedor, origem (compra/remanescente).
+      * **Consumos:** Lista com data e quantidade (kg).
+      * **Saldo atual:** Recebido - Consumido = Saldo. Com estimativa de dias restantes.
+      * **Consumo por ave:** Calculo automatico.
+      * FAB `+` com opcoes: "Recebimento" ou "Consumo".
 
-#### **4.5. Finalizacao de Lote** *(NOVO)*
+  * **Aba 5: Agua** *(NOVO)*
 
-  * O usuario pode finalizar um lote quando o ciclo e concluido (abate).
-  * Ao finalizar, o sistema solicita:
-      * **Data de finalizacao.**
-      * **Sobra de racao (kg):** Quantidade de racao nao consumida. Gera automaticamente um `feed_receipt` com `origem = 'sobra_final'` (valor negativo para subtrair do consumo) e opcionalmente um `feed_receipt` com `origem = 'remanescente_anterior'` no proximo lote do mesmo galpao.
-  * Lotes finalizados aparecem na tela "Lotes Finalizados" e nao na Home.
-  * O lote finalizado fica somente leitura (sem novos registros).
+      * Lista de registros diarios de consumo de agua (L).
+      * Calculo automatico: consumo/ave/dia (mL), relacao agua/racao.
+      * Alerta se relacao agua/racao fora de 1,6 a 2,0.
+      * Alerta se variacao > 15% vs dia anterior.
+      * Grafico de evolucao de consumo de agua.
+      * FAB `+` para "Registrar Consumo de Agua".
 
-#### **4.6. Fluxos de Registro de Dados**
+#### **4.6. Finalizacao de Lote**
+
+  * Botao "Finalizar Lote" na aba Resumo (somente produtor).
+  * Ao finalizar, solicita:
+      * **Data de finalizacao**
+      * **Aves entregues ao abate** (para calculo de rendimento)
+      * **Peso total entregue (kg)** (para peso medio final real)
+      * **Sobra de racao (kg):** Gera `feed_receipt` com `origem = 'sobra_final'`. Opcionalmente gera `feed_receipt` com `origem = 'remanescente_anterior'` no proximo lote do mesmo galpao.
+  * Gera automaticamente o **Relatorio de Fechamento de Lote** com todos os indicadores consolidados.
+  * Lotes finalizados: somente leitura, acessiveis em "Lotes Finalizados".
+
+#### **4.7. Comunicacao Produtor-Tecnico (Chat)** *(NOVO)*
+
+  * **Canal de mensagens por lote:** Cada lote possui um canal de comunicacao entre produtor e tecnico vinculado.
+  * **Tipos de mensagem:**
+      * **Texto:** Mensagens simples de texto.
+      * **Foto:** Captura direta da camera ou galeria. Fotos ficam vinculadas ao lote como evidencia.
+      * **Audio:** Gravacao de voz (util para produtor rural que prefere falar). Limite: 2 minutos.
+      * **Solicitacao formal:** O tecnico pode criar uma solicitacao com prazo. Ex: "Envie foto da cama do galpao 3 ate amanha". O produtor recebe notificacao e pode responder com foto/texto. A solicitacao fica com status: pendente, respondida, expirada.
+  * **Registro de visita tecnica:** O tecnico pode registrar uma visita presencial com:
+      * Data/hora
+      * Checklist de itens inspecionados (biosseguranca, equipamentos, cama, agua, ambiencia)
+      * Fotos
+      * Observacoes e orientacoes
+      * Esse registro fica no historico do lote.
+  * **Notificacoes push:** Mensagens novas e solicitacoes pendentes geram notificacao.
+  * **Historico rastreavel:** Todas as mensagens ficam vinculadas ao lote, criando um historico completo de comunicacao e diligencia.
+  * **Armazenamento de midia:** Fotos e audios sao enviados ao backend (upload para storage S3/MinIO), com thumbnail local para visualizacao offline.
+
+#### **4.8. Fluxos de Registro de Dados**
 
   * **Fluxo de Nova Pesagem:**
-
-    1.  A tela abre com uma linha para registro de uma amostra, com campos para quantidade de aves e peso total da amostra (em kg, com mascara 0,000). O peso medio da amostra e calculado automaticamente.
-    2.  Um botao `+` permite adicionar novas linhas (amostras).
-    3.  Um rodape exibe o peso medio total, recalculado a cada nova amostra.
-    4.  O botao "Finalizar Pesagem" consolida os dados, cria os registros (`pesagem` e `pesagem_items`) e os salva (localmente ou via API).
+    1. Tela abre com uma linha para amostra: quantidade de aves + peso total (kg, mascara 0,000). Peso medio calculado automaticamente.
+    2. Botao `+` adiciona novas linhas (amostras).
+    3. Rodape: peso medio total, recalculado a cada amostra. Indicador vs benchmark da linhagem.
+    4. "Finalizar Pesagem" consolida dados, cria `pesagem` + `pesagem_items`, salva local ou via API.
+    5. Calcula e exibe automaticamente: uniformidade (CV%), desvio vs linhagem.
 
   * **Fluxo de Novo Registro de Mortalidade:**
-
-      * Formulario simples com os campos:
-          * **Data:** Padrao "hoje".
-          * **Quantidade:** Numero inteiro maior que zero.
-          * **Causa:** *(NOVO)* Dropdown opcional com opcoes: "Indefinida", "Ascite", "Infarto", "Onfalite", "Refugo", "Outra".
-          * **Observacao:** Campo de texto opcional.
+      * **Data:** Padrao "hoje".
+      * **Quantidade:** Inteiro > 0.
+      * **Causa:** Dropdown: "Indefinida", "Ascite", "Morte Subita", "Problemas Locomotores", "Refugo", "Onfalite", "Infecciosa", "Outra". (Baseado em classificacao EMBRAPA/UFFS)
+      * **Observacao:** Texto opcional.
+      * **Foto (opcional):** Captura de foto para registro veterinario.
+      * Apos salvar, exibe alerta se mortalidade do dia > 0,5%.
 
   * **Fluxo de Novo Recebimento de Racao:**
+      * **Data:** Padrao "hoje".
+      * **Quantidade em kg:** Mascara decimal (0,000).
+      * **Tipo de racao:** Dropdown: "Pre-Inicial", "Inicial", "Crescimento", "Finalizacao". (Tabela `tipos_racao`)
+      * **Fornecedor:** Texto opcional.
+      * **Lote da racao:** Texto opcional (rastreabilidade conforme Portaria SDA 798/2023).
 
-      * Formulario rapido com os campos:
-          * **Data:** Padrao "hoje".
-          * **Quantidade em kg:** Campo numerico com mascara decimal (0,000).
-          * **Tipo de racao:** Dropdown com opcoes pre-definidas: "Pre-Inicial", "Inicial", "Crescimento", "Finalizacao". *(MELHORIA: adicionada Pre-Inicial)*
-          * **Fornecedor:** Campo de texto opcional.
+  * **Fluxo de Registro de Consumo de Racao:**
+      * **Data:** Padrao "hoje".
+      * **Quantidade em kg** consumida.
+      * Saldo atualizado automaticamente.
 
-  * **Fluxo de Registro de Consumo de Racao:** *(NOVO - fluxo detalhado)*
+  * **Fluxo de Registro de Consumo de Agua:** *(NOVO)*
+      * **Data:** Padrao "hoje".
+      * **Leitura do hidrometro (L):** Ou quantidade consumida diretamente.
+      * Calculo automatico: consumo/ave, relacao agua/racao.
 
-      * Na aba Controle de Racao, botao "Registrar Consumo".
-      * Campos: **Data** (padrao "hoje") e **Quantidade em kg** consumida.
-      * O saldo e atualizado automaticamente.
+#### **4.9. Checklist de Manejo Diario** *(NOVO)*
 
-#### **4.7. Fluxo de Envio via WhatsApp**
+  * Tela acessivel pelo menu lateral ou por notificacao diaria (7h).
+  * Checklist adaptado a fase do lote (baseado em manuais Cobb/Embrapa):
 
-1.  O clique no botao "Enviar via WhatsApp" em um card de pesagem ou mortalidade abre um modal.
-2.  O modal permite selecionar um numero de telefone salvo para o lote ou adicionar um novo.
-3.  Uma pre-visualizacao da mensagem formatada e exibida.
-4.  *(MELHORIA)* No Android, o link abre diretamente o app WhatsApp via deep link (`whatsapp://send?phone=<numero>&text=<texto>`), evitando a necessidade do WhatsApp Web. Fallback para `https://api.whatsapp.com/send?phone=<numero>&text=<texto_urlencoded>`.
-5.  Apos o envio manual pelo usuario no WhatsApp, ele confirma a acao no app e um registro de `WhatsappSendHistory` e criado no backend.
+  **Checklist padrao:**
+  ```
+  [ ] Verificar mortalidade (recolher mortos)
+  [ ] Registrar mortalidade no app
+  [ ] Verificar temperatura ambiente (min/max)
+  [ ] Verificar umidade relativa
+  [ ] Conferir bebedouros (vazamentos, altura, pressao)
+  [ ] Conferir comedouros (nivel, regulagem)
+  [ ] Verificar nivel de racao no silo
+  [ ] Registrar leitura do hidrometro
+  [ ] Verificar condicao da cama
+  [ ] Verificar ventilacao/cortinas/nebulizacao
+  [ ] Observar comportamento das aves
+  [ ] Verificar biosseguranca (pediluvio, cercas)
+  ```
+
+  * Itens adicionais por fase:
+      * **1a semana:** Verificar aquecimento, circulos de protecao, temperatura da cama (32C)
+      * **Pre-abate:** Verificar jejum alimentar, preparar para apanha
+  * Historico de checklists completados por dia.
+  * Porcentagem de conclusao visivel no card do lote.
+
+#### **4.10. Alertas Automaticos** *(NOVO)*
+
+  * Alertas gerados automaticamente pelo app com base nos dados registrados:
+
+  | Alerta | Condicao | Prioridade |
+  |--------|----------|-----------|
+  | Mortalidade alta no dia | > 0,5% das aves vivas | CRITICA |
+  | Mortalidade acumulada alta | > 3% do lote | ALTA |
+  | Peso abaixo do padrao | < 90% do benchmark da linhagem | ALTA |
+  | Peso muito abaixo | < 80% do benchmark | CRITICA |
+  | Queda consumo de agua | > 15% vs dia anterior | CRITICA |
+  | Relacao agua/racao anormal | Fora de 1,6 a 2,0 | MEDIA |
+  | Racao acabando | Estoque < 2 dias | ALTA |
+  | Pesagem nao registrada | > 8 dias sem pesagem | MEDIA |
+  | Checklist nao completado | Ate 20h do dia | MEDIA |
+  | Lote proximo ao abate | Faltam < 5 dias para data prevista | MEDIA |
+
+  * Alertas exibidos como notificacao push + badge na Home.
+  * Alertas CRITICOS geram notificacao tambem para o tecnico vinculado.
+  * Historico de alertas acessivel por lote.
+
+#### **4.11. Relatorios e Exportacao** *(NOVO)*
+
+  * **Relatorio de Fechamento de Lote (PDF):**
+      * Gerado automaticamente ao finalizar lote.
+      * Conteudo: todos os indicadores consolidados (peso medio, mortalidade, CA, IEP, GPD, viabilidade, consumo de racao/agua, custos).
+      * Formato padrao aceito por integradoras.
+      * Compartilhavel via WhatsApp ou email.
+
+  * **Relatorio Comparativo entre Lotes:**
+      * Tabela comparando lotes do mesmo galpao ou da mesma granja.
+      * Indicadores lado a lado: peso, mortalidade, CA, IEP, GPD.
+      * Grafico de evolucao do IEP ao longo dos lotes.
+
+  * **Exportacao CSV:**
+      * Dados brutos de pesagens, mortalidade, consumo de racao e agua.
+      * Para analise em planilhas.
+
+#### **4.12. Fluxo de Envio via WhatsApp**
+
+1. Botao "Enviar via WhatsApp" em card de pesagem, mortalidade ou resumo diario.
+2. Modal: selecionar destinatario salvo ou adicionar novo.
+3. Pre-visualizacao da mensagem formatada.
+4. Deep link `whatsapp://send?phone=<numero>&text=<texto>` (Android) com fallback `https://api.whatsapp.com/send`.
+5. Confirmacao apos envio; registro em `whatsapp_send_histories`.
+
+**Modelos de mensagem:**
+
+  * **Pesagem semanal:**
+    ```
+    *PESAGEM SEMANAL - eGranja*
+    Aviario: [nome] | Lote: [nr]
+    Data: [DD/MM/AAAA] | Idade: [XX] dias
+
+    Aves vivas: [XXXXX]
+    *Peso medio:* [X.XXX] g
+    Padrao [linhagem]: [X.XXX] g
+    Diferenca: [+/-X,X]%
+    Uniformidade: [XX]%
+    GPD: [XX,X] g/dia
+    CA parcial: [X,XX]
+    ```
+
+  * **Mortalidade diaria:**
+    ```
+    *MORTALIDADE - eGranja*
+    Aviario: [nome] | Lote: [nr]
+    Data: [DD/MM/AAAA] | Idade: [XX] dias
+
+    Mortos hoje: [XX] ([X,XX]%)
+    Acumulado: [XXX] ([X,XX]%)
+    Aves vivas: [XXXXX]
+    Causa principal: [causa]
+    ```
+
+  * **Resumo diario:**
+    ```
+    *RESUMO DIARIO - eGranja*
+    Aviario: [nome] | Idade: [XX] dias
+
+    Mortalidade: [XX] mortes ([X,XX]%)
+    Peso medio: [X.XXX]g ([+/-X]% do padrao)
+    Racao consumida: [X.XXX] kg
+    Agua: [X.XXX] L (rel. [X,X])
+    Racao em estoque: [X.XXX] kg (~[X] dias)
+    IEP atual: [XXX]
+    ```
 
 ---
 
-### **5. Requisitos Nao-Funcionais**
+### **5. Indices Zootecnicos e Calculos** *(NOVO - secao dedicada)*
+
+Baseado em dados oficiais da Embrapa, Cobb-Vantress, Aviagen e publicacoes tecnicas.
+
+#### **5.1. Indices de Desempenho**
+
+| Indice | Formula | Meta (42 dias) |
+|--------|---------|----------------|
+| **CA (Conversao Alimentar)** | Consumo Total Racao (kg) / Peso Total Produzido (kg) | < 1,70 |
+| **EA (Eficiencia Alimentar)** | 1 / CA | > 0,59 |
+| **GPD (Ganho Peso Diario)** | (Peso Medio - Peso Inicial) / Idade (dias) | > 65 g/dia |
+| **Viabilidade** | (Alojadas - Mortas) / Alojadas x 100 | > 95% |
+| **Mortalidade** | Mortas / Alojadas x 100 | < 5% |
+| **IEP (Eficiencia Produtiva)** | (GPD(g) x Viabilidade%) / (CA x 10) | > 350 |
+| **Uniformidade** | Aves em +/-10% do PM / Total pesadas x 100 | > 80% |
+| **CV (Coef. Variacao)** | Desvio Padrao / Peso Medio x 100 | < 10% |
+| **Aves Vivas** | Qtd Original - SUM(mortalidade) | -- |
+| **Consumo/Ave (kg)** | Consumo Liquido / Aves Vivas | -- |
+| **Relacao Agua/Racao** | Consumo Agua (L) / Consumo Racao (kg) | 1,6 a 2,0 |
+
+**Classificacao do IEP:**
+- < 260: Ruim
+- 260-350: Regular
+- 350-400: Bom
+- > 400: Excelente
+
+Fonte: Embrapa, Poultry Performance Plus (EPEF)
+
+#### **5.2. Tabela de Referencia Cobb 500 (Misto - 2022)**
+
+| Dia | Peso (g) | GPD (g) | Consumo Acum (g) | CA |
+|-----|----------|---------|-------------------|----|
+| 0 | 42 | - | - | - |
+| 7 | 202 | 22,9 | 180 | 0,891 |
+| 14 | 570 | 37,7 | 588 | 1,029 |
+| 21 | 1.116 | 51,1 | 1.320 | 1,182 |
+| 28 | 1.656 | 57,6 | 2.359 | 1,322 |
+| 35 | 2.348 | 65,9 | 3.448 | 1,469 |
+| 42 | 2.857 | 67,0 | 4.430 | 1,550 |
+| 49 | 3.414 | 68,8 | 5.600 | 1,640 |
+
+Fonte: Cobb 500 Performance & Nutrition Supplement 2022
+
+#### **5.3. Tabela de Referencia Ross 308 (Misto - 2022)**
+
+| Dia | Peso (g) | GPD (g) | Consumo Acum (g) | CA |
+|-----|----------|---------|-------------------|----|
+| 0 | 42 | - | - | - |
+| 7 | 197 | 22,1 | 177 | 0,900 |
+| 14 | 545 | 36,0 | 568 | 1,042 |
+| 21 | 1.070 | 48,9 | 1.274 | 1,191 |
+| 28 | 1.728 | 60,2 | 2.292 | 1,326 |
+| 35 | 2.464 | 68,9 | 3.592 | 1,458 |
+| 42 | 3.203 | 75,3 | 5.106 | 1,594 |
+| 49 | 3.900 | 78,7 | 6.798 | 1,743 |
+
+Fonte: Aviagen Ross 308 Performance Objectives 2022
+
+#### **5.4. Fases de Criacao**
+
+| Fase | Periodo | Tipo Racao | Temp. Ideal | PB (%) | EM (kcal/kg) |
+|------|---------|------------|-------------|--------|-------------|
+| Pre-Inicial | 1-7 dias | Pre-Inicial (farelada) | 32-33 C | 22-24 | 2.950-3.010 |
+| Inicial | 8-21 dias | Inicial (triturada/pelete) | 27-30 C | 21-22 | 3.000-3.050 |
+| Crescimento | 22-35 dias | Crescimento (peletizada) | 21-26 C | 19-20 | 3.050-3.100 |
+| Finalizacao | 36-42+ dias | Finalizacao (peletizada) | 18-21 C | 17-19 | 3.100-3.200 |
+
+Fonte: Cobb Manual Frango de Corte, Embrapa
+
+#### **5.5. Temperatura Ideal por Idade (Referencia para Alertas)**
+
+| Idade | Temperatura (C) | Umidade (%) |
+|-------|-----------------|-------------|
+| 1-3 dias | 32-33 | 60-70 |
+| 4-7 dias | 30-31 | 60-70 |
+| 8-14 dias | 28-29 | 60-70 |
+| 15-21 dias | 25-27 | 50-60 |
+| 22-28 dias | 22-24 | 50-60 |
+| 29-35 dias | 20-22 | 50-60 |
+| 36-42 dias | 18-21 | 50-60 |
+
+Fonte: Cobb, Embrapa Ater+ Digital
+
+#### **5.6. Mortalidade Aceitavel por Semana**
+
+| Semana | Mortalidade Semanal | Acumulada |
+|--------|--------------------|-----------|
+| 1 (1-7d) | ate 0,8% | 0,8% |
+| 2 (8-14d) | ate 0,5% | 1,3% |
+| 3 (15-21d) | ate 0,5% | 1,8% |
+| 4 (22-28d) | ate 0,5% | 2,3% |
+| 5 (29-35d) | ate 0,5% | 2,8% |
+| 6 (36-42d) | ate 0,5% | 3,3% |
+
+Nota: Mortalidade > 10% sem causa definida exige notificacao a autoridade sanitaria (PNSA/MAPA).
+
+Fonte: Embrapa, IFC Concordia
+
+---
+
+### **6. Requisitos Nao-Funcionais**
 
   * **Sincronizacao Offline:**
-      * Registros criados offline sao adicionados a uma fila de operacoes pendentes com timestamp e UUID gerado no cliente.
-      * A sincronizacao ocorre automaticamente quando a conectividade e restaurada.
-      * *(NOVO)* **Resolucao de Conflitos:** Estrategia last-write-wins baseada no campo `updated_at`. O servidor sempre vence em caso de conflito de mesmo registro.
-      * *(NOVO)* **Endpoint de Sync em Lote:** `POST /api/v1/sync` aceita um array de operacoes pendentes e retorna os resultados consolidados, reduzindo o numero de requisicoes.
-  * **Autorizacao:** O acesso aos dados (lotes, pesagens, etc.) e restrito ao usuario autenticado. Um usuario so pode ver e gerenciar os lotes que lhe pertencem.
+      * Registros offline entram em fila com timestamp e UUID gerado no cliente.
+      * Sincronizacao automatica quando conectividade e restaurada.
+      * **Resolucao de Conflitos:** Last-write-wins baseada em `updated_at`. Servidor vence em conflito de mesmo registro.
+      * **Sync em lote:** `POST /api/v1/sync` aceita array de operacoes e retorna resultados consolidados.
+      * Mensagens do chat ficam em fila offline; fotos e audios sao enviados quando online.
+  * **Autorizacao:**
+      * Produtor: ve e gerencia apenas seus lotes.
+      * Tecnico: ve lotes dos produtores vinculados a ele. Pode enviar mensagens e solicitacoes, registrar visitas.
   * **Seguranca:**
-      * Senhas tratadas com bcrypt (cost factor 12) no backend.
-      * Comunicacao exclusivamente via HTTPS.
-      * Access token JWT com expiracao de 24h, refresh token com 30 dias.
-      * *(NOVO)* Rate limiting: maximo 60 requisicoes/minuto por IP no login, 200/minuto nos demais endpoints.
-      * *(NOVO)* Tokens armazenados com `react-native-keychain` (Keychain no iOS, Keystore no Android), nunca em AsyncStorage puro.
+      * Senhas: bcrypt (cost 12).
+      * HTTPS obrigatorio.
+      * JWT: access 24h, refresh 30 dias.
+      * Rate limiting: 60 req/min no login, 200/min nos demais.
+      * Tokens em react-native-keychain (Keychain iOS, Keystore Android).
+      * Upload de midias: validacao de tipo (JPEG/PNG/MP3/OGG) e tamanho maximo (5MB foto, 2MB audio).
   * **Tratamento de Erros:**
-      * **Falha de Rede:** O aplicativo deve salvar a operacao localmente e exibir um aviso nao bloqueante (toast/snackbar).
-      * **Validacao de Dados:** Mensagens de erro exibidas de forma clara e inline nos formularios.
-      * **Sessao Expirada:** Tentativa automatica de refresh; se falhar, redireciona para login.
-  * **Performance:** *(NOVO)*
-      * Tempo de resposta da API < 200ms para endpoints simples.
-      * Paginacao obrigatoria em todos os endpoints de listagem (20 itens por pagina).
-      * Indices de banco de dados otimizados para as consultas mais frequentes.
+      * Falha de rede: salva local + toast nao bloqueante.
+      * Validacao inline nos formularios.
+      * Sessao expirada: refresh automatico; se falhar, redireciona para login.
+  * **Performance:**
+      * API < 200ms para endpoints simples.
+      * Paginacao obrigatoria (20 itens/pagina).
+      * Indices de banco otimizados.
+      * Upload de imagens com compressao client-side (max 1024px, qualidade 80%).
 
 ---
 
-### **6. Especificacao Tecnica**
+### **7. Especificacao Tecnica**
 
-#### **6.1. Arquitetura**
+#### **7.1. Arquitetura**
 
   * **Frontend:** React Native (Expo managed workflow).
-      * **Gerenciamento de Estado:** Zustand (leve, simples, sem boilerplate).
-      * **Armazenamento Local:** WatermelonDB (SQLite por baixo, otimizado para React Native, com suporte a sync).
-      * **Armazenamento Seguro:** react-native-keychain para tokens.
+      * **Estado:** Zustand.
+      * **DB Local:** WatermelonDB (SQLite, suporte a sync).
+      * **Seguranca:** react-native-keychain.
       * **Navegacao:** React Navigation v6+.
-      * **HTTP Client:** Axios com interceptors para JWT refresh automatico.
+      * **HTTP:** Axios com interceptors JWT.
       * **Graficos:** Victory Native ou react-native-chart-kit.
+      * **Notificacoes push:** Firebase Cloud Messaging (FCM).
+      * **Camera:** react-native-camera ou expo-camera.
+      * **Audio:** expo-av para gravacao/reproducao.
   * **Backend:** Go (Golang).
-      * **Framework HTTP:** Gin (alta performance, middlewares prontos).
-      * **ORM:** GORM (migracao automatica, hooks, preloads).
-      * **API:** RESTful, com prefixo `/api/v1`.
-      * **Autenticacao:** golang-jwt/jwt para geracao e validacao de tokens.
+      * **HTTP:** Gin.
+      * **ORM:** GORM.
+      * **API:** RESTful + WebSocket (para chat em tempo real), prefixo `/api/v1`.
+      * **JWT:** golang-jwt/jwt.
       * **Senha:** golang.org/x/crypto/bcrypt.
-      * **Validacao:** go-playground/validator para validacao de structs.
-      * **Documentacao:** Swagger/OpenAPI via swaggo/swag (geracao automatica). *(NOVO)*
-  * **Banco de Dados:** PostgreSQL 15+ na nuvem.
-  * **Infraestrutura:** *(NOVO)*
-      * Backend em container Docker.
-      * CI/CD via GitHub Actions: lint, testes, build do APK.
-      * Variaveis de ambiente via `.env` (nunca commitadas).
+      * **Validacao:** go-playground/validator.
+      * **Docs:** Swagger/OpenAPI via swaggo/swag.
+      * **WebSocket:** gorilla/websocket (para chat).
+      * **Storage de midias:** Upload para S3/MinIO com URLs assinadas.
+      * **Notificacoes:** Firebase Admin SDK para envio de push.
+  * **Banco de Dados:** PostgreSQL 15+.
+  * **Infraestrutura:**
+      * Backend em Docker.
+      * CI/CD: GitHub Actions (lint, testes, build APK).
+      * Storage: MinIO (self-hosted) ou S3 (AWS).
+      * `.env` para variaveis (nunca commitadas).
 
-#### **6.2. Modelo de Dados (PostgreSQL)**
+#### **7.2. Modelo de Dados (PostgreSQL)**
 
 ```sql
--- Extensao para UUID
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
--- Tabela de Usuarios
+-- Usuarios
 CREATE TABLE usuarios (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     login VARCHAR(100) NOT NULL UNIQUE,
     password_digest VARCHAR(255) NOT NULL,
     nome VARCHAR(200),
-    ativo BOOLEAN NOT NULL DEFAULT true,  -- NOVO: soft delete
+    tipo VARCHAR(20) NOT NULL DEFAULT 'produtor' CHECK (tipo IN ('produtor', 'tecnico')),
+    ativo BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMP NOT NULL DEFAULT now(),
     updated_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
--- Tabela de Galpoes
+-- Vinculo Tecnico-Produtor
+CREATE TABLE tecnico_produtores (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    tecnico_id UUID NOT NULL REFERENCES usuarios(id),
+    produtor_id UUID NOT NULL REFERENCES usuarios(id),
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+    UNIQUE(tecnico_id, produtor_id)
+);
+
+-- Galpoes
 CREATE TABLE galpaos (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    nome VARCHAR(100) NOT NULL UNIQUE,
-    capacidade INTEGER,  -- NOVO: capacidade maxima de aves
+    usuario_id UUID NOT NULL REFERENCES usuarios(id),
+    nome VARCHAR(100) NOT NULL,
+    capacidade INTEGER,
     created_at TIMESTAMP NOT NULL DEFAULT now(),
-    updated_at TIMESTAMP NOT NULL DEFAULT now()
+    updated_at TIMESTAMP NOT NULL DEFAULT now(),
+    UNIQUE(usuario_id, nome)
 );
 
--- Tabela de Lotes
+-- Lotes
 CREATE TABLE lotes (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     usuario_id UUID NOT NULL REFERENCES usuarios(id),
@@ -262,17 +572,19 @@ CREATE TABLE lotes (
     data_prevista_abate DATE NOT NULL,
     quantidade INTEGER NOT NULL CHECK (quantidade > 0),
     tipo VARCHAR(10) NOT NULL CHECK (tipo IN ('Femea', 'Macho', 'Misto')),
-    linhagem VARCHAR(100),  -- NOVO
-    peso_inicial_g NUMERIC(8,2) NOT NULL DEFAULT 40.0,  -- NOVO: editavel
-    status VARCHAR(20) NOT NULL DEFAULT 'ativo' CHECK (status IN ('ativo', 'finalizado')),  -- NOVO
-    data_finalizacao DATE,  -- NOVO
+    linhagem VARCHAR(50),
+    peso_inicial_g NUMERIC(8,2) NOT NULL DEFAULT 42.0,
+    status VARCHAR(20) NOT NULL DEFAULT 'ativo' CHECK (status IN ('ativo', 'finalizado')),
+    data_finalizacao DATE,
+    aves_entregues INTEGER,
+    peso_total_entregue NUMERIC(12,3),
     created_at TIMESTAMP NOT NULL DEFAULT now(),
     updated_at TIMESTAMP NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_lotes_usuario ON lotes(usuario_id);
 CREATE INDEX idx_lotes_status ON lotes(usuario_id, status);
 
--- Tabela de Pesagens
+-- Pesagens
 CREATE TABLE pesagens (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     lote_id UUID NOT NULL REFERENCES lotes(id) ON DELETE CASCADE,
@@ -283,58 +595,59 @@ CREATE TABLE pesagens (
     created_at TIMESTAMP NOT NULL DEFAULT now(),
     updated_at TIMESTAMP NOT NULL DEFAULT now()
 );
-CREATE INDEX idx_pesagens_lote ON pesagens(lote_id);
 CREATE INDEX idx_pesagens_lote_data ON pesagens(lote_id, data DESC);
 
--- Tabela de Itens de Pesagem (Amostras)
+-- Itens de Pesagem (Amostras)
 CREATE TABLE pesagem_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     pesagem_id UUID NOT NULL REFERENCES pesagens(id) ON DELETE CASCADE,
     quantidade INTEGER NOT NULL CHECK (quantidade > 0),
     peso NUMERIC(12,3) NOT NULL,
     peso_medio NUMERIC(12,3) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT now(),
-    updated_at TIMESTAMP NOT NULL DEFAULT now()
+    created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_pesagem_items_pesagem ON pesagem_items(pesagem_id);
 
--- Tabela de Mortalidade
+-- Mortalidade
 CREATE TABLE mortalidades (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     lote_id UUID NOT NULL REFERENCES lotes(id) ON DELETE CASCADE,
     data DATE NOT NULL,
     quantidade INTEGER NOT NULL CHECK (quantidade > 0),
-    causa VARCHAR(50) DEFAULT 'Indefinida',  -- NOVO
+    causa VARCHAR(50) DEFAULT 'Indefinida'
+        CHECK (causa IN ('Indefinida','Ascite','Morte Subita','Problemas Locomotores','Refugo','Onfalite','Infecciosa','Outra')),
     observacao TEXT,
+    foto_url TEXT,
     created_at TIMESTAMP NOT NULL DEFAULT now(),
     updated_at TIMESTAMP NOT NULL DEFAULT now()
 );
-CREATE INDEX idx_mortalidades_lote ON mortalidades(lote_id);
 CREATE INDEX idx_mortalidades_lote_data ON mortalidades(lote_id, data DESC);
 
--- Tabela de Tipos de Racao  -- NOVO: normalizada
+-- Tipos de Racao
 CREATE TABLE tipos_racao (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    nome VARCHAR(100) NOT NULL UNIQUE,  -- Pre-Inicial, Inicial, Crescimento, Finalizacao
+    nome VARCHAR(100) NOT NULL UNIQUE,
     ordem INTEGER NOT NULL DEFAULT 0,
     created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 
--- Tabela de Recebimentos de Racao
+-- Recebimentos de Racao
 CREATE TABLE feed_receipts (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     lote_id UUID REFERENCES lotes(id) ON DELETE CASCADE,
-    tipo_racao_id UUID REFERENCES tipos_racao(id),  -- NOVO: FK normalizada
+    tipo_racao_id UUID REFERENCES tipos_racao(id),
     quantidade_kg NUMERIC(12,3) NOT NULL,
     data_recebimento DATE NOT NULL,
     fornecedor VARCHAR(200),
-    origem VARCHAR(30) NOT NULL DEFAULT 'compra' CHECK (origem IN ('compra', 'remanescente_anterior', 'sobra_final')),
+    lote_racao VARCHAR(100),
+    origem VARCHAR(30) NOT NULL DEFAULT 'compra'
+        CHECK (origem IN ('compra', 'remanescente_anterior', 'sobra_final')),
     created_at TIMESTAMP NOT NULL DEFAULT now(),
     updated_at TIMESTAMP NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_feed_receipts_lote ON feed_receipts(lote_id);
 
--- Tabela de Consumo de Racao
+-- Consumo de Racao
 CREATE TABLE feed_consumptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     lote_id UUID NOT NULL REFERENCES lotes(id) ON DELETE CASCADE,
@@ -345,18 +658,72 @@ CREATE TABLE feed_consumptions (
 );
 CREATE INDEX idx_feed_consumptions_lote ON feed_consumptions(lote_id);
 
--- Tabela de Destinatarios do WhatsApp
+-- Consumo de Agua
+CREATE TABLE water_consumptions (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lote_id UUID NOT NULL REFERENCES lotes(id) ON DELETE CASCADE,
+    data DATE NOT NULL,
+    quantidade_litros NUMERIC(12,3) NOT NULL CHECK (quantidade_litros > 0),
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+    updated_at TIMESTAMP NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_water_consumptions_lote ON water_consumptions(lote_id);
+
+-- Registros Ambientais (para IoT futuro, mas ja aceita entrada manual)
+CREATE TABLE registros_ambientais (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lote_id UUID NOT NULL REFERENCES lotes(id) ON DELETE CASCADE,
+    data DATE NOT NULL,
+    temperatura_min NUMERIC(5,2),
+    temperatura_max NUMERIC(5,2),
+    umidade_min NUMERIC(5,2),
+    umidade_max NUMERIC(5,2),
+    origem VARCHAR(20) NOT NULL DEFAULT 'manual' CHECK (origem IN ('manual', 'iot')),
+    created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_reg_amb_lote ON registros_ambientais(lote_id, data DESC);
+
+-- Checklist Diario
+CREATE TABLE checklists (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lote_id UUID NOT NULL REFERENCES lotes(id) ON DELETE CASCADE,
+    data DATE NOT NULL,
+    itens JSONB NOT NULL DEFAULT '[]',
+    completado BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+    updated_at TIMESTAMP NOT NULL DEFAULT now(),
+    UNIQUE(lote_id, data)
+);
+
+-- Mensagens (Chat Produtor-Tecnico)
+CREATE TABLE mensagens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lote_id UUID NOT NULL REFERENCES lotes(id) ON DELETE CASCADE,
+    remetente_id UUID NOT NULL REFERENCES usuarios(id),
+    tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('texto', 'foto', 'audio', 'solicitacao', 'visita')),
+    conteudo TEXT,
+    midia_url TEXT,
+    midia_thumbnail_url TEXT,
+    solicitacao_status VARCHAR(20) CHECK (solicitacao_status IN ('pendente', 'respondida', 'expirada')),
+    solicitacao_prazo TIMESTAMP,
+    lida BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_mensagens_lote ON mensagens(lote_id, created_at DESC);
+CREATE INDEX idx_mensagens_remetente ON mensagens(remetente_id);
+CREATE INDEX idx_mensagens_nao_lidas ON mensagens(lote_id, lida) WHERE lida = false;
+
+-- Destinatarios WhatsApp
 CREATE TABLE whatsapp_recipients (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     lote_id UUID NOT NULL REFERENCES lotes(id) ON DELETE CASCADE,
     numero VARCHAR(20) NOT NULL,
     nome VARCHAR(200),
     created_at TIMESTAMP NOT NULL DEFAULT now(),
-    updated_at TIMESTAMP NOT NULL DEFAULT now(),
     UNIQUE(lote_id, numero)
 );
 
--- Tabela de Historico de Envios via WhatsApp
+-- Historico de Envios WhatsApp
 CREATE TABLE whatsapp_send_histories (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     whatsapp_recipient_id UUID NOT NULL REFERENCES whatsapp_recipients(id),
@@ -364,217 +731,221 @@ CREATE TABLE whatsapp_send_histories (
     mortalidade_id UUID REFERENCES mortalidades(id) ON DELETE SET NULL,
     mensagem TEXT NOT NULL,
     status VARCHAR(20) NOT NULL CHECK (status IN ('enviado', 'falha')),
-    tipo_envio VARCHAR(20) NOT NULL CHECK (tipo_envio IN ('pesagem', 'mortalidade')),
-    erro TEXT,
-    created_at TIMESTAMP NOT NULL DEFAULT now(),
-    CHECK (
-        (pesagem_id IS NOT NULL AND mortalidade_id IS NULL AND tipo_envio = 'pesagem') OR
-        (pesagem_id IS NULL AND mortalidade_id IS NOT NULL AND tipo_envio = 'mortalidade')
-    )  -- NOVO: constraint garante consistencia entre tipo_envio e FK
+    tipo_envio VARCHAR(30) NOT NULL CHECK (tipo_envio IN ('pesagem', 'mortalidade', 'resumo_diario', 'fechamento')),
+    created_at TIMESTAMP NOT NULL DEFAULT now()
 );
 CREATE INDEX idx_wsh_recipient ON whatsapp_send_histories(whatsapp_recipient_id);
+
+-- Benchmarks de Linhagem (tabela de referencia embutida)
+CREATE TABLE benchmarks_linhagem (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    linhagem VARCHAR(50) NOT NULL,
+    dia INTEGER NOT NULL,
+    peso_g NUMERIC(10,2) NOT NULL,
+    consumo_acum_g NUMERIC(10,2),
+    ca NUMERIC(6,3),
+    gpd_g NUMERIC(6,2),
+    UNIQUE(linhagem, dia)
+);
 ```
 
-#### **6.3. Calculos de Desempenho**
-
-  * **Ganho de Peso Medio por Ave (kg):** `(peso_medio_atual_g - peso_inicial_g) / 1000`.
-      * Usa o `peso_inicial_g` configurado no lote (padrao 40g), em vez de valor fixo. *(MELHORIA)*
-  * **Aves Vivas:** `quantidade_original - SUM(mortalidades.quantidade)`. *(NOVO)*
-  * **Percentual de Mortalidade:** `(total_mortes / quantidade_original) * 100`. *(NOVO)*
-  * **Consumo Real de Racao por Ave (kg):** `consumo_liquido_kg / aves_vivas`.
-      * `consumo_liquido_kg` = SUM(feed_receipts onde origem != 'sobra_final') - SUM(feed_receipts onde origem = 'sobra_final'). *(MELHORIA: formula mais precisa)*
-  * **Indice de Conversao Alimentar (ICA):** `consumo_medio_por_ave_kg / ganho_peso_medio_kg`.
-  * **Indice de Eficiencia Alimentar (IEA):** `ganho_peso_medio_kg / consumo_medio_por_ave_kg`.
-  * **Ganho de Peso Diario (GPD):** `peso_medio_atual_g / dias_de_alojamento`. *(NOVO)*
-  * **Indice de Eficiencia Produtiva (IEP):** `((100 - % mortalidade) * peso_medio_kg * 100) / (idade_dias * ICA)`. *(NOVO)*
-
-#### **6.4. Endpoints da API REST (Prefixo: `/api/v1`)**
+#### **7.3. Endpoints da API REST (Prefixo: `/api/v1`)**
 
 **Autenticacao:**
-  * `POST /auth/login` - Autentica e retorna access_token + refresh_token.
-  * `POST /auth/refresh` - Renova o access_token usando o refresh_token. *(NOVO)*
+  * `POST /auth/login` -- Login, retorna access + refresh token
+  * `POST /auth/refresh` -- Renova access token
 
 **Lotes:**
-  * `GET /lotes` - Lista lotes do usuario autenticado. Query params: `status` (ativo/finalizado), `page`, `per_page`.
-  * `POST /lotes` - Cria um novo lote.
-  * `GET /lotes/{id}` - Retorna detalhes de um lote com indicadores calculados.
-  * `PATCH /lotes/{id}/finalizar` - Finaliza um lote. *(NOVO)*
+  * `GET /lotes` -- Lista lotes. Params: `status`, `page`, `per_page`
+  * `POST /lotes` -- Cria lote
+  * `GET /lotes/{id}` -- Detalhes com indicadores
+  * `PATCH /lotes/{id}/finalizar` -- Finaliza lote
 
 **Pesagens:**
-  * `GET /lotes/{lote_id}/pesagens` - Lista pesagens. Query params: `page`, `per_page`.
-  * `POST /lotes/{lote_id}/pesagens` - Cria pesagem com items (nested).
-  * `GET /lotes/{lote_id}/pesagens/{id}` - Detalhes de uma pesagem com items. *(NOVO)*
+  * `GET /lotes/{id}/pesagens` -- Lista. Params: `page`, `per_page`
+  * `POST /lotes/{id}/pesagens` -- Cria com items (nested)
+  * `GET /lotes/{id}/pesagens/{pid}` -- Detalhes
 
 **Mortalidade:**
-  * `GET /lotes/{lote_id}/mortalidades` - Lista mortalidades. Query params: `page`, `per_page`, `data_inicio`, `data_fim`.
-  * `POST /lotes/{lote_id}/mortalidades` - Cria registro de mortalidade.
+  * `GET /lotes/{id}/mortalidades` -- Lista. Params: `page`, `per_page`, `data_inicio`, `data_fim`
+  * `POST /lotes/{id}/mortalidades` -- Cria registro
 
 **Racao:**
-  * `GET /lotes/{lote_id}/feed_receipts` - Lista recebimentos.
-  * `POST /lotes/{lote_id}/feed_receipts` - Registra recebimento.
-  * `GET /lotes/{lote_id}/feed_consumptions` - Lista consumos. *(NOVO)*
-  * `POST /lotes/{lote_id}/feed_consumptions` - Registra consumo.
-  * `GET /lotes/{lote_id}/racao/saldo` - Retorna saldo atual de racao. *(NOVO)*
+  * `GET /lotes/{id}/feed_receipts` -- Lista recebimentos
+  * `POST /lotes/{id}/feed_receipts` -- Registra recebimento
+  * `GET /lotes/{id}/feed_consumptions` -- Lista consumos
+  * `POST /lotes/{id}/feed_consumptions` -- Registra consumo
+  * `GET /lotes/{id}/racao/saldo` -- Saldo atual
+
+**Agua:**
+  * `GET /lotes/{id}/water_consumptions` -- Lista consumos
+  * `POST /lotes/{id}/water_consumptions` -- Registra consumo
+
+**Ambiencia:**
+  * `GET /lotes/{id}/ambiencia` -- Lista registros ambientais
+  * `POST /lotes/{id}/ambiencia` -- Registra temperatura/umidade
 
 **Indicadores:**
-  * `GET /lotes/{lote_id}/indicadores` - Retorna ICA, IEA, GPD, IEP, mortalidade %, aves vivas. *(MELHORIA: endpoint unificado)*
+  * `GET /lotes/{id}/indicadores` -- ICA, IEA, GPD, IEP, mortalidade, aves vivas, saldo racao, relacao agua/racao, projecao
+
+**Checklist:**
+  * `GET /lotes/{id}/checklists` -- Lista por periodo
+  * `POST /lotes/{id}/checklists` -- Cria/atualiza checklist do dia
+  * `PATCH /lotes/{id}/checklists/{data}` -- Marca itens
+
+**Mensagens (Chat):**
+  * `GET /lotes/{id}/mensagens` -- Lista mensagens do lote. Params: `page`, `per_page`, `desde`
+  * `POST /lotes/{id}/mensagens` -- Envia mensagem (texto/foto/audio/solicitacao)
+  * `PATCH /mensagens/{mid}/lida` -- Marca como lida
+  * `PATCH /mensagens/{mid}/responder` -- Responde solicitacao
+  * `POST /lotes/{id}/visitas` -- Registra visita tecnica
+  * WebSocket: `ws://host/api/v1/ws/lotes/{id}` -- Canal tempo real para chat
+
+**Upload de midia:**
+  * `POST /upload` -- Upload de foto/audio. Retorna URL.
 
 **WhatsApp:**
-  * `GET /lotes/{lote_id}/whatsapp_recipients` - Lista destinatarios.
-  * `POST /lotes/{lote_id}/whatsapp_recipients` - Adiciona destinatario.
-  * `DELETE /lotes/{lote_id}/whatsapp_recipients/{id}` - Remove destinatario. *(NOVO)*
-  * `POST /lotes/{lote_id}/pesagens/{pesagem_id}/enviar_whatsapp` - Registra envio de pesagem.
-  * `POST /lotes/{lote_id}/mortalidades/{mortalidade_id}/enviar_whatsapp` - Registra envio de mortalidade.
+  * `GET /lotes/{id}/whatsapp_recipients` -- Lista
+  * `POST /lotes/{id}/whatsapp_recipients` -- Adiciona
+  * `DELETE /lotes/{id}/whatsapp_recipients/{rid}` -- Remove
+  * `POST /lotes/{id}/pesagens/{pid}/enviar_whatsapp` -- Registra envio
+  * `POST /lotes/{id}/mortalidades/{mid}/enviar_whatsapp` -- Registra envio
 
-**Sincronizacao:** *(NOVO)*
-  * `POST /sync` - Recebe array de operacoes pendentes do offline e retorna resultados consolidados.
+**Benchmarks:**
+  * `GET /benchmarks/{linhagem}` -- Retorna tabela de referencia da linhagem
 
-**Auxiliares:** *(NOVO)*
-  * `GET /galpaos` - Lista galpoes disponiveis.
-  * `GET /tipos_racao` - Lista tipos de racao.
-  * `GET /health` - Health check do servidor.
+**Relatorios:**
+  * `GET /lotes/{id}/relatorio/fechamento` -- PDF de fechamento
+  * `GET /lotes/{id}/relatorio/comparativo` -- Comparativo vs lotes anteriores
+  * `GET /lotes/{id}/exportar/csv` -- Dados brutos em CSV
 
-#### **6.5. Formato de Resposta Padrao da API** *(NOVO)*
+**Sync:**
+  * `POST /sync` -- Sync em lote de operacoes offline
+
+**Auxiliares:**
+  * `GET /galpaos` -- Lista galpoes
+  * `GET /tipos_racao` -- Lista tipos
+  * `GET /health` -- Health check
+
+**Tecnico:**
+  * `GET /tecnico/lotes` -- Lista todos os lotes dos produtores vinculados
+  * `GET /tecnico/alertas` -- Lista alertas ativos de todos os produtores
+
+#### **7.4. Formato de Resposta Padrao**
 
 ```json
-// Sucesso
 {
   "success": true,
-  "data": { ... },
-  "meta": {
-    "page": 1,
-    "per_page": 20,
-    "total": 45,
-    "total_pages": 3
-  }
+  "data": { },
+  "meta": { "page": 1, "per_page": 20, "total": 45, "total_pages": 3 }
 }
 
-// Erro
 {
   "success": false,
-  "error": {
-    "code": "VALIDATION_ERROR",
-    "message": "Quantidade deve ser maior que zero.",
-    "details": [
-      { "field": "quantidade", "message": "deve ser maior que zero" }
-    ]
+  "error": { "code": "VALIDATION_ERROR", "message": "Quantidade deve ser maior que zero.", "details": [] }
+}
+```
+
+#### **7.5. Estrutura do Repositorio**
+
+```
+egranja/
+├── mobile/
+│   ├── src/
+│   │   ├── app/
+│   │   ├── components/
+│   │   ├── screens/
+│   │   │   ├── auth/
+│   │   │   ├── home/
+│   │   │   ├── lote/
+│   │   │   ├── pesagem/
+│   │   │   ├── mortalidade/
+│   │   │   ├── racao/
+│   │   │   ├── agua/
+│   │   │   ├── chat/
+│   │   │   ├── checklist/
+│   │   │   └── relatorios/
+│   │   ├── services/
+│   │   ├── stores/
+│   │   ├── database/
+│   │   ├── hooks/
+│   │   ├── utils/
+│   │   │   └── benchmarks/       # Tabelas Cobb/Ross embutidas
+│   │   └── theme/
+│   ├── app.json
+│   ├── package.json
+│   └── tsconfig.json
+├── backend/
+│   ├── cmd/server/main.go
+│   ├── internal/
+│   │   ├── config/
+│   │   ├── middleware/
+│   │   ├── handler/
+│   │   ├── model/
+│   │   ├── repository/
+│   │   ├── service/
+│   │   ├── dto/
+│   │   ├── websocket/            # Chat em tempo real
+│   │   └── benchmark/            # Tabelas de referencia
+│   ├── migrations/
+│   ├── docs/
+│   ├── Dockerfile
+│   ├── docker-compose.yml
+│   ├── go.mod
+│   └── go.sum
+└── README.md
+```
+
+#### **7.6. Dependencias**
+
+**React Native (package.json):**
+```json
+{
+  "dependencies": {
+    "react-native": "0.76+",
+    "@react-navigation/native": "^6.0.0",
+    "@react-navigation/bottom-tabs": "^6.0.0",
+    "@react-navigation/drawer": "^6.0.0",
+    "@react-navigation/native-stack": "^6.0.0",
+    "@nozbe/watermelondb": "^0.27.0",
+    "zustand": "^4.5.0",
+    "axios": "^1.7.0",
+    "react-native-keychain": "^8.2.0",
+    "@react-native-community/netinfo": "^11.0.0",
+    "react-native-chart-kit": "^6.12.0",
+    "react-native-paper": "^5.12.0",
+    "dayjs": "^1.11.0",
+    "@react-native-firebase/messaging": "^18.0.0",
+    "react-native-image-picker": "^7.0.0",
+    "expo-av": "^14.0.0",
+    "react-native-gifted-chat": "^2.4.0",
+    "react-native-share": "^10.0.0",
+    "react-native-pdf": "^6.7.0"
   }
 }
 ```
 
----
+**Go (go.mod):**
+```
+require (
+    github.com/gin-gonic/gin v1.9+
+    gorm.io/gorm v1.25+
+    gorm.io/driver/postgres v1.5+
+    github.com/golang-jwt/jwt/v5 v5.2+
+    golang.org/x/crypto v0.27+
+    github.com/go-playground/validator/v10 v10.22+
+    github.com/swaggo/swag v1.16+
+    github.com/gorilla/websocket v1.5+
+    github.com/joho/godotenv v1.5+
+    github.com/google/uuid v1.6+
+    go.uber.org/zap v1.27+
+    github.com/minio/minio-go/v7 v7.0+
+    firebase.google.com/go/v4 v4.14+
+    github.com/jung-kurt/gofpdf v1.16+
+)
+```
 
-### **7. Diretrizes de Implementacao e DevOps**
-
-#### **7.1. Estrutura do Repositorio**
-
-  * **Frontend (React Native):**
-
-    ```
-    mobile/
-    ├── src/
-    │   ├── app/                  # Configuracao do app, navegacao raiz
-    │   ├── components/           # Componentes reutilizaveis (Button, Card, Input...)
-    │   ├── screens/              # Telas organizadas por feature
-    │   │   ├── auth/
-    │   │   ├── home/
-    │   │   ├── lote/
-    │   │   └── pesagem/
-    │   ├── services/             # API client, sync service
-    │   ├── stores/               # Zustand stores (auth, lotes, sync)
-    │   ├── database/             # WatermelonDB schema e models
-    │   ├── hooks/                # Custom hooks
-    │   ├── utils/                # Helpers, formatadores, constantes
-    │   └── theme/                # Cores, tipografia, espacamento
-    ├── app.json
-    ├── package.json
-    └── tsconfig.json
-    ```
-
-  * **Backend (Go):**
-
-    ```
-    backend/
-    ├── cmd/
-    │   └── server/
-    │       └── main.go           # Entrypoint
-    ├── internal/
-    │   ├── config/               # Configuracao (env vars, DB)
-    │   ├── middleware/            # Auth JWT, CORS, rate limit, logger
-    │   ├── handler/              # Handlers HTTP (um arquivo por recurso)
-    │   ├── model/                # Structs GORM (entidades)
-    │   ├── repository/           # Camada de acesso a dados
-    │   ├── service/              # Logica de negocio (calculos, sync)
-    │   ├── dto/                  # Request/Response structs
-    │   └── validator/            # Validacoes customizadas
-    ├── migrations/               # SQL de migracao
-    ├── docs/                     # Swagger gerado
-    ├── Dockerfile
-    ├── docker-compose.yml
-    ├── go.mod
-    └── go.sum
-    ```
-
-#### **7.2. Dependencias**
-
-  * **React Native (package.json):**
-
-    ```json
-    {
-      "dependencies": {
-        "react-native": "0.76+",
-        "@react-navigation/native": "^6.0.0",
-        "@react-navigation/bottom-tabs": "^6.0.0",
-        "@react-navigation/drawer": "^6.0.0",
-        "@react-navigation/native-stack": "^6.0.0",
-        "@nozbe/watermelondb": "^0.27.0",
-        "zustand": "^4.5.0",
-        "axios": "^1.7.0",
-        "react-native-keychain": "^8.2.0",
-        "@react-native-community/netinfo": "^11.0.0",
-        "react-native-chart-kit": "^6.12.0",
-        "react-native-paper": "^5.12.0",
-        "dayjs": "^1.11.0"
-      },
-      "devDependencies": {
-        "typescript": "^5.3.0",
-        "jest": "^29.0.0",
-        "@testing-library/react-native": "^12.0.0"
-      }
-    }
-    ```
-
-  * **Go (go.mod):**
-
-    ```
-    require (
-        github.com/gin-gonic/gin v1.9+
-        gorm.io/gorm v1.25+
-        gorm.io/driver/postgres v1.5+
-        github.com/golang-jwt/jwt/v5 v5.2+
-        golang.org/x/crypto v0.27+
-        github.com/go-playground/validator/v10 v10.22+
-        github.com/swaggo/swag v1.16+
-        github.com/swaggo/gin-swagger v1.6+
-        github.com/joho/godotenv v1.5+
-        github.com/google/uuid v1.6+
-        go.uber.org/zap v1.27+
-    )
-    ```
-
-#### **7.3. Instrucoes do README**
-
-O arquivo `README.md` deve ser escrito em portugues do Brasil e conter:
-  * Objetivo do projeto.
-  * Requisitos de ambiente (Node.js, Go, PostgreSQL, Android SDK).
-  * Como instalar dependencias (`npm install`, `go mod download`).
-  * Como configurar variaveis de ambiente (`.env.example`).
-  * Como rodar o backend (`go run cmd/server/main.go`).
-  * Como rodar o app (`npx react-native run-android`).
-  * Como rodar testes (`go test ./...`, `npm test`).
-  * Como gerar o APK de producao.
-
-#### **7.4. SQL de Carga Inicial**
+#### **7.7. SQL de Carga Inicial**
 
 ```sql
 -- Tipos de racao
@@ -584,87 +955,151 @@ INSERT INTO tipos_racao (id, nome, ordem) VALUES
   (gen_random_uuid(), 'Crescimento', 3),
   (gen_random_uuid(), 'Finalizacao', 4);
 
--- Galpoes iniciais
-INSERT INTO galpaos (id, nome, capacidade) VALUES
-  (gen_random_uuid(), 'Galpao 1', 15000),
-  (gen_random_uuid(), 'Galpao 3', 15000),
-  (gen_random_uuid(), 'Galpao 4', 12000);
+-- Benchmarks Cobb 500 (misto)
+INSERT INTO benchmarks_linhagem (id, linhagem, dia, peso_g, consumo_acum_g, ca, gpd_g) VALUES
+  (gen_random_uuid(), 'Cobb 500', 0, 42, 0, 0, 0),
+  (gen_random_uuid(), 'Cobb 500', 7, 202, 180, 0.891, 22.9),
+  (gen_random_uuid(), 'Cobb 500', 14, 570, 588, 1.029, 37.7),
+  (gen_random_uuid(), 'Cobb 500', 21, 1116, 1320, 1.182, 51.1),
+  (gen_random_uuid(), 'Cobb 500', 28, 1656, 2359, 1.322, 57.6),
+  (gen_random_uuid(), 'Cobb 500', 35, 2348, 3448, 1.469, 65.9),
+  (gen_random_uuid(), 'Cobb 500', 42, 2857, 4430, 1.550, 67.0),
+  (gen_random_uuid(), 'Cobb 500', 49, 3414, 5600, 1.640, 68.8);
 
--- Usuario de exemplo (senha 'senha123' - gerar hash bcrypt no backend)
--- Usar endpoint ou script: go run cmd/seed/main.go
+-- Benchmarks Ross 308 (misto)
+INSERT INTO benchmarks_linhagem (id, linhagem, dia, peso_g, consumo_acum_g, ca, gpd_g) VALUES
+  (gen_random_uuid(), 'Ross 308', 0, 42, 0, 0, 0),
+  (gen_random_uuid(), 'Ross 308', 7, 197, 177, 0.900, 22.1),
+  (gen_random_uuid(), 'Ross 308', 14, 545, 568, 1.042, 36.0),
+  (gen_random_uuid(), 'Ross 308', 21, 1070, 1274, 1.191, 48.9),
+  (gen_random_uuid(), 'Ross 308', 28, 1728, 2292, 1.326, 60.2),
+  (gen_random_uuid(), 'Ross 308', 35, 2464, 3592, 1.458, 68.9),
+  (gen_random_uuid(), 'Ross 308', 42, 3203, 5106, 1.594, 75.3),
+  (gen_random_uuid(), 'Ross 308', 49, 3900, 6798, 1.743, 78.7);
+
+-- Galpoes de exemplo
+INSERT INTO galpaos (id, usuario_id, nome, capacidade) VALUES
+  (gen_random_uuid(), '<usuario_id>', 'Galpao 1', 15000),
+  (gen_random_uuid(), '<usuario_id>', 'Galpao 3', 15000),
+  (gen_random_uuid(), '<usuario_id>', 'Galpao 4', 12000);
 ```
 
-#### **7.5. Variaveis de Ambiente (.env.example)** *(NOVO)*
+#### **7.8. Variaveis de Ambiente (.env.example)**
 
 ```env
 # Backend
 PORT=8080
 DATABASE_URL=postgres://user:pass@host:5432/egranja?sslmode=require
-JWT_SECRET=chave-secreta-segura-aqui
+JWT_SECRET=chave-secreta-segura
 JWT_ACCESS_EXPIRY=24h
 JWT_REFRESH_EXPIRY=720h
 BCRYPT_COST=12
 GIN_MODE=release
 
-# Mobile (via .env ou app.json)
+# Storage (MinIO/S3)
+STORAGE_ENDPOINT=minio:9000
+STORAGE_ACCESS_KEY=minioadmin
+STORAGE_SECRET_KEY=minioadmin
+STORAGE_BUCKET=egranja-media
+STORAGE_USE_SSL=false
+
+# Firebase (push notifications)
+FIREBASE_CREDENTIALS_FILE=./firebase-credentials.json
+
+# Mobile
 API_BASE_URL=https://api.egranja.com.br/api/v1
+WS_BASE_URL=wss://api.egranja.com.br/api/v1/ws
 ```
 
 ---
 
-### **8. Criterios de Aceite**
+### **8. Integracao IoT (Preparacao Futura)** *(NOVO)*
 
-  * [ ] O login com token persistido pula a tela de login em inicializacoes futuras do app.
-  * [ ] O refresh token renova o access token automaticamente sem intervencao do usuario. *(NOVO)*
-  * [ ] Lotes, pesagens e registros de mortalidade podem ser criados offline e sao sincronizados com sucesso quando a conexao e restabelecida.
-  * [ ] O indicador de status online/offline e quantidade de operacoes pendentes esta visivel. *(NOVO)*
-  * [ ] Os graficos na tela de resumo do lote exibem corretamente a evolucao do peso e da mortalidade.
-  * [ ] Os indices ICA, IEA, GPD e IEP sao recalculados e atualizados na tela apos um novo registro. *(MELHORIA)*
-  * [ ] O card do lote na Home mostra aves vivas (descontando mortalidade). *(NOVO)*
-  * [ ] O fluxo de envio via WhatsApp funciona abrindo o app WhatsApp diretamente no Android. *(MELHORIA)*
-  * [ ] Novos numeros de telefone usados no envio via WhatsApp sao salvos e podem ser reutilizados.
-  * [ ] O historico de envios diferencia claramente entre envios de pesagem e de mortalidade.
-  * [ ] Um lote pode ser finalizado com registro de sobra de racao. *(NOVO)*
-  * [ ] Lotes finalizados ficam somente leitura e aparecem em tela separada. *(NOVO)*
-  * [ ] A API responde em formato padronizado com paginacao. *(NOVO)*
-  * [ ] O APK e gerado com sucesso via pipeline CI/CD. *(NOVO)*
+O modelo de dados ja inclui `registros_ambientais` com campo `origem` (manual/iot). A arquitetura esta preparada para receber dados de sensores no futuro.
 
----
+#### **8.1. Sensores Planejados (Fase 2)**
 
-### **9. Pontos de Extensao Futura**
+| Sensor | Protocolo | Dado |
+|--------|-----------|------|
+| Temperatura (NTC/DS18B20) | LoRaWAN/MQTT | Temp. interna (3-6 pontos) |
+| Umidade (capacitivo) | LoRaWAN/MQTT | Umidade relativa |
+| Amonia NH3 (DOL 53) | 0-10V via gateway | ppm (alerta > 20 ppm) |
+| Balanca automatica (E-Wise) | Wi-Fi/MQTT | Peso medio continuo |
+| Hidrometro digital | Pulso/gateway | Consumo de agua automatico |
+| Celula de carga silo | Gateway | Consumo de racao automatico |
 
-  * Implementacao de alertas automaticos (push notification) para picos de mortalidade.
-  * Dashboard web agregado para administradores (React web reaproveitando logica).
-  * Analise de correlacao entre variaveis (peso x mortalidade x temperatura).
-  * Integracao com a API oficial do WhatsApp Business para envios automatizados.
-  * *(NOVO)* Registro de temperatura e umidade do galpao (IoT).
-  * *(NOVO)* Modo multi-granja: um usuario gerencia aviarios em propriedades diferentes.
-  * *(NOVO)* Exportacao de dados em CSV/PDF para relatorios impressos.
-  * *(NOVO)* Comparativo entre lotes (benchmark de desempenho).
+#### **8.2. Arquitetura IoT Planejada**
+
+```
+Sensores -> LoRaWAN/Zigbee -> Gateway -> MQTT Broker -> Backend Go -> PostgreSQL
+                                                     -> WebSocket -> App Mobile (tempo real)
+                                                     -> Alertas Push
+```
+
+#### **8.3. Endpoint IoT (futuro)**
+
+  * `POST /api/v1/iot/{galpao_id}/dados` -- Recebe payload de sensores (autenticado por API key)
 
 ---
 
-### **10. Resumo das Melhorias do Arquiteto** *(NOVO)*
+### **9. Criterios de Aceite**
 
-| # | Melhoria | Justificativa |
-|---|----------|---------------|
-| 1 | Refresh token | Evita re-login frequente; seguranca sem fricao |
-| 2 | Status de lote (ativo/finalizado) | Ciclo de vida completo do lote com transferencia de sobras |
-| 3 | Aves vivas (qtd - mortes) | Indicador essencial que estava ausente |
-| 4 | IEP e GPD | Metricas padrao da industria avicola |
-| 5 | Peso inicial editavel | Nem todo lote comeca com 40g; flexibilidade |
-| 6 | Causa da mortalidade | Permite analise de causas e prevencao |
-| 7 | Tipo de racao normalizado | Tabela separada evita inconsistencia de dados |
-| 8 | Endpoint de sync em lote | Reduz requisicoes; melhora sync offline |
-| 9 | Paginacao obrigatoria | Performance com grandes volumes de dados |
-| 10 | Rate limiting | Seguranca contra abuso |
-| 11 | Formato de resposta padrao | Consistencia e facilidade de parsing no frontend |
-| 12 | CHECK constraints no banco | Integridade de dados garantida pelo SGBD |
-| 13 | Indices otimizados | Queries frequentes (por lote, por data) performaticas |
-| 14 | Deep link WhatsApp nativo | UX melhor que redirecionar para WhatsApp Web |
-| 15 | Capacidade do galpao | Base para validacao e alertas futuros |
-| 16 | CI/CD com GitHub Actions | Build automatizado e confiavel |
-| 17 | Swagger/OpenAPI | Documentacao viva da API |
-| 18 | Ciclo de 42 dias | Correcao: frango de corte padrao e 42 dias, nao 25 |
-| 19 | Linhagem do lote | Informacao relevante para analise tecnica |
-| 20 | User Stories formalizadas | Rastreabilidade de requisitos |
+  * [ ] Login com token persistido pula tela de login.
+  * [ ] Refresh token renova access token automaticamente.
+  * [ ] Lotes, pesagens, mortalidade, racao e agua podem ser registrados offline e sincronizados.
+  * [ ] Indicador online/offline + contagem de pendencias visivel.
+  * [ ] Graficos de peso (real vs benchmark linhagem) e mortalidade funcionam.
+  * [ ] Indices ICA, IEA, GPD, IEP, viabilidade calculados e atualizados em tempo real.
+  * [ ] Alertas automaticos disparam para mortalidade > 0,5%, peso < 90% do padrao, agua anormal.
+  * [ ] Chat produtor-tecnico funciona com texto, foto e audio.
+  * [ ] Solicitacoes do tecnico com prazo chegam como notificacao push ao produtor.
+  * [ ] Registro de visita tecnica com checklist e fotos.
+  * [ ] Checklist diario de manejo funciona e registra historico.
+  * [ ] Card do lote na Home mostra aves vivas, peso com cor semantica vs benchmark.
+  * [ ] Envio via WhatsApp abre app nativo com mensagem formatada.
+  * [ ] Lote pode ser finalizado com registro de sobra de racao e geracao de relatorio PDF.
+  * [ ] Relatorio comparativo entre lotes funciona.
+  * [ ] Exportacao CSV dos dados brutos funciona.
+  * [ ] Consumo de agua registravel com calculo automatico de relacao agua/racao.
+  * [ ] Projecao de peso e data de abate exibida na aba Resumo.
+  * [ ] API responde em formato padronizado com paginacao.
+  * [ ] APK gerado com sucesso via CI/CD.
+
+---
+
+### **10. Pontos de Extensao Futura**
+
+  * Integracao IoT completa (sensores de temperatura, umidade, amonia, peso, agua).
+  * Push notifications automaticas para alertas criticos.
+  * Dashboard web agregado para administradores e integradoras.
+  * IA preditiva: predicao de peso ao abate, deteccao de anomalias (baseado em dados historicos).
+  * Visao computacional para contagem de aves e estimativa de peso por camera.
+  * Integracao WhatsApp Business API para envios automatizados.
+  * Modo multi-granja: usuario gerencia propriedades diferentes.
+  * Registro de temperatura e umidade via sensores IoT.
+  * Registro de vacinacoes e medicamentos com rastreabilidade (Portaria SDA 798/2023).
+  * Controle de visitantes e biosseguridade (livro de registro digital).
+  * Geracao de GTA (Guia de Transito Animal) digital.
+  * Exportacao PDF/CSV avancada com graficos.
+  * Comparativo entre granjas (benchmark inter-produtor).
+  * Modulo financeiro: custos de producao, remuneracao da integradora, resultado liquido.
+  * Blockchain para rastreabilidade farm-to-table.
+
+---
+
+### **11. Referencias e Fontes**
+
+  * Embrapa -- Frango de Corte (Manejo, Sanidade, Desempenho Zootecnico, Nutricao)
+  * Cobb 500 -- Performance & Nutrition Supplement 2022
+  * Aviagen/Ross 308 -- Performance Objectives 2022
+  * MAPA -- Programa Nacional de Sanidade Avicola (PNSA)
+  * IN MAPA 56/2007 -- Registro de estabelecimentos avicolas
+  * IN SDA 20/2016 -- Controle de Salmonella
+  * Portaria SDA 798/2023 -- Medicamentos em racao animal
+  * Portaria 365/2021 + 864/2023 -- Abate humanitario
+  * Lei 13.288/2016 -- Contratos de integracao
+  * ABPA -- Protocolo de Bem-Estar para Frangos de Corte 2016
+  * Poultry Performance Plus -- EPEF Formula
+  * Agrisolus, E-Aware, Khomp, Sisgra -- Plataformas IoT avicolas
+  * Agriness S4, Vilesoft, SAG, BRF AgroBRF, Seara SuperAgroTech -- Analise competitiva
+  * PoultrySync, Poultrix, PoultryPlan, Amino (MTech) -- Benchmarks internacionais
