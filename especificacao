@@ -11,7 +11,7 @@ Voc~e deve terminar que cada um faça sua parte para o projeto abaixo, desde a e
 ### **1. Visão Geral do Produto**
 
   * **Nome do Projeto:** eGranja.
-  * **Objetivo:** Desenvolver um aplicativo móvel (Flutter) com backend (Ruby on Rails) para o gerenciamento de aviários de corte. O sistema deve priorizar a simplicidade, o funcionamento offline e a usabilidade para usuários rurais.
+  * **Objetivo:** Desenvolver um aplicativo móvel (react) com backend (go) para o gerenciamento de aviários de corte. O sistema deve priorizar a simplicidade, o funcionamento offline e a usabilidade para usuários rurais.
   * **Plataformas:** Android (prioritário), com iOS/web como opcionais futuros.
   * **Diferenciais Chave:**
       * **Operação Offline-First:** Funcionalidades críticas como registro de mortalidade, pesagens e consumo de ração devem funcionar sem conexão com a internet, com sincronização automática posterior.
