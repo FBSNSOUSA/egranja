@@ -63,6 +63,9 @@ func main() {
 	remuneracaoRepo := repository.NewRemuneracaoRepository(db)
 	rastreabilidadeRepo := repository.NewRastreabilidadeRepository(db)
 	tipoRacaoRepo := repository.NewTipoRacaoRepository(db)
+	iaRepo := repository.NewIARepository(db)
+	iotRepo := repository.NewIoTRepository(db)
+	climaRepo := repository.NewClimaRepository(db)
 
 	// ── Services ────────────────────────────────────────────────────────
 	authService := service.NewAuthService(usuarioRepo, cfg, logger)
@@ -80,6 +83,15 @@ func main() {
 	)
 	notificacaoService := service.NewFirebaseNotificacaoService(cfg.FirebaseCredentialsFile, logger)
 	_ = notificacaoService // Sera usado futuramente para enviar push em alertas criticos
+
+	// Fase 4: Servicos avancados
+	iaService := service.NewIAService(cfg.GeminiAPIKey, cfg.GeminiModel, iaRepo, loteRepo, logger)
+	climaService := service.NewClimaService(climaRepo, logger)
+	mqttService := service.NewMQTTService(cfg.MQTTBrokerURL, cfg.MQTTUsername, cfg.MQTTPassword, cfg.MQTTTopicPrefix, iotRepo, logger)
+	schedulerService := service.NewSchedulerService(climaService, iaService, galpaoRepo, loteRepo, granjaRepo, logger)
+
+	// Iniciar scheduler
+	schedulerService.Start()
 
 	// ── WebSocket Hub ───────────────────────────────────────────────────
 	wsHub := ws.NewHub(logger)
@@ -114,6 +126,12 @@ func main() {
 	tipoRacaoHandler := handler.NewTipoRacaoHandler(tipoRacaoRepo, logger)
 	wsHandler := handler.NewWSHandler(wsHub, mensagemRepo, loteRepo, cfg.JWTSecret, logger)
 	alertaHandler := handler.NewAlertaHandler(alertaService, loteRepo, logger)
+
+	// Fase 4: Handlers avancados
+	iaHandler := handler.NewIAHandler(iaService, iaRepo, loteRepo, cfg.GeminiMaxCallsPerUserDay, logger)
+	iotHandler := handler.NewIoTHandler(iotRepo, galpaoRepo, logger)
+	climaHandler := handler.NewClimaHandler(climaService, galpaoRepo, logger)
+	blockchainHandler := handler.NewBlockchainHandler(blockchainService, loteRepo, logger)
 
 	// ── Gin Router ──────────────────────────────────────────────────────
 	gin.SetMode(cfg.GinMode)
@@ -263,6 +281,27 @@ func main() {
 
 		// Upload
 		protected.POST("/upload", uploadHandler.Upload)
+
+		// ── Fase 4: Funcionalidades Avancadas ──────────────────────────
+
+		// IA - Assistente Virtual Gemini
+		protected.POST("/lotes/:id/ia/consultar", iaHandler.Consultar)
+		protected.POST("/lotes/:id/ia/analisar", iaHandler.Analisar)
+		protected.GET("/lotes/:id/ia/historico", iaHandler.Historico)
+
+		// IoT - Leituras de Sensores
+		protected.GET("/galpoes/:id/iot/readings", iotHandler.ListReadings)
+		protected.GET("/galpoes/:id/iot/latest", iotHandler.Latest)
+		protected.GET("/galpoes/:id/iot/historico", iotHandler.Historico)
+
+		// Clima - Previsao do Tempo
+		protected.GET("/galpoes/:id/clima/previsao", climaHandler.Previsao)
+		protected.GET("/galpoes/:id/clima/alertas", climaHandler.Alertas)
+
+		// Blockchain - Rastreabilidade Avancada
+		protected.GET("/lotes/:id/rastreabilidade/completa", blockchainHandler.GetRastreabilidade)
+		protected.GET("/lotes/:id/rastreabilidade/verificar", blockchainHandler.Verificar)
+		protected.GET("/lotes/:id/rastreabilidade/certificado", blockchainHandler.Certificado)
 	}
 
 	// ── HTTP Server ─────────────────────────────────────────────────────
@@ -288,6 +327,11 @@ func main() {
 	sig := <-quit
 
 	logger.Info("Sinal de parada recebido", zap.String("signal", sig.String()))
+
+	// Parar servicos avancados
+	schedulerService.Stop()
+	mqttService.Close()
+	iaService.Close()
 
 	// Contexto com timeout para shutdown
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

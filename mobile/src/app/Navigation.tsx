@@ -3,9 +3,9 @@
  *
  * Estrutura:
  * - Stack Navigator principal: Login -> Main
- * - Drawer Navigator (menu lateral): Home, Lotes Finalizados, Mensagens, Checklist, Sanidade, Financeiro, Relatorios, Configuracoes, Sair
+ * - Drawer Navigator (menu lateral): Home, Lotes Finalizados, Mensagens, Checklist, Sanidade, Financeiro, Relatorios, IA, IoT, Clima, MapaGalpoes, Configuracoes, Sair
  * - Bottom Tabs no detalhe do lote: Resumo, Pesagens, Mortalidade, Racao, Agua
- * - Stacks dedicados: Chat, Sanidade, Financeiro, Relatorios
+ * - Stacks dedicados: Chat, Sanidade, Financeiro, Relatorios, IA, IoT
  * - Stacks de formularios: NovaPesagem, NovaMortalidade, NovoRecebimento, NovoConsumo, NovoConsumoAgua, FinalizarLote
  *
  * Fluxo: Login -> Drawer(Home) -> Lote -> Tabs(Resumo|Pesagens|Mortalidade|Racao|Agua)
@@ -74,6 +74,24 @@ import RemuneracaoScreen from '@screens/financeiro/RemuneracaoScreen';
 import RelatoriosScreen from '@screens/relatorios/RelatoriosScreen';
 import ComparativoLotesScreen from '@screens/relatorios/ComparativoLotesScreen';
 
+// IA (Fase 4)
+import IAAssistenteScreen from '@screens/ia/IAAssistenteScreen';
+import IAAnaliseScreen from '@screens/ia/IAAnaliseScreen';
+
+// IoT (Fase 4)
+import IoTDashboardScreen from '@screens/iot/IoTDashboardScreen';
+import IoTHistoricoScreen from '@screens/iot/IoTHistoricoScreen';
+
+// Clima (Fase 4)
+import ClimaScreen from '@screens/clima/ClimaScreen';
+
+// Galpao/Mapa (Fase 4)
+import MapaGalpoesScreen from '@screens/galpao/MapaGalpoesScreen';
+import GalpaoDetalheScreen from '@screens/galpao/GalpaoDetalheScreen';
+
+// Configuracoes (Fase 4)
+import ConfiguracoesScreen from '@screens/config/ConfiguracoesScreen';
+
 // ==========================================
 // TIPOS DE NAVEGACAO
 // ==========================================
@@ -93,6 +111,10 @@ export type DrawerParamList = {
   Sanidade: undefined;
   Financeiro: undefined;
   Relatorios: undefined;
+  IA: undefined;
+  IoT: undefined;
+  Clima: undefined;
+  MapaGalpoes: undefined;
   Configuracoes: undefined;
 };
 
@@ -149,6 +171,24 @@ export type RelatoriosStackParamList = {
   ComparativoLotes: undefined;
 };
 
+/** Parametros do stack de IA */
+export type IAStackParamList = {
+  IAAssistente: undefined;
+  IAAnalise: undefined;
+};
+
+/** Parametros do stack de IoT */
+export type IoTStackParamList = {
+  IoTDashboard: undefined;
+  IoTHistorico: { galpaoId: string };
+};
+
+/** Parametros do stack de Galpao/Mapa */
+export type GalpaoStackParamList = {
+  MapaGalpoes: undefined;
+  GalpaoDetalhe: { galpaoId: string };
+};
+
 // ==========================================
 // TELAS PLACEHOLDER (para secoes ainda nao implementadas)
 // ==========================================
@@ -180,7 +220,6 @@ const placeholderStyles = StyleSheet.create({
 });
 
 const LotesFinalizadosScreen: React.FC = () => <PlaceholderScreen title="Lotes Finalizados" />;
-const ConfiguracoesScreen: React.FC = () => <PlaceholderScreen title="Configuracoes" />;
 
 /**
  * Menu inicial de Sanidade — permite selecionar lote e modulo (Vacinacoes, Medicamentos, Visitantes).
@@ -466,6 +505,81 @@ const RelatoriosStackNavigator: React.FC = () => {
 };
 
 // ==========================================
+// IA STACK (Fase 4)
+// ==========================================
+
+const IAStackNav = createNativeStackNavigator<IAStackParamList>();
+
+const IAStackNavigator: React.FC = () => {
+  return (
+    <IAStackNav.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <IAStackNav.Screen
+        name="IAAssistente"
+        component={IAAssistenteScreen}
+      />
+      <IAStackNav.Screen
+        name="IAAnalise"
+        component={IAAnaliseScreen}
+      />
+    </IAStackNav.Navigator>
+  );
+};
+
+// ==========================================
+// IoT STACK (Fase 4)
+// ==========================================
+
+const IoTStackNav = createNativeStackNavigator<IoTStackParamList>();
+
+const IoTStackNavigator: React.FC = () => {
+  return (
+    <IoTStackNav.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <IoTStackNav.Screen
+        name="IoTDashboard"
+        component={IoTDashboardScreen}
+      />
+      <IoTStackNav.Screen
+        name="IoTHistorico"
+        component={IoTHistoricoScreen}
+      />
+    </IoTStackNav.Navigator>
+  );
+};
+
+// ==========================================
+// GALPAO/MAPA STACK (Fase 4)
+// ==========================================
+
+const GalpaoStackNav = createNativeStackNavigator<GalpaoStackParamList>();
+
+const GalpaoStackNavigator: React.FC = () => {
+  return (
+    <GalpaoStackNav.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <GalpaoStackNav.Screen
+        name="MapaGalpoes"
+        component={MapaGalpoesScreen}
+      />
+      <GalpaoStackNav.Screen
+        name="GalpaoDetalhe"
+        component={GalpaoDetalheScreen}
+      />
+    </GalpaoStackNav.Navigator>
+  );
+};
+
+// ==========================================
 // DRAWER NAVIGATOR (menu lateral)
 // ==========================================
 
@@ -480,6 +594,10 @@ const DRAWER_ICONS: Record<keyof DrawerParamList, string> = {
   Sanidade: 'shield-plus',
   Financeiro: 'cash-multiple',
   Relatorios: 'chart-box',
+  IA: 'robot',
+  IoT: 'chip',
+  Clima: 'weather-partly-cloudy',
+  MapaGalpoes: 'map-marker-multiple',
   Configuracoes: 'cog',
 };
 
@@ -635,6 +753,46 @@ const DrawerNavigator: React.FC = () => {
           drawerLabel: 'Relatorios',
           drawerIcon: ({ color, size }) => (
             <IconButton icon={DRAWER_ICONS.Relatorios} iconColor={color} size={size} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="IA"
+        component={IAStackNavigator}
+        options={{
+          drawerLabel: 'Assistente IA',
+          drawerIcon: ({ color, size }) => (
+            <IconButton icon={DRAWER_ICONS.IA} iconColor={color} size={size} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="IoT"
+        component={IoTStackNavigator}
+        options={{
+          drawerLabel: 'Sensores IoT',
+          drawerIcon: ({ color, size }) => (
+            <IconButton icon={DRAWER_ICONS.IoT} iconColor={color} size={size} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="Clima"
+        component={ClimaScreen}
+        options={{
+          drawerLabel: 'Previsao do Tempo',
+          drawerIcon: ({ color, size }) => (
+            <IconButton icon={DRAWER_ICONS.Clima} iconColor={color} size={size} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="MapaGalpoes"
+        component={GalpaoStackNavigator}
+        options={{
+          drawerLabel: 'Mapa de Galpoes',
+          drawerIcon: ({ color, size }) => (
+            <IconButton icon={DRAWER_ICONS.MapaGalpoes} iconColor={color} size={size} />
           ),
         }}
       />
