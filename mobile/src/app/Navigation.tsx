@@ -5,6 +5,7 @@
  * - Stack Navigator principal: Login -> Main
  * - Drawer Navigator (menu lateral): Home, Lotes Finalizados, Mensagens, Checklist, Configuracoes, Sair
  * - Bottom Tabs no detalhe do lote: Resumo, Pesagens, Mortalidade, Racao, Agua
+ * - Stacks de formularios: NovaPesagem, NovaMortalidade, NovoRecebimento, NovoConsumo, NovoConsumoAgua, FinalizarLote
  *
  * Fluxo: Login -> Drawer(Home) -> Lote -> Tabs(Resumo|Pesagens|Mortalidade|Racao|Agua)
  */
@@ -20,8 +21,32 @@ import { useAuthStore } from '@stores/authStore';
 import { useSyncStore } from '@stores/syncStore';
 import { colors, typography, spacing, borders } from '@theme/index';
 
-// Telas
+// ==========================================
+// IMPORTS DE TELAS
+// ==========================================
+
+// Auth
 import LoginScreen from '@screens/auth/LoginScreen';
+
+// Home
+import HomeScreen from '@screens/home/HomeScreen';
+import HomeTecnicoScreen from '@screens/home/HomeTecnicoScreen';
+
+// Lote
+import NovoLoteScreen from '@screens/lote/NovoLoteScreen';
+import LoteResumoTab from '@screens/lote/LoteResumoTab';
+import LotePesagensTab from '@screens/lote/LotePesagensTab';
+import LoteMortalidadeTab from '@screens/lote/LoteMortalidadeTab';
+import LoteRacaoTab from '@screens/lote/LoteRacaoTab';
+import LoteAguaTab from '@screens/lote/LoteAguaTab';
+import FinalizarLoteScreen from '@screens/lote/FinalizarLoteScreen';
+
+// Formularios
+import NovaPesagemScreen from '@screens/pesagem/NovaPesagemScreen';
+import NovaMortalidadeScreen from '@screens/mortalidade/NovaMortalidadeScreen';
+import NovoRecebimentoScreen from '@screens/racao/NovoRecebimentoScreen';
+import NovoConsumoScreen from '@screens/racao/NovoConsumoScreen';
+import NovoConsumoAguaScreen from '@screens/agua/NovoConsumoAguaScreen';
 
 // ==========================================
 // TIPOS DE NAVEGACAO
@@ -56,10 +81,16 @@ export type HomeStackParamList = {
   HomeList: undefined;
   LoteDetail: { loteId: string; loteNome?: string };
   NovoLote: undefined;
+  NovaPesagem: { loteId: string };
+  NovaMortalidade: { loteId: string };
+  NovoRecebimentoRacao: { loteId: string };
+  NovoConsumoRacao: { loteId: string };
+  NovoConsumoAgua: { loteId: string };
+  FinalizarLote: { loteId: string };
 };
 
 // ==========================================
-// TELAS PLACEHOLDER (serao substituidas pelos componentes reais)
+// TELAS PLACEHOLDER (para secoes ainda nao implementadas)
 // ==========================================
 
 const PlaceholderScreen: React.FC<{ title: string }> = ({ title }) => (
@@ -88,20 +119,10 @@ const placeholderStyles = StyleSheet.create({
   },
 });
 
-// Telas placeholder para cada secao
-const HomeListScreen: React.FC = () => <PlaceholderScreen title="Home - Lotes Ativos" />;
 const LotesFinalizadosScreen: React.FC = () => <PlaceholderScreen title="Lotes Finalizados" />;
 const MensagensScreen: React.FC = () => <PlaceholderScreen title="Mensagens" />;
 const ChecklistScreen: React.FC = () => <PlaceholderScreen title="Checklist Diario" />;
 const ConfiguracoesScreen: React.FC = () => <PlaceholderScreen title="Configuracoes" />;
-const NovoLoteScreen: React.FC = () => <PlaceholderScreen title="Novo Lote" />;
-
-// Tabs do detalhe do lote
-const ResumoScreen: React.FC = () => <PlaceholderScreen title="Resumo do Lote" />;
-const PesagensScreen: React.FC = () => <PlaceholderScreen title="Pesagens" />;
-const MortalidadeScreen: React.FC = () => <PlaceholderScreen title="Mortalidade" />;
-const RacaoScreen: React.FC = () => <PlaceholderScreen title="Racao" />;
-const AguaScreen: React.FC = () => <PlaceholderScreen title="Agua" />;
 
 // ==========================================
 // BOTTOM TABS - DETALHE DO LOTE
@@ -141,31 +162,31 @@ const LoteDetailTabs: React.FC<{ route: { params: { loteId: string } } }> = ({ r
     >
       <Tab.Screen
         name="Resumo"
-        component={ResumoScreen}
+        component={LoteResumoTab}
         initialParams={{ loteId }}
         options={{ tabBarLabel: 'Resumo' }}
       />
       <Tab.Screen
         name="Pesagens"
-        component={PesagensScreen}
+        component={LotePesagensTab}
         initialParams={{ loteId }}
         options={{ tabBarLabel: 'Pesagens' }}
       />
       <Tab.Screen
         name="Mortalidade"
-        component={MortalidadeScreen}
+        component={LoteMortalidadeTab}
         initialParams={{ loteId }}
         options={{ tabBarLabel: 'Mortalidade' }}
       />
       <Tab.Screen
         name="Racao"
-        component={RacaoScreen}
+        component={LoteRacaoTab}
         initialParams={{ loteId }}
         options={{ tabBarLabel: 'Racao' }}
       />
       <Tab.Screen
         name="Agua"
-        component={AguaScreen}
+        component={LoteAguaTab}
         initialParams={{ loteId }}
         options={{ tabBarLabel: 'Agua' }}
       />
@@ -174,10 +195,23 @@ const LoteDetailTabs: React.FC<{ route: { params: { loteId: string } } }> = ({ r
 };
 
 // ==========================================
-// HOME STACK (lista de lotes + detalhe)
+// HOME STACK (lista de lotes + detalhe + formularios)
 // ==========================================
 
 const HomeStack = createNativeStackNavigator<HomeStackParamList>();
+
+/**
+ * Componente que escolhe entre HomeScreen (produtor) e HomeTecnicoScreen (tecnico)
+ * baseado no tipo do usuario logado.
+ */
+const HomeListScreen: React.FC<any> = (props) => {
+  const userType = useAuthStore((state) => state.user?.tipo);
+
+  if (userType === 'tecnico') {
+    return <HomeTecnicoScreen {...props} />;
+  }
+  return <HomeScreen {...props} />;
+};
 
 const HomeStackNavigator: React.FC = () => {
   return (
@@ -191,7 +225,7 @@ const HomeStackNavigator: React.FC = () => {
       <HomeStack.Screen
         name="HomeList"
         component={HomeListScreen}
-        options={{ title: 'eGranja' }}
+        options={{ title: 'eGranja', headerShown: false }}
       />
       <HomeStack.Screen
         name="LoteDetail"
@@ -204,6 +238,36 @@ const HomeStackNavigator: React.FC = () => {
         name="NovoLote"
         component={NovoLoteScreen}
         options={{ title: 'Novo Lote' }}
+      />
+      <HomeStack.Screen
+        name="NovaPesagem"
+        component={NovaPesagemScreen}
+        options={{ title: 'Nova Pesagem' }}
+      />
+      <HomeStack.Screen
+        name="NovaMortalidade"
+        component={NovaMortalidadeScreen}
+        options={{ title: 'Registrar Mortalidade' }}
+      />
+      <HomeStack.Screen
+        name="NovoRecebimentoRacao"
+        component={NovoRecebimentoScreen}
+        options={{ title: 'Recebimento de Racao' }}
+      />
+      <HomeStack.Screen
+        name="NovoConsumoRacao"
+        component={NovoConsumoScreen}
+        options={{ title: 'Consumo de Racao' }}
+      />
+      <HomeStack.Screen
+        name="NovoConsumoAgua"
+        component={NovoConsumoAguaScreen}
+        options={{ title: 'Consumo de Agua' }}
+      />
+      <HomeStack.Screen
+        name="FinalizarLote"
+        component={FinalizarLoteScreen}
+        options={{ title: 'Finalizar Lote' }}
       />
     </HomeStack.Navigator>
   );

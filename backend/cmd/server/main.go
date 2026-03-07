@@ -45,14 +45,60 @@ func main() {
 	// ── Repositories ────────────────────────────────────────────────────
 	usuarioRepo := repository.NewUsuarioRepository(db)
 	loteRepo := repository.NewLoteRepository(db)
+	granjaRepo := repository.NewGranjaRepository(db)
+	galpaoRepo := repository.NewGalpaoRepository(db)
+	pesagemRepo := repository.NewPesagemRepository(db)
+	mortalidadeRepo := repository.NewMortalidadeRepository(db)
+	feedRepo := repository.NewFeedRepository(db)
+	waterRepo := repository.NewWaterRepository(db)
+	ambienciaRepo := repository.NewAmbienciaRepository(db)
+	checklistRepo := repository.NewChecklistRepository(db)
+	mensagemRepo := repository.NewMensagemRepository(db)
+	whatsappRepo := repository.NewWhatsappRepository(db)
+	vacinacaoRepo := repository.NewVacinacaoRepository(db)
+	medicamentoRepo := repository.NewMedicamentoRepository(db)
+	visitanteRepo := repository.NewVisitanteRepository(db)
+	custoRepo := repository.NewCustoRepository(db)
+	remuneracaoRepo := repository.NewRemuneracaoRepository(db)
+	rastreabilidadeRepo := repository.NewRastreabilidadeRepository(db)
+	tipoRacaoRepo := repository.NewTipoRacaoRepository(db)
 
 	// ── Services ────────────────────────────────────────────────────────
 	authService := service.NewAuthService(usuarioRepo, cfg, logger)
-	_ = service.NewIndicadoresService(loteRepo, logger)
+	indicadoresService := service.NewIndicadoresService(loteRepo, logger)
+	blockchainService := service.NewBlockchainService(rastreabilidadeRepo, logger)
+	uploadService := service.NewUploadService(logger)
+	relatorioService := service.NewRelatorioService(
+		loteRepo, mortalidadeRepo, pesagemRepo, feedRepo, waterRepo,
+		custoRepo, remuneracaoRepo, indicadoresService, logger,
+	)
 
 	// ── Handlers ────────────────────────────────────────────────────────
 	authHandler := handler.NewAuthHandler(authService, logger)
 	healthHandler := handler.NewHealthHandler(db)
+	granjaHandler := handler.NewGranjaHandler(granjaRepo, loteRepo, logger)
+	galpaoHandler := handler.NewGalpaoHandler(galpaoRepo, logger)
+	loteHandler := handler.NewLoteHandler(loteRepo, galpaoRepo, indicadoresService, blockchainService, logger)
+	pesagemHandler := handler.NewPesagemHandler(pesagemRepo, loteRepo, blockchainService, logger)
+	mortalidadeHandler := handler.NewMortalidadeHandler(mortalidadeRepo, loteRepo, blockchainService, logger)
+	racaoHandler := handler.NewRacaoHandler(feedRepo, loteRepo, logger)
+	aguaHandler := handler.NewAguaHandler(waterRepo, loteRepo, logger)
+	ambienciaHandler := handler.NewAmbienciaHandler(ambienciaRepo, loteRepo, logger)
+	indicadoresHandler := handler.NewIndicadoresHandler(indicadoresService, loteRepo, logger)
+	checklistHandler := handler.NewChecklistHandler(checklistRepo, loteRepo, logger)
+	mensagemHandler := handler.NewMensagemHandler(mensagemRepo, loteRepo, logger)
+	whatsappHandler := handler.NewWhatsappHandler(whatsappRepo, loteRepo, logger)
+	benchmarkHandler := handler.NewBenchmarkHandler(logger)
+	sanidadeHandler := handler.NewSanidadeHandler(
+		vacinacaoRepo, medicamentoRepo, visitanteRepo, granjaRepo, loteRepo,
+		blockchainService, logger,
+	)
+	financeiroHandler := handler.NewFinanceiroHandler(custoRepo, remuneracaoRepo, loteRepo, logger)
+	relatorioHandler := handler.NewRelatorioHandler(relatorioService, loteRepo, logger)
+	tecnicoHandler := handler.NewTecnicoHandler(loteRepo, usuarioRepo, indicadoresService, logger)
+	syncHandler := handler.NewSyncHandler(db, logger)
+	uploadHandler := handler.NewUploadHandler(uploadService, logger)
+	tipoRacaoHandler := handler.NewTipoRacaoHandler(tipoRacaoRepo, logger)
 
 	// ── Gin Router ──────────────────────────────────────────────────────
 	gin.SetMode(cfg.GinMode)
@@ -86,113 +132,113 @@ func main() {
 	protected := api.Group("")
 	protected.Use(middleware.AuthMiddleware(cfg.JWTSecret, logger))
 	{
-		// Lotes
-		// protected.GET("/lotes", loteHandler.List)
-		// protected.POST("/lotes", loteHandler.Create)
-		// protected.GET("/lotes/:id", loteHandler.Get)
-		// protected.PATCH("/lotes/:id/finalizar", loteHandler.Finalizar)
-		// protected.GET("/lotes/:id/indicadores", loteHandler.Indicadores)
-
-		// Pesagens
-		// protected.GET("/lotes/:id/pesagens", pesagemHandler.List)
-		// protected.POST("/lotes/:id/pesagens", pesagemHandler.Create)
-
-		// Mortalidade
-		// protected.GET("/lotes/:id/mortalidades", mortalidadeHandler.List)
-		// protected.POST("/lotes/:id/mortalidades", mortalidadeHandler.Create)
-
-		// Racao
-		// protected.GET("/lotes/:id/feed_receipts", feedHandler.ListReceipts)
-		// protected.POST("/lotes/:id/feed_receipts", feedHandler.CreateReceipt)
-		// protected.GET("/lotes/:id/feed_consumptions", feedHandler.ListConsumptions)
-		// protected.POST("/lotes/:id/feed_consumptions", feedHandler.CreateConsumption)
-		// protected.GET("/lotes/:id/racao/saldo", feedHandler.Saldo)
-
-		// Agua
-		// protected.GET("/lotes/:id/water_consumptions", waterHandler.List)
-		// protected.POST("/lotes/:id/water_consumptions", waterHandler.Create)
-
-		// Ambiencia
-		// protected.GET("/lotes/:id/ambiencia", ambienciaHandler.List)
-		// protected.POST("/lotes/:id/ambiencia", ambienciaHandler.Create)
-
-		// Checklist
-		// protected.GET("/lotes/:id/checklists", checklistHandler.List)
-		// protected.POST("/lotes/:id/checklists", checklistHandler.Create)
-
-		// Mensagens (Chat)
-		// protected.GET("/lotes/:id/mensagens", mensagemHandler.List)
-		// protected.POST("/lotes/:id/mensagens", mensagemHandler.Create)
-
-		// WhatsApp
-		// protected.GET("/lotes/:id/whatsapp_recipients", whatsappHandler.ListRecipients)
-		// protected.POST("/lotes/:id/whatsapp_recipients", whatsappHandler.CreateRecipient)
-
-		// Benchmarks
-		// protected.GET("/benchmarks/:linhagem", benchmarkHandler.Get)
-
 		// Granjas
-		// protected.GET("/granjas", granjaHandler.List)
-		// protected.POST("/granjas", granjaHandler.Create)
-		// protected.GET("/granjas/:id", granjaHandler.Get)
+		protected.GET("/granjas", granjaHandler.List)
+		protected.POST("/granjas", granjaHandler.Create)
+		protected.GET("/granjas/dashboard", granjaHandler.Dashboard)
+		protected.GET("/granjas/comparativo", granjaHandler.Comparativo)
+		protected.GET("/granjas/:id", granjaHandler.Get)
 
 		// Galpaos
-		// protected.GET("/galpaos", galpaoHandler.List)
+		protected.GET("/galpaos", galpaoHandler.List)
+		protected.POST("/galpaos", galpaoHandler.Create)
 
 		// Tipos de racao
-		// protected.GET("/tipos_racao", tipoRacaoHandler.List)
+		protected.GET("/tipos_racao", tipoRacaoHandler.List)
+
+		// Lotes
+		protected.GET("/lotes", loteHandler.List)
+		protected.POST("/lotes", loteHandler.Create)
+		protected.GET("/lotes/:id", loteHandler.Get)
+		protected.PATCH("/lotes/:id/finalizar", loteHandler.Finalizar)
+
+		// Indicadores
+		protected.GET("/lotes/:id/indicadores", indicadoresHandler.Get)
+
+		// Pesagens
+		protected.GET("/lotes/:id/pesagens", pesagemHandler.List)
+		protected.POST("/lotes/:id/pesagens", pesagemHandler.Create)
+		protected.GET("/lotes/:id/pesagens/:pid", pesagemHandler.Get)
+
+		// Mortalidade
+		protected.GET("/lotes/:id/mortalidades", mortalidadeHandler.List)
+		protected.POST("/lotes/:id/mortalidades", mortalidadeHandler.Create)
+
+		// Racao
+		protected.GET("/lotes/:id/feed_receipts", racaoHandler.ListReceipts)
+		protected.POST("/lotes/:id/feed_receipts", racaoHandler.CreateReceipt)
+		protected.GET("/lotes/:id/feed_consumptions", racaoHandler.ListConsumptions)
+		protected.POST("/lotes/:id/feed_consumptions", racaoHandler.CreateConsumption)
+		protected.GET("/lotes/:id/racao/saldo", racaoHandler.Saldo)
+
+		// Agua
+		protected.GET("/lotes/:id/water_consumptions", aguaHandler.List)
+		protected.POST("/lotes/:id/water_consumptions", aguaHandler.Create)
+
+		// Ambiencia
+		protected.GET("/lotes/:id/ambiencia", ambienciaHandler.List)
+		protected.POST("/lotes/:id/ambiencia", ambienciaHandler.Create)
+
+		// Checklist
+		protected.GET("/lotes/:id/checklists", checklistHandler.List)
+		protected.POST("/lotes/:id/checklists", checklistHandler.Create)
+		protected.PATCH("/lotes/:id/checklists/:data", checklistHandler.UpdateByData)
+
+		// Mensagens (Chat)
+		protected.GET("/lotes/:id/mensagens", mensagemHandler.List)
+		protected.POST("/lotes/:id/mensagens", mensagemHandler.Create)
+		protected.PATCH("/mensagens/:mid/lida", mensagemHandler.MarcarLida)
+		protected.POST("/lotes/:id/visitas", mensagemHandler.CriarVisita)
+
+		// WhatsApp
+		protected.GET("/lotes/:id/whatsapp_recipients", whatsappHandler.ListRecipients)
+		protected.POST("/lotes/:id/whatsapp_recipients", whatsappHandler.CreateRecipient)
+		protected.DELETE("/lotes/:id/whatsapp_recipients/:rid", whatsappHandler.DeleteRecipient)
+		protected.POST("/lotes/:id/enviar_whatsapp", whatsappHandler.EnviarWhatsapp)
+
+		// Benchmarks
+		protected.GET("/benchmarks/:linhagem", benchmarkHandler.Get)
 
 		// Sanidade
-		// protected.GET("/lotes/:id/vacinacoes", vacinacaoHandler.List)
-		// protected.POST("/lotes/:id/vacinacoes", vacinacaoHandler.Create)
-		// protected.GET("/lotes/:id/medicamentos", medicamentoHandler.List)
-		// protected.POST("/lotes/:id/medicamentos", medicamentoHandler.Create)
+		protected.GET("/lotes/:id/vacinacoes", sanidadeHandler.ListVacinacoes)
+		protected.POST("/lotes/:id/vacinacoes", sanidadeHandler.CreateVacinacao)
+		protected.GET("/lotes/:id/medicamentos", sanidadeHandler.ListMedicamentos)
+		protected.POST("/lotes/:id/medicamentos", sanidadeHandler.CreateMedicamento)
+		protected.GET("/lotes/:id/gta", sanidadeHandler.GetGTA)
+		protected.GET("/lotes/:id/rastreabilidade", sanidadeHandler.GetRastreabilidade)
 
-		// Visitantes
-		// protected.GET("/granjas/:id/visitantes", visitanteHandler.List)
-		// protected.POST("/granjas/:id/visitantes", visitanteHandler.Create)
+		// Visitantes (vinculados a granja)
+		protected.GET("/granjas/:id/visitantes", sanidadeHandler.ListVisitantes)
+		protected.POST("/granjas/:id/visitantes", sanidadeHandler.CreateVisitante)
+		protected.PATCH("/granjas/:id/visitantes/:vid/saida", sanidadeHandler.RegistrarSaidaVisitante)
 
 		// Financeiro
-		// protected.GET("/lotes/:id/custos", custoHandler.List)
-		// protected.POST("/lotes/:id/custos", custoHandler.Create)
-		// protected.POST("/lotes/:id/remuneracao", remuneracaoHandler.Create)
-
-		// IoT
-		// protected.POST("/iot/:galpao_id/dados", iotHandler.ReceberDados)
-		// protected.GET("/iot/:galpao_id/status", iotHandler.Status)
-		// protected.GET("/iot/:galpao_id/historico", iotHandler.Historico)
-
-		// IA
-		// protected.GET("/lotes/:id/ia/predicao", iaHandler.Predicao)
-		// protected.POST("/ia/chat", iaHandler.Chat)
-
-		// Clima
-		// protected.GET("/granjas/:id/clima/atual", climaHandler.Atual)
-		// protected.GET("/granjas/:id/clima/previsao", climaHandler.Previsao)
-
-		// Rastreabilidade
-		// protected.GET("/lotes/:id/rastreabilidade", rastreabilidadeHandler.Get)
-
-		// Tecnico
-		// tecnico := protected.Group("/tecnico")
-		// tecnico.Use(middleware.RequireTipo("tecnico"))
-		// tecnico.GET("/lotes", tecnicoHandler.ListLotes)
-		// tecnico.GET("/alertas", tecnicoHandler.ListAlertas)
-
-		// Sync
-		// protected.POST("/sync", syncHandler.Sync)
-
-		// Upload
-		// protected.POST("/upload", uploadHandler.Upload)
+		protected.GET("/lotes/:id/custos", financeiroHandler.ListCustos)
+		protected.POST("/lotes/:id/custos", financeiroHandler.CreateCusto)
+		protected.DELETE("/lotes/:id/custos/:cid", financeiroHandler.DeleteCusto)
+		protected.POST("/lotes/:id/remuneracao", financeiroHandler.CreateRemuneracao)
+		protected.GET("/lotes/:id/financeiro/resumo", financeiroHandler.ResumoFinanceiro)
+		protected.GET("/lotes/:id/financeiro/relatorio", financeiroHandler.RelatorioFinanceiro)
 
 		// Relatorios
-		// protected.GET("/lotes/:id/relatorio/fechamento", relatorioHandler.Fechamento)
-		// protected.GET("/lotes/:id/exportar/csv", relatorioHandler.ExportCSV)
-	}
+		protected.GET("/lotes/:id/relatorio/fechamento", relatorioHandler.Fechamento)
+		protected.GET("/lotes/:id/relatorio/comparativo", relatorioHandler.Comparativo)
+		protected.GET("/lotes/:id/exportar/csv", relatorioHandler.ExportCSV)
 
-	// ── WebSocket ───────────────────────────────────────────────────────
-	// router.GET("/api/v1/ws/lotes/:id", wsHandler.HandleConnection)
-	// router.GET("/api/v1/iot/:galpao_id/tempo-real", wsIoTHandler.HandleConnection)
+		// Tecnico (requer tipo 'tecnico')
+		tecnico := protected.Group("/tecnico")
+		tecnico.Use(middleware.RequireTipo("tecnico"))
+		{
+			tecnico.GET("/lotes", tecnicoHandler.ListLotes)
+			tecnico.GET("/alertas", tecnicoHandler.ListAlertas)
+		}
+
+		// Sync
+		protected.POST("/sync", syncHandler.Sync)
+
+		// Upload
+		protected.POST("/upload", uploadHandler.Upload)
+	}
 
 	// ── HTTP Server ─────────────────────────────────────────────────────
 	srv := &http.Server{
