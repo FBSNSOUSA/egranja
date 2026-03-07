@@ -1,0 +1,76 @@
+# =============================================================
+# eGranja - .gitignore
+# =============================================================
+
+# ---- Go ----
+bin/
+vendor/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+coverage.out
+coverage.html
+
+# ---- Node / React Native ----
+node_modules/
+.expo/
+*.tsbuildinfo
+.cache/
+dist/
+build/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# ---- Variaveis de Ambiente ----
+.env
+.env.local
+.env.development
+.env.production
+*.env
+!.env.example
+
+# ---- IDE ----
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+*.iml
+
+# ---- OS ----
+.DS_Store
+.DS_Store?
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ---- Firebase ----
+firebase-credentials.json
+google-services.json
+GoogleService-Info.plist
+
+# ---- Build / Release ----
+*.apk
+*.aab
+*.ipa
+*.tar.gz
+*.zip
+
+# ---- Docker ----
+docker/mosquitto/passwd
+
+# ---- Swagger (gerado) ----
+backend/docs/swagger.json
+backend/docs/swagger.yaml
+backend/docs/docs.go
+
+# ---- Temporarios ----
+tmp/
+*.tmp
+*.bak

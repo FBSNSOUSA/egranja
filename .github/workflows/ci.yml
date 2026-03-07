@@ -1,0 +1,147 @@
+name: eGranja CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  GO_VERSION: "1.22"
+  NODE_VERSION: "20"
+
+jobs:
+  # ---- Backend: Lint ----
+  backend-lint:
+    name: Backend Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: latest
+          working-directory: backend
+
+  # ---- Backend: Testes ----
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: egranja_test
+          POSTGRES_USER: egranja
+          POSTGRES_PASSWORD: egranja_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U egranja -d egranja_test"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgres://egranja:egranja_test@localhost:5432/egranja_test?sslmode=disable
+      JWT_SECRET: test-secret-key
+      JWT_ACCESS_EXPIRY: 24h
+      JWT_REFRESH_EXPIRY: 720h
+      BCRYPT_COST: 4
+      GIN_MODE: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run tests
+        run: go test ./... -v -cover -coverprofile=coverage.out
+
+      - name: Upload coverage
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage.out
+
+  # ---- Mobile: Lint ----
+  mobile-lint:
+    name: Mobile Lint
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: ESLint
+        run: npx eslint . --ext .ts,.tsx --max-warnings 0
+
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+  # ---- Mobile: Build APK (placeholder) ----
+  build-apk:
+    name: Build APK
+    runs-on: ubuntu-latest
+    needs: [mobile-lint]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      # Placeholder: EAS Build requer conta Expo configurada
+      # Descomentar quando a conta estiver pronta:
+      # - name: Build APK
+      #   run: eas build --platform android --profile preview --non-interactive
+
+      - name: Build check (placeholder)
+        run: |
+          echo "============================================"
+          echo "  APK build placeholder"
+          echo "  Para ativar o build real:"
+          echo "  1. Configure EXPO_TOKEN nos secrets"
+          echo "  2. Configure eas.json no projeto"
+          echo "  3. Descomente o step 'Build APK' acima"
+          echo "============================================"

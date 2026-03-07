@@ -1,0 +1,61 @@
+{
+  "expo": {
+    "name": "eGranja",
+    "slug": "egranja",
+    "scheme": "egranja",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#D32F2F"
+    },
+    "assetBundlePatterns": ["**/*"],
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.egranja.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "O eGranja precisa acessar a camera para registrar fotos do galpao e mortalidade.",
+        "NSMicrophoneUsageDescription": "O eGranja precisa acessar o microfone para gravacao de mensagens de audio.",
+        "NSLocationWhenInUseUsageDescription": "O eGranja precisa acessar sua localizacao para registrar coordenadas dos galpoes."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#D32F2F"
+      },
+      "package": "com.egranja.app",
+      "permissions": [
+        "CAMERA",
+        "RECORD_AUDIO",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "INTERNET",
+        "ACCESS_NETWORK_STATE"
+      ],
+      "googleServicesFile": "./google-services.json"
+    },
+    "plugins": [
+      "expo-location",
+      "expo-av",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "compileSdkVersion": 34,
+            "targetSdkVersion": 34,
+            "minSdkVersion": 24
+          }
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "egranja-project-id"
+      }
+    }
+  }
+}
