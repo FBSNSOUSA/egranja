@@ -22,8 +22,11 @@ import { useSyncStore } from '@stores/syncStore';
 // CONFIGURACAO
 // ==========================================
 
-/** URL base da API - configuravel via variavel de ambiente */
-const API_BASE_URL = process.env.API_BASE_URL || 'https://api.egranja.com.br/api/v1';
+/** URL base da API - configuravel via EXPO_PUBLIC_API_BASE_URL ou API_BASE_URL (emulador: http://10.0.2.2:8080/api/v1) */
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_BASE_URL ||
+  process.env.API_BASE_URL ||
+  'https://api.egranja.com.br/api/v1';
 
 /** Timeout padrao para requisicoes (ms) */
 const REQUEST_TIMEOUT = 30000;

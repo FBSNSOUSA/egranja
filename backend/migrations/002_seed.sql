@@ -1,10 +1,27 @@
 -- ============================================================================
 -- eGranja - Migration 002: Carga Inicial (Seed Data)
 -- ============================================================================
--- Dados iniciais obrigatorios: tipos de racao e benchmarks de linhagens.
+-- Dados iniciais obrigatorios: tipos de racao, benchmarks e usuario de teste.
 -- ============================================================================
 
 BEGIN;
+
+-- ============================================================================
+-- USUARIOS DE TESTE (um de cada tipo: produtor e tecnico)
+-- So sao inseridos se ainda nao existirem.
+-- ============================================================================
+INSERT INTO usuarios (id, login, password_digest, nome, tipo, ativo)
+SELECT 'a0000000-0000-0000-0000-000000000001'::uuid, 'tecnico', crypt('tecnico123', gen_salt('bf', 12)), 'Tecnico Teste', 'tecnico', true
+WHERE NOT EXISTS (SELECT 1 FROM usuarios WHERE login = 'tecnico');
+
+INSERT INTO usuarios (id, login, password_digest, nome, tipo, ativo)
+SELECT 'a0000000-0000-0000-0000-000000000002'::uuid, 'produtor', crypt('produtor123', gen_salt('bf', 12)), 'Produtor Teste', 'produtor', true
+WHERE NOT EXISTS (SELECT 1 FROM usuarios WHERE login = 'produtor');
+
+-- Vinculo tecnico-produtor: o tecnico pode ver os lotes do produtor
+INSERT INTO tecnico_produtores (tecnico_id, produtor_id)
+SELECT 'a0000000-0000-0000-0000-000000000001'::uuid, 'a0000000-0000-0000-0000-000000000002'::uuid
+WHERE NOT EXISTS (SELECT 1 FROM tecnico_produtores WHERE tecnico_id = 'a0000000-0000-0000-0000-000000000001'::uuid AND produtor_id = 'a0000000-0000-0000-0000-000000000002'::uuid);
 
 -- ============================================================================
 -- TIPOS DE RACAO

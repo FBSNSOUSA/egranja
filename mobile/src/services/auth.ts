@@ -17,8 +17,11 @@ import * as Keychain from 'react-native-keychain';
 // CONFIGURACAO
 // ==========================================
 
-/** URL base da API */
-const API_BASE_URL = process.env.API_BASE_URL || 'https://api.egranja.com.br/api/v1';
+/** URL base da API - mesma config de api.ts (emulador: http://10.0.2.2:8080/api/v1) */
+const API_BASE_URL =
+  process.env.EXPO_PUBLIC_API_BASE_URL ||
+  process.env.API_BASE_URL ||
+  'https://api.egranja.com.br/api/v1';
 
 /** Chaves para armazenamento seguro no Keychain */
 const KEYCHAIN_SERVICE_ACCESS = 'egranja_access_token';
