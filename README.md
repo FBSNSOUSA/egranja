@@ -123,7 +123,15 @@ make docker-up
 
 Isso sobe PostgreSQL, MinIO, Mosquitto e o backend.
 
-### 4. Executar migrations
+### Credenciais dos servicos (ambiente Docker local)
+
+| Servico | URL / Porta | Usuario | Senha |
+|---------|--------------|---------|--------|
+| **MinIO** (API) | http://localhost:9000 | `minioadmin` | `minioadmin` |
+| **MinIO** (Console web) | http://localhost:9001 | `minioadmin` | `minioadmin` |
+| **Mosquitto** (MQTT) | localhost:1883 (MQTT), 9883 (WebSocket) | Em desenvolvimento: acesso anonimo (sem usuario/senha) | — |
+
+Para alterar as credenciais do MinIO, defina `MINIO_ROOT_USER` e `MINIO_ROOT_PASSWORD` no ambiente antes de subir o Docker.
 
 ```bash
 make migrate
