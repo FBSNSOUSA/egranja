@@ -3,8 +3,9 @@
  *
  * Estrutura:
  * - Stack Navigator principal: Login -> Main
- * - Drawer Navigator (menu lateral): Home, Lotes Finalizados, Mensagens, Checklist, Configuracoes, Sair
+ * - Drawer Navigator (menu lateral): Home, Lotes Finalizados, Mensagens, Checklist, Sanidade, Financeiro, Relatorios, Configuracoes, Sair
  * - Bottom Tabs no detalhe do lote: Resumo, Pesagens, Mortalidade, Racao, Agua
+ * - Stacks dedicados: Chat, Sanidade, Financeiro, Relatorios
  * - Stacks de formularios: NovaPesagem, NovaMortalidade, NovoRecebimento, NovoConsumo, NovoConsumoAgua, FinalizarLote
  *
  * Fluxo: Login -> Drawer(Home) -> Lote -> Tabs(Resumo|Pesagens|Mortalidade|Racao|Agua)
@@ -41,12 +42,37 @@ import LoteRacaoTab from '@screens/lote/LoteRacaoTab';
 import LoteAguaTab from '@screens/lote/LoteAguaTab';
 import FinalizarLoteScreen from '@screens/lote/FinalizarLoteScreen';
 
-// Formularios
+// Formularios existentes
 import NovaPesagemScreen from '@screens/pesagem/NovaPesagemScreen';
 import NovaMortalidadeScreen from '@screens/mortalidade/NovaMortalidadeScreen';
 import NovoRecebimentoScreen from '@screens/racao/NovoRecebimentoScreen';
 import NovoConsumoScreen from '@screens/racao/NovoConsumoScreen';
 import NovoConsumoAguaScreen from '@screens/agua/NovoConsumoAguaScreen';
+
+// Chat
+import ChatListScreen from '@screens/chat/ChatListScreen';
+import ChatScreen from '@screens/chat/ChatScreen';
+
+// Checklist
+import ChecklistScreenImpl from '@screens/checklist/ChecklistScreen';
+
+// Sanidade
+import VacinacoesScreen from '@screens/sanidade/VacinacoesScreen';
+import NovaVacinacaoScreen from '@screens/sanidade/NovaVacinacaoScreen';
+import MedicamentosScreen from '@screens/sanidade/MedicamentosScreen';
+import NovoMedicamentoScreen from '@screens/sanidade/NovoMedicamentoScreen';
+import VisitantesScreen from '@screens/sanidade/VisitantesScreen';
+import NovoVisitanteScreen from '@screens/sanidade/NovoVisitanteScreen';
+
+// Financeiro
+import FinanceiroResumoScreen from '@screens/financeiro/FinanceiroResumoScreen';
+import CustosScreen from '@screens/financeiro/CustosScreen';
+import NovoCustoScreen from '@screens/financeiro/NovoCustoScreen';
+import RemuneracaoScreen from '@screens/financeiro/RemuneracaoScreen';
+
+// Relatorios
+import RelatoriosScreen from '@screens/relatorios/RelatoriosScreen';
+import ComparativoLotesScreen from '@screens/relatorios/ComparativoLotesScreen';
 
 // ==========================================
 // TIPOS DE NAVEGACAO
@@ -64,6 +90,9 @@ export type DrawerParamList = {
   LotesFinalizados: undefined;
   Mensagens: undefined;
   Checklist: undefined;
+  Sanidade: undefined;
+  Financeiro: undefined;
+  Relatorios: undefined;
   Configuracoes: undefined;
 };
 
@@ -87,6 +116,37 @@ export type HomeStackParamList = {
   NovoConsumoRacao: { loteId: string };
   NovoConsumoAgua: { loteId: string };
   FinalizarLote: { loteId: string };
+};
+
+/** Parametros do stack de Chat */
+export type ChatStackParamList = {
+  ChatList: undefined;
+  Chat: { loteId: string; loteNome: string };
+};
+
+/** Parametros do stack de Sanidade */
+export type SanidadeStackParamList = {
+  SanidadeMenu: undefined;
+  Vacinacoes: { loteId: string; loteNome?: string };
+  NovaVacinacao: { loteId: string };
+  Medicamentos: { loteId: string; loteNome?: string };
+  NovoMedicamento: { loteId: string };
+  Visitantes: { loteId: string; loteNome?: string };
+  NovoVisitante: { loteId: string };
+};
+
+/** Parametros do stack Financeiro */
+export type FinanceiroStackParamList = {
+  FinanceiroResumo: { loteId: string; loteNome?: string };
+  Custos: { loteId: string; loteNome?: string };
+  NovoCusto: { loteId: string };
+  Remuneracao: { loteId: string; loteNome?: string };
+};
+
+/** Parametros do stack de Relatorios */
+export type RelatoriosStackParamList = {
+  RelatoriosList: undefined;
+  ComparativoLotes: undefined;
 };
 
 // ==========================================
@@ -120,9 +180,13 @@ const placeholderStyles = StyleSheet.create({
 });
 
 const LotesFinalizadosScreen: React.FC = () => <PlaceholderScreen title="Lotes Finalizados" />;
-const MensagensScreen: React.FC = () => <PlaceholderScreen title="Mensagens" />;
-const ChecklistScreen: React.FC = () => <PlaceholderScreen title="Checklist Diario" />;
 const ConfiguracoesScreen: React.FC = () => <PlaceholderScreen title="Configuracoes" />;
+
+/**
+ * Menu inicial de Sanidade — permite selecionar lote e modulo (Vacinacoes, Medicamentos, Visitantes).
+ * Tela simples de hub para direcionar ao modulo correto.
+ */
+const SanidadeMenuScreen: React.FC = () => <PlaceholderScreen title="Sanidade e Rastreabilidade" />;
 
 // ==========================================
 // BOTTOM TABS - DETALHE DO LOTE
@@ -274,6 +338,134 @@ const HomeStackNavigator: React.FC = () => {
 };
 
 // ==========================================
+// CHAT STACK
+// ==========================================
+
+const ChatStackNav = createNativeStackNavigator<ChatStackParamList>();
+
+const ChatStackNavigator: React.FC = () => {
+  return (
+    <ChatStackNav.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <ChatStackNav.Screen
+        name="ChatList"
+        component={ChatListScreen}
+      />
+      <ChatStackNav.Screen
+        name="Chat"
+        component={ChatScreen}
+      />
+    </ChatStackNav.Navigator>
+  );
+};
+
+// ==========================================
+// SANIDADE STACK
+// ==========================================
+
+const SanidadeStackNav = createNativeStackNavigator<SanidadeStackParamList>();
+
+const SanidadeStackNavigator: React.FC = () => {
+  return (
+    <SanidadeStackNav.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <SanidadeStackNav.Screen
+        name="SanidadeMenu"
+        component={SanidadeMenuScreen}
+      />
+      <SanidadeStackNav.Screen
+        name="Vacinacoes"
+        component={VacinacoesScreen}
+      />
+      <SanidadeStackNav.Screen
+        name="NovaVacinacao"
+        component={NovaVacinacaoScreen}
+      />
+      <SanidadeStackNav.Screen
+        name="Medicamentos"
+        component={MedicamentosScreen}
+      />
+      <SanidadeStackNav.Screen
+        name="NovoMedicamento"
+        component={NovoMedicamentoScreen}
+      />
+      <SanidadeStackNav.Screen
+        name="Visitantes"
+        component={VisitantesScreen}
+      />
+      <SanidadeStackNav.Screen
+        name="NovoVisitante"
+        component={NovoVisitanteScreen}
+      />
+    </SanidadeStackNav.Navigator>
+  );
+};
+
+// ==========================================
+// FINANCEIRO STACK
+// ==========================================
+
+const FinanceiroStackNav = createNativeStackNavigator<FinanceiroStackParamList>();
+
+const FinanceiroStackNavigator: React.FC = () => {
+  return (
+    <FinanceiroStackNav.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <FinanceiroStackNav.Screen
+        name="FinanceiroResumo"
+        component={FinanceiroResumoScreen}
+      />
+      <FinanceiroStackNav.Screen
+        name="Custos"
+        component={CustosScreen}
+      />
+      <FinanceiroStackNav.Screen
+        name="NovoCusto"
+        component={NovoCustoScreen}
+      />
+      <FinanceiroStackNav.Screen
+        name="Remuneracao"
+        component={RemuneracaoScreen}
+      />
+    </FinanceiroStackNav.Navigator>
+  );
+};
+
+// ==========================================
+// RELATORIOS STACK
+// ==========================================
+
+const RelatoriosStackNav = createNativeStackNavigator<RelatoriosStackParamList>();
+
+const RelatoriosStackNavigator: React.FC = () => {
+  return (
+    <RelatoriosStackNav.Navigator
+      screenOptions={{
+        headerShown: false,
+      }}
+    >
+      <RelatoriosStackNav.Screen
+        name="RelatoriosList"
+        component={RelatoriosScreen}
+      />
+      <RelatoriosStackNav.Screen
+        name="ComparativoLotes"
+        component={ComparativoLotesScreen}
+      />
+    </RelatoriosStackNav.Navigator>
+  );
+};
+
+// ==========================================
 // DRAWER NAVIGATOR (menu lateral)
 // ==========================================
 
@@ -285,6 +477,9 @@ const DRAWER_ICONS: Record<keyof DrawerParamList, string> = {
   LotesFinalizados: 'archive',
   Mensagens: 'message-text',
   Checklist: 'checkbox-marked-outline',
+  Sanidade: 'shield-plus',
+  Financeiro: 'cash-multiple',
+  Relatorios: 'chart-box',
   Configuracoes: 'cog',
 };
 
@@ -395,7 +590,7 @@ const DrawerNavigator: React.FC = () => {
       />
       <Drawer.Screen
         name="Mensagens"
-        component={MensagensScreen}
+        component={ChatStackNavigator}
         options={{
           drawerLabel: 'Mensagens',
           drawerIcon: ({ color, size }) => (
@@ -405,11 +600,41 @@ const DrawerNavigator: React.FC = () => {
       />
       <Drawer.Screen
         name="Checklist"
-        component={ChecklistScreen}
+        component={ChecklistScreenImpl}
         options={{
           drawerLabel: 'Checklist Diario',
           drawerIcon: ({ color, size }) => (
             <IconButton icon={DRAWER_ICONS.Checklist} iconColor={color} size={size} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="Sanidade"
+        component={SanidadeStackNavigator}
+        options={{
+          drawerLabel: 'Sanidade',
+          drawerIcon: ({ color, size }) => (
+            <IconButton icon={DRAWER_ICONS.Sanidade} iconColor={color} size={size} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="Financeiro"
+        component={FinanceiroStackNavigator}
+        options={{
+          drawerLabel: 'Financeiro',
+          drawerIcon: ({ color, size }) => (
+            <IconButton icon={DRAWER_ICONS.Financeiro} iconColor={color} size={size} />
+          ),
+        }}
+      />
+      <Drawer.Screen
+        name="Relatorios"
+        component={RelatoriosStackNavigator}
+        options={{
+          drawerLabel: 'Relatorios',
+          drawerIcon: ({ color, size }) => (
+            <IconButton icon={DRAWER_ICONS.Relatorios} iconColor={color} size={size} />
           ),
         }}
       />

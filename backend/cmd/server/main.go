@@ -14,6 +14,7 @@ import (
 	"github.com/FBSNSOUSA/egranja/backend/internal/middleware"
 	"github.com/FBSNSOUSA/egranja/backend/internal/repository"
 	"github.com/FBSNSOUSA/egranja/backend/internal/service"
+	ws "github.com/FBSNSOUSA/egranja/backend/internal/websocket"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -73,6 +74,18 @@ func main() {
 		custoRepo, remuneracaoRepo, indicadoresService, logger,
 	)
 
+	alertaService := service.NewAlertaService(
+		loteRepo, mortalidadeRepo, pesagemRepo, waterRepo, feedRepo,
+		checklistRepo, indicadoresService, usuarioRepo, logger,
+	)
+	notificacaoService := service.NewFirebaseNotificacaoService(cfg.FirebaseCredentialsFile, logger)
+	_ = notificacaoService // Sera usado futuramente para enviar push em alertas criticos
+
+	// ── WebSocket Hub ───────────────────────────────────────────────────
+	wsHub := ws.NewHub(logger)
+	go wsHub.Run()
+	logger.Info("WebSocket Hub iniciado")
+
 	// ── Handlers ────────────────────────────────────────────────────────
 	authHandler := handler.NewAuthHandler(authService, logger)
 	healthHandler := handler.NewHealthHandler(db)
@@ -99,6 +112,8 @@ func main() {
 	syncHandler := handler.NewSyncHandler(db, logger)
 	uploadHandler := handler.NewUploadHandler(uploadService, logger)
 	tipoRacaoHandler := handler.NewTipoRacaoHandler(tipoRacaoRepo, logger)
+	wsHandler := handler.NewWSHandler(wsHub, mensagemRepo, loteRepo, cfg.JWTSecret, logger)
+	alertaHandler := handler.NewAlertaHandler(alertaService, loteRepo, logger)
 
 	// ── Gin Router ──────────────────────────────────────────────────────
 	gin.SetMode(cfg.GinMode)
@@ -116,6 +131,12 @@ func main() {
 	// ── Rotas ───────────────────────────────────────────────────────────
 	// Health check (sem autenticacao)
 	router.GET("/health", healthHandler.Check)
+
+	// WebSocket (autenticacao via query param token)
+	wsGroup := router.Group("/ws")
+	{
+		wsGroup.GET("/lotes/:id", wsHandler.HandleWebSocket)
+	}
 
 	// API v1
 	api := router.Group("/api/v1")
@@ -189,6 +210,10 @@ func main() {
 		protected.POST("/lotes/:id/mensagens", mensagemHandler.Create)
 		protected.PATCH("/mensagens/:mid/lida", mensagemHandler.MarcarLida)
 		protected.POST("/lotes/:id/visitas", mensagemHandler.CriarVisita)
+
+		// Alertas
+		protected.GET("/lotes/:id/alertas", alertaHandler.ListByLote)
+		protected.GET("/alertas", alertaHandler.ListAll)
 
 		// WhatsApp
 		protected.GET("/lotes/:id/whatsapp_recipients", whatsappHandler.ListRecipients)
