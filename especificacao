@@ -2,7 +2,7 @@
 
 **Status:** Revisao completa -- Analise de Negocios + Arquitetura de Software
 **Data:** 07 de Marco de 2026
-**Revisao:** v4.0 -- Escopo completo v1.0 com IA (Gemini), IoT, multi-granja, financeiro, rastreabilidade, previsao do tempo, geolocalizacao de galpoes
+**Revisao:** v4.0 -- Escopo completo v1.0 com IA (Gemini), IoT, multi-granja, financeiro, rastreabilidade, previsao do tempo, geolocalizacao de galpoes + modulo integradora (fase futura)
 
 ---
 
@@ -1592,19 +1592,357 @@ WS_BASE_URL=wss://api.egranja.com.br/api/v1/ws
 
 ---
 
-### **9. Pontos de Extensao Futura**
+### **9. Modulo Integradora (Fase Futura -- Arquitetura Preparada)**
+
+Este modulo NAO sera desenvolvido no v1.0, mas a arquitetura do sistema esta preparada para recebe-lo sem refatoracao significativa. O objetivo e permitir que integradoras (BRF, Seara, JBS, Aurora, etc.) adotem o eGranja como plataforma de gestao dos seus integrados.
+
+#### **9.1. Preparacoes Arquiteturais no v1.0**
+
+Para garantir compatibilidade futura, o v1.0 ja implementa:
+
+  * **Campo `tipo` em `usuarios` extensivel:** Atualmente aceita `produtor` e `tecnico`. A migração futura adicionara: `admin_integradora`, `gerente_nucleo`, `supervisor`. Usar ALTER TABLE + CHECK para expandir sem quebrar dados existentes.
+  * **Tabela `granjas` com estrutura independente:** Ja suporta multiplas granjas por usuario. Futuramente recebera FK `integradora_id` opcional (NULL para produtores independentes).
+  * **Tabela `tecnico_produtores` generica:** O vinculo tecnico-produtor ja existe e sera reaproveitado. Futuramente o tecnico sera vinculado via integradora.
+  * **API com prefixo `/api/v1`:** Os endpoints da integradora serao adicionados sob `/api/v1/integradora/...` sem conflito.
+  * **JWT com claims extensiveis:** O token ja carrega `tipo` do usuario. Middleware de autorizacao pode ser estendido para novos perfis sem alterar os existentes.
+  * **Dados financeiros estruturados:** Tabelas `custos_lote` e `remuneracoes` ja armazenam dados que a integradora consumira.
+  * **Rastreabilidade pronta:** Cadeia de hashes, vacinacoes, medicamentos, visitantes ja registram tudo que a integradora precisa auditar.
+
+#### **9.2. Hierarquia de Perfis (Fase Futura)**
+
+```
+INTEGRADORA (organizacao)
+├── Admin Integradora (visao total, configuracoes, formulas de pagamento)
+├── Gerente de Nucleo (visao regional, N nucleos)
+│   ├── Supervisor (visao de N tecnicos)
+│   │   ├── Tecnico de Campo (15-30 granjas)  <-- ja existe no v1.0
+│   │   │   ├── Produtor 1                     <-- ja existe no v1.0
+│   │   │   ├── Produtor 2
+│   │   │   └── ...
+│   │   └── ...
+│   └── ...
+└── ...
+```
+
+**Permissoes por perfil:**
+
+| Perfil | Visibilidade | Acoes |
+|--------|-------------|-------|
+| Admin Integradora | Todos os nucleos, tecnicos e produtores | Configurar formulas de remuneracao, programar alojamentos/abates, criar nucleos, gerenciar usuarios, broadcast, relatorios consolidados |
+| Gerente de Nucleo | Tecnicos e produtores do seu nucleo | Programar alojamentos do nucleo, redistribuir tecnicos, relatorios do nucleo, aprovar GTAs |
+| Supervisor | Tecnicos sob sua gestao | Acompanhar desempenho dos tecnicos, auditoria de visitas, escalar alertas |
+| Tecnico | Produtores vinculados | *(ja implementado no v1.0)* |
+| Produtor | Suas granjas e lotes | *(ja implementado no v1.0)* |
+
+#### **9.3. Tabelas Adicionais (Fase Futura)**
+
+```sql
+-- Integradora (organizacao)
+CREATE TABLE integradoras (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    nome VARCHAR(200) NOT NULL,
+    cnpj VARCHAR(18) UNIQUE,
+    logo_url TEXT,
+    cor_primaria VARCHAR(7) DEFAULT '#D32F2F',
+    cor_secundaria VARCHAR(7) DEFAULT '#1565C0',
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+    updated_at TIMESTAMP NOT NULL DEFAULT now()
+);
+
+-- Nucleos regionais da integradora
+CREATE TABLE nucleos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    integradora_id UUID NOT NULL REFERENCES integradoras(id),
+    nome VARCHAR(200) NOT NULL,
+    regiao VARCHAR(100),
+    gerente_id UUID REFERENCES usuarios(id),
+    created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_nucleos_integradora ON nucleos(integradora_id);
+
+-- Vinculo usuario <-> integradora (com perfil)
+CREATE TABLE integradora_usuarios (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    integradora_id UUID NOT NULL REFERENCES integradoras(id),
+    usuario_id UUID NOT NULL REFERENCES usuarios(id),
+    perfil VARCHAR(30) NOT NULL
+        CHECK (perfil IN ('admin_integradora','gerente_nucleo','supervisor','tecnico','produtor')),
+    nucleo_id UUID REFERENCES nucleos(id),
+    ativo BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+    UNIQUE(integradora_id, usuario_id)
+);
+
+-- Programacao de alojamento
+CREATE TABLE programacoes_alojamento (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    integradora_id UUID NOT NULL REFERENCES integradoras(id),
+    granja_id UUID NOT NULL REFERENCES granjas(id),
+    galpao_id UUID NOT NULL REFERENCES galpaos(id),
+    data_prevista DATE NOT NULL,
+    quantidade_prevista INTEGER NOT NULL,
+    linhagem VARCHAR(50),
+    status VARCHAR(20) NOT NULL DEFAULT 'programado'
+        CHECK (status IN ('programado','confirmado','alojado','cancelado')),
+    lote_id UUID REFERENCES lotes(id),
+    observacao TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+
+-- Programacao de abate
+CREATE TABLE programacoes_abate (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    integradora_id UUID NOT NULL REFERENCES integradoras(id),
+    lote_id UUID NOT NULL REFERENCES lotes(id),
+    data_prevista DATE NOT NULL,
+    peso_alvo_kg NUMERIC(8,3),
+    frigorifico VARCHAR(200),
+    turno VARCHAR(20),
+    status VARCHAR(20) NOT NULL DEFAULT 'programado'
+        CHECK (status IN ('programado','confirmado','realizado','cancelado')),
+    observacao TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+
+-- Entregas de racao (integradora -> produtor)
+CREATE TABLE entregas_racao (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    integradora_id UUID NOT NULL REFERENCES integradoras(id),
+    lote_id UUID NOT NULL REFERENCES lotes(id),
+    data_entrega DATE NOT NULL,
+    tipo_racao_id UUID REFERENCES tipos_racao(id),
+    quantidade_kg NUMERIC(12,3) NOT NULL,
+    lote_racao VARCHAR(100),
+    nota_fiscal VARCHAR(50),
+    motorista VARCHAR(200),
+    placa_veiculo VARCHAR(20),
+    recebido_por VARCHAR(200),
+    created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+
+-- Score do produtor (ranking de desempenho)
+CREATE TABLE scores_produtor (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    integradora_id UUID NOT NULL REFERENCES integradoras(id),
+    produtor_id UUID NOT NULL REFERENCES usuarios(id),
+    lote_id UUID NOT NULL REFERENCES lotes(id),
+    iep NUMERIC(8,2),
+    ca NUMERIC(6,3),
+    mortalidade_pct NUMERIC(6,3),
+    score_calculado NUMERIC(8,2),
+    ranking_nucleo INTEGER,
+    ranking_geral INTEGER,
+    bonificacao_pct NUMERIC(6,2),
+    created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+
+-- Contratos de integracao (Lei 13.288/2016)
+CREATE TABLE contratos_integracao (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    integradora_id UUID NOT NULL REFERENCES integradoras(id),
+    produtor_id UUID NOT NULL REFERENCES usuarios(id),
+    numero_contrato VARCHAR(50),
+    data_inicio DATE NOT NULL,
+    data_fim DATE,
+    formula_remuneracao TEXT,
+    documento_url TEXT,
+    status VARCHAR(20) NOT NULL DEFAULT 'ativo'
+        CHECK (status IN ('ativo','suspenso','encerrado')),
+    created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+
+-- Comunicacao em massa (broadcast)
+CREATE TABLE broadcasts (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    integradora_id UUID NOT NULL REFERENCES integradoras(id),
+    remetente_id UUID NOT NULL REFERENCES usuarios(id),
+    titulo VARCHAR(200) NOT NULL,
+    mensagem TEXT NOT NULL,
+    destinatarios VARCHAR(30) NOT NULL
+        CHECK (destinatarios IN ('todos','nucleo','tecnicos','produtores')),
+    nucleo_id UUID REFERENCES nucleos(id),
+    prioridade VARCHAR(10) DEFAULT 'normal'
+        CHECK (prioridade IN ('normal','alta','urgente')),
+    created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+
+-- Formula de remuneracao configuravel
+CREATE TABLE formulas_remuneracao (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    integradora_id UUID NOT NULL REFERENCES integradoras(id),
+    nome VARCHAR(200) NOT NULL,
+    descricao TEXT,
+    tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('por_iep','por_kg','por_ave','customizada')),
+    parametros JSONB NOT NULL DEFAULT '{}',
+    ativa BOOLEAN NOT NULL DEFAULT true,
+    created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+```
+
+#### **9.4. Funcionalidades do Modulo Integradora**
+
+  * **Painel Administrativo (Dashboard Web):**
+      * Visao consolidada de TODOS os produtores integrados: total de aves, mortalidade media, IEP medio, lotes ativos por nucleo.
+      * Mapa geografico com todas as granjas, coloridas por desempenho (verde/amarelo/vermelho).
+      * KPIs comparativos: nucleo vs nucleo, tecnico vs tecnico, safra vs safra.
+      * Painel de compliance: produtores com vacinacoes pendentes, carencia de medicamentos, biosseguridade vencida.
+
+  * **Programacao de Alojamento:**
+      * Calendario visual de alojamentos programados por nucleo/galpao.
+      * Algoritmo de sugestao: considera vazio sanitario, historico do galpao, capacidade, proximidade do frigorifico.
+      * Confirmacao pelo produtor via app (push notification).
+      * Rastreabilidade: lote de pintinhos, incubatorio de origem, linhagem.
+
+  * **Programacao de Abate:**
+      * Baseado na predicao de peso da IA (Gemini) + capacidade do frigorifico.
+      * Calendario de apanha com turnos e equipes.
+      * Alerta automatico ao produtor: jejum alimentar, preparacao do galpao.
+
+  * **Gestao de Racao:**
+      * Controle de entregas da fabrica ao produtor (NF, motorista, placa).
+      * Reconciliacao: racao entregue vs consumida vs sobra.
+      * Alerta de reposicao automatico (estoque < 2 dias).
+      * Rastreabilidade: lote da racao → lote do frango.
+
+  * **Score e Ranking do Produtor:**
+      * Calculo automatico baseado em: IEP (40%), CA (25%), mortalidade (20%), compliance (15%).
+      * Ranking por nucleo e geral.
+      * Score influencia: prioridade de alojamento, bonificacao financeira, acesso a programas de incentivo.
+      * Gamificacao: badges, evolucao historica, metas.
+
+  * **Calculo Automatico de Remuneracao:**
+      * Formulas configuraveis por integradora (JSONB parametrizavel).
+      * Exemplos de formulas:
+          * Por IEP: `base + (IEP - IEP_referencia) * valor_ponto`
+          * Por kg: `peso_total * valor_kg * fator_qualidade`
+      * Simulacao: "Se o lote fechar com IEP 380, a remuneracao sera R$ X.XXX"
+      * Integracao com sistema de pagamento da integradora (via API).
+
+  * **Contratos de Integracao (Lei 13.288/2016):**
+      * Cadastro do contrato com upload do documento PDF.
+      * Campos: formula de remuneracao, prazos, obrigacoes.
+      * Alerta de vencimento (90, 60, 30 dias antes).
+      * Transparencia: produtor pode consultar seu contrato e simular remuneracao.
+
+  * **Comunicacao em Massa (Broadcast):**
+      * Admin/gerente envia comunicado para: todos, nucleo especifico, so tecnicos, so produtores.
+      * Prioridades: normal, alta, urgente (urgente = push imediato).
+      * Exemplos: "Frente fria prevista para quinta-feira", "Novo protocolo de vacinacao Newcastle", "Programacao de abate semana 12".
+      * Historico de broadcasts com confirmacao de leitura.
+
+  * **Onboarding de Produtores:**
+      * Fluxo: admin cria conta → produtor recebe convite por SMS/WhatsApp → produtor completa cadastro → tecnico vinculado automaticamente.
+      * Checklist de propriedade: capacidade dos galpoes, equipamentos, certificacoes.
+      * Aprovacao pelo gerente de nucleo.
+
+  * **Auditoria e Compliance:**
+      * Dashboard de conformidade sanitaria: vacinacoes, medicamentos, carencias.
+      * Historico de visitas tecnicas por produtor (frequencia, notas, pendencias).
+      * Exportacao para orgaos reguladores (MAPA, defesa sanitaria estadual).
+      * Rastreabilidade completa: do pintinho ao frigorifico (integrando com cadeia de hashes do v1.0).
+
+  * **White-Label:**
+      * Integradora pode personalizar: logo, cores (tabela `integradoras`), nome do app.
+      * Build separado ou configuracao por tenant.
+      * Dominio proprio para dashboard web (ex: granjas.brf.com.br).
+
+#### **9.5. Endpoints da API (Fase Futura -- prefixo `/api/v1/integradora`)**
+
+```
+# Gestao
+GET    /integradora/dashboard           -- Dashboard consolidado
+GET    /integradora/nucleos             -- Lista nucleos
+POST   /integradora/nucleos             -- Cria nucleo
+GET    /integradora/nucleos/{id}        -- Detalhes do nucleo com indicadores
+GET    /integradora/produtores          -- Lista todos os produtores integrados
+POST   /integradora/produtores/onboard  -- Convite para novo produtor
+
+# Programacao
+GET    /integradora/alojamentos         -- Lista programacoes de alojamento
+POST   /integradora/alojamentos         -- Programa novo alojamento
+PATCH  /integradora/alojamentos/{id}    -- Atualiza status
+GET    /integradora/abates              -- Lista programacoes de abate
+POST   /integradora/abates              -- Programa abate
+PATCH  /integradora/abates/{id}         -- Atualiza status
+
+# Racao
+GET    /integradora/entregas-racao      -- Lista entregas
+POST   /integradora/entregas-racao      -- Registra entrega
+GET    /integradora/racao/reconciliacao  -- Reconciliacao entregue vs consumido
+
+# Score e financeiro
+GET    /integradora/scores              -- Ranking de produtores
+GET    /integradora/scores/{produtor_id} -- Score detalhado
+GET    /integradora/remuneracao/simular -- Simulacao de pagamento
+POST   /integradora/remuneracao/calcular -- Calcula remuneracao do lote
+GET    /integradora/formulas            -- Lista formulas de remuneracao
+POST   /integradora/formulas            -- Cria formula
+
+# Contratos
+GET    /integradora/contratos           -- Lista contratos
+POST   /integradora/contratos           -- Cria contrato
+GET    /integradora/contratos/{id}      -- Detalhes
+
+# Comunicacao
+POST   /integradora/broadcast           -- Envia comunicado em massa
+GET    /integradora/broadcast/historico  -- Historico de comunicados
+
+# Compliance
+GET    /integradora/compliance          -- Painel de conformidade
+GET    /integradora/compliance/export   -- Exportacao para MAPA
+GET    /integradora/auditoria/visitas   -- Historico de visitas por produtor
+```
+
+#### **9.6. Estrutura Adicional no Repositorio (Fase Futura)**
+
+```
+backend/
+├── internal/
+│   ├── handler/
+│   │   └── integradora/         # Handlers do modulo integradora
+│   │       ├── dashboard.go
+│   │       ├── nucleos.go
+│   │       ├── programacao.go
+│   │       ├── racao.go
+│   │       ├── score.go
+│   │       ├── remuneracao.go
+│   │       ├── contratos.go
+│   │       ├── broadcast.go
+│   │       └── compliance.go
+│   ├── service/
+│   │   ├── score.go             # Calculo de score
+│   │   └── remuneracao.go       # Motor de formulas
+│   └── middleware/
+│       └── integradora_auth.go  # Middleware de autorizacao hierarquica
+web/
+├── src/
+│   └── pages/
+│       └── integradora/         # Paginas do painel da integradora
+│           ├── dashboard/
+│           ├── nucleos/
+│           ├── produtores/
+│           ├── programacao/
+│           ├── scores/
+│           ├── remuneracao/
+│           ├── contratos/
+│           └── compliance/
+```
+
+---
+
+### **10. Pontos de Extensao Futura**
 
   * Visao computacional para contagem de aves e estimativa de peso por camera.
   * Integracao WhatsApp Business API para envios automatizados (sem depender de deep link).
   * Migracao da cadeia de hashes para blockchain publica (Hyperledger/Polygon).
-  * Integracao com ERPs de integradoras (BRF, Seara, JBS) via API.
   * Marketplace de insumos avicolas integrado ao app.
   * Modulo de gestao de matrizes e incubatorio.
   * App para visitantes/motoristas (check-in/check-out digital com QR Code).
+  * Integracao com ERPs de integradoras (SAP, Totvs) via API bidirecional.
 
 ---
 
-### **10. Referencias e Fontes**
+### **11. Referencias e Fontes**
 
   * Embrapa -- Frango de Corte (Manejo, Sanidade, Desempenho Zootecnico, Nutricao)
   * Cobb 500 -- Performance & Nutrition Supplement 2022
