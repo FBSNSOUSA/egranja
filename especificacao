@@ -2,7 +2,7 @@
 
 **Status:** Revisao completa -- Analise de Negocios + Arquitetura de Software
 **Data:** 07 de Marco de 2026
-**Revisao:** v3.0 -- Refinamento de negocios com pesquisa tecnica avicola
+**Revisao:** v4.0 -- Escopo completo v1.0 com IA (Gemini), IoT, multi-granja, financeiro, rastreabilidade, previsao do tempo, geolocalizacao de galpoes
 
 ---
 
@@ -10,7 +10,7 @@
 
   * **Nome do Projeto:** eGranja
   * **Objetivo:** Aplicativo movel multiplataforma (React Native) com backend em Go para gestao completa de aviarios de corte. O sistema prioriza simplicidade, operacao offline-first, orientacao tecnica ao produtor e comunicacao direta produtor-tecnico.
-  * **Plataformas:** Android (prioritario) e iOS. Futuramente, dashboard web administrativo.
+  * **Plataformas:** Android (prioritario), iOS e **Dashboard Web** para administradores e integradoras.
   * **Publico-alvo prioritario:**
       * Produtores integrados que querem mais controle alem do app da integradora
       * Produtores independentes que nao possuem nenhuma ferramenta digital
@@ -22,7 +22,12 @@
       * **Comunicacao Direta Produtor-Tecnico:** Chat integrado com envio de fotos, audio e solicitacoes formais do tecnico, eliminando a necessidade de usar WhatsApp pessoal para diligencias.
       * **Controle Completo de Racao:** Recebimentos, consumo, sobras, transferencia entre lotes e calculo preciso de todos os indices zootecnicos.
       * **Compartilhamento via WhatsApp:** Relatorios formatados de pesagem, mortalidade e resumo diario enviados via deep link.
-      * **Integracao IoT (futuro proximo):** Preparado para receber dados de sensores (temperatura, umidade, amonia, peso automatico, consumo de agua).
+      * **Integracao IoT:** Recebe dados de sensores (temperatura, umidade, amonia, peso automatico, consumo de agua) via MQTT/LoRaWAN.
+      * **IA Preditiva (Gemini API):** Predicao de peso ao abate, deteccao de anomalias, recomendacoes automaticas de manejo, analise de fotos do galpao.
+      * **Multi-granja:** Usuario gerencia aviarios em propriedades diferentes com visao consolidada.
+      * **Modulo Financeiro:** Custos de producao, remuneracao da integradora, resultado liquido por lote.
+      * **Rastreabilidade Completa:** Vacinacoes, medicamentos (Portaria SDA 798/2023), visitantes, biosseguridade, GTA digital.
+      * **Dashboard Web:** Painel agregado para administradores e integradoras com comparativo inter-granja.
   * **Identidade Visual:** Vermelho (#D32F2F), branco (#FFFFFF) e azul (#1565C0).
   * **Idioma:** Portugues (Brasil).
 
@@ -129,6 +134,30 @@ O eGranja preenche um vazio no mercado brasileiro entre:
       * **Linhagem:** Dropdown com "Cobb 500", "Ross 308", "Hubbard", "Outra". Quando selecionada, ativa comparacao automatica com benchmarks.
       * **Peso Inicial (g):** Padrao 42g (Cobb 500) ou 42g (Ross 308), editavel.
   * Se offline: salva localmente. Se online: chama API e atualiza Home.
+
+  **Cadastro de Galpao (campos adicionais v4):**
+  * **Localizacao GPS:** Captura automatica via GPS do celular ou marcacao no mapa. Latitude/longitude do galpao.
+  * **Orientacao (graus):** Angulo de orientacao do eixo longitudinal do galpao em relacao ao norte (0-359). Pode ser capturado via bussola do celular ou informado manualmente. Recomendacao: eixo leste-oeste para menor incidencia solar.
+  * **Dimensoes:** Comprimento e largura em metros (para calculo de area e densidade).
+  * **Tipo de ventilacao:** Convencional (cortinas), Tunel, Dark House, Misto.
+  * **Lado das cortinas:** Indica quais laterais possuem cortinas (relevante para analise de impacto do vento).
+  * Esses dados sao usados para:
+      * Cruzar orientacao do galpao com direcao do vento (previsao do tempo) e gerar alertas especificos: "Vento de 45 km/h previsto do sul as 15h. Galpao orientado N-S com cortinas abertas no lado sul -- risco de estresse por corrente de ar. Recomendacao: fechar cortinas do lado sul."
+      * Calcular incidencia solar por horario (baseado em orientacao + latitude).
+      * Calcular densidade (aves/m2) automaticamente.
+      * Visualizar no mapa a disposicao dos galpoes da granja.
+
+  **Visualizacao Grafica do Galpao e Vento:**
+  * **Mapa da granja:** Tela com mapa (react-native-maps / Mapbox) mostrando a localizacao de cada galpao como retangulo orientado (representando comprimento, largura e orientacao real).
+  * **Rosa dos ventos animada:** Sobre o mapa, indicador de direcao e velocidade do vento atual/previsto com seta animada.
+  * **Incidencia do vento no galpao:** Visualizacao grafica que mostra:
+      * Retangulo do galpao na orientacao real (baseado no angulo em graus).
+      * Seta de vento indicando de onde vem e a intensidade (tamanho proporcional a velocidade).
+      * Laterais do galpao coloridas: verde (protegida), amarelo (exposicao parcial), vermelho (exposicao direta ao vento).
+      * Indica qual lado das cortinas esta recebendo vento direto.
+  * **Simulacao por horario:** Slider de tempo (proximas 24h) para ver como a direcao do vento muda ao longo do dia e qual impacto em cada galpao.
+  * **Incidencia solar:** Representacao grafica da trajetoria solar sobre o galpao (leste-oeste), mostrando quais laterais recebem sol direto em cada horario. Util para decidir posicionamento de cortinas e nebulizacao.
+  * **Dashboard Web:** Mesma visualizacao no dashboard web com mapa interativo e dados de todos os galpoes da granja.
 
 #### **4.5. Tela de Detalhes do Lote**
 
@@ -362,6 +391,206 @@ Organizada em **5 abas**:
     IEP atual: [XXX]
     ```
 
+#### **4.13. Multi-Granja** *(NOVO v4)*
+
+  * **Modelo:** Um usuario pode ter multiplas **granjas** (propriedades). Cada granja tem seus galpoes.
+  * **Tela de selecao de granja:** Ao abrir o app, se o usuario tem mais de uma granja, seleciona qual visualizar. Opcao "Todas" para visao consolidada.
+  * **Dashboard consolidado:** Administrador ve indicadores agregados de todas as granjas: total de aves, mortalidade media, IEP medio, lotes ativos.
+  * **Comparativo inter-granja:** Ranking de desempenho entre granjas do mesmo usuario.
+
+#### **4.14. Modulo de Sanidade e Rastreabilidade** *(NOVO v4)*
+
+  * **Registro de Vacinacoes:**
+      * Data, tipo de vacina, lote do produto, via de administracao, responsavel.
+      * Calendario de vacinacao com lembretes push.
+      * Historico completo por lote.
+
+  * **Registro de Medicamentos:**
+      * Data inicio/fim, medicamento, dosagem, via, periodo de carencia, responsavel.
+      * Alerta de periodo de carencia antes do abate.
+      * Rastreabilidade conforme Portaria SDA 798/2023 (minimo 2 anos de registro).
+
+  * **Controle de Visitantes (Livro de Registro Digital):**
+      * Nome, documento, origem, motivo, ultimo contato com aves, placa do veiculo.
+      * Data/hora entrada e saida.
+      * Alerta se visitante teve contato com aves < 48h (vazio sanitario).
+
+  * **Biosseguridade:**
+      * Checklist de biosseguridade: pediluvio, arco de desinfeccao, cerca perimetral, banho/troca de roupa.
+      * Registro fotografico das condicoes.
+      * Score de biosseguridade do galpao.
+
+  * **GTA Digital (Guia de Transito Animal):**
+      * Preenchimento dos dados do lote para geracao do formulario GTA.
+      * Campos: origem, destino, quantidade, especie, finalidade, certificado sanitario.
+      * Exportacao em PDF para impressao/envio.
+
+#### **4.15. Modulo Financeiro** *(NOVO v4)*
+
+  * **Custos de Producao por Lote:**
+      * Categorias de custo: mao de obra, energia eletrica, aquecimento (gas/lenha), cama do aviario, manutencao, depreciacao, agua, outros.
+      * Entrada manual de valores por categoria.
+      * Calculo automatico: custo total, custo por kg produzido, custo por ave.
+
+  * **Remuneracao da Integradora:**
+      * Registro do valor recebido da integradora pelo lote.
+      * Campo para tipo de remuneracao: por kg, por ave, por IEP.
+
+  * **Resultado Liquido:**
+      * Receita (remuneracao) - Custos = Resultado.
+      * Margem por kg, margem por ave.
+      * Comparativo de resultado entre lotes.
+
+  * **Relatorio Financeiro:**
+      * Exportacao PDF com breakdown de custos e receitas.
+      * Grafico de evolucao de resultado por lote ao longo do tempo.
+
+#### **4.16. IA Preditiva (Gemini API)** *(NOVO v4)*
+
+  * **Integracao:** Backend Go consome a API Google Gemini (modelo gemini-2.0-flash ou gemini-2.5-pro) para funcionalidades de IA.
+
+  * **Predicao de Peso ao Abate:**
+      * Com base nos dados reais do lote (pesagens, consumo de racao, mortalidade, temperatura, linhagem), o sistema envia prompt estruturado ao Gemini para prever o peso medio na data prevista de abate.
+      * Exibido na aba Resumo: "IA preve peso medio de X.XXX g no dia DD/MM (confianca: alta/media/baixa)".
+      * Recalculado a cada nova pesagem registrada.
+
+  * **Deteccao de Anomalias:**
+      * Analise diaria dos dados registrados vs historico e benchmarks.
+      * O Gemini recebe os dados dos ultimos 7 dias + historico do lote + benchmarks da linhagem.
+      * Retorna alertas inteligentes: "Mortalidade nos ultimos 3 dias esta 40% acima do padrao para Cobb 500 aos 18 dias. Possíveis causas: qualidade da agua, temperatura inadequada, problemas com racao. Recomendacao: verificar cloro na ponta do bebedouro e temperatura da cama."
+
+  * **Recomendacoes de Manejo:**
+      * Com base na fase do lote, dados atuais e condicoes ambientais, o Gemini gera orientacoes contextualizadas.
+      * Exemplo: "Lote com 21 dias, temperatura externa prevista de 35C amanha. Recomendacao: verificar sistema de nebulizacao, aumentar ventilacao, garantir agua fresca disponivel."
+      * Acessivel via botao "Orientacoes IA" na aba Resumo.
+
+  * **Analise de Fotos do Galpao:**
+      * Quando produtor ou tecnico envia foto pelo chat, o sistema pode opcionalmente enviar ao Gemini Vision para analise.
+      * Identificacao automatica: condicao da cama (seca/umida/compactada), distribuicao das aves (uniforme/aglomeradas = estresse termico), condicao de equipamentos.
+      * Resposta exibida como mensagem do sistema no chat: "Analise da foto: cama aparenta umidade excessiva na area proxima aos bebedouros. Verificar possiveis vazamentos."
+
+  * **Assistente Virtual (Chat com IA):**
+      * O produtor pode fazer perguntas ao "Assistente eGranja" sobre manejo, sanidade, nutricao.
+      * O Gemini recebe como contexto: dados do lote atual, fase, linhagem, historico.
+      * Exemplo: Produtor pergunta "Meus frangos estao com as patas inchadas, o que pode ser?" -> IA responde com possiveis causas e recomendacoes, sugerindo contatar o tecnico se necessario.
+
+  * **Implementacao tecnica:**
+      * Backend Go faz chamadas a API Gemini com prompts estruturados (system prompt com contexto avicola + dados do lote).
+      * Cache de respostas: predicoes recalculadas max 1x/dia ou apos novo registro.
+      * Fallback: se API indisponivel, app funciona normalmente sem IA.
+      * Rate limit: max 100 chamadas Gemini/dia por usuario (controle no backend).
+
+#### **4.17. Dashboard Web (Administradores e Integradoras)** *(NOVO v4)*
+
+  * **Tecnologia:** React (web) reaproveitando logica do mobile.
+  * **Acesso:** Via navegador, autenticado com mesmo JWT do app.
+  * **Funcionalidades:**
+      * Visao consolidada de todas as granjas, galpoes e lotes.
+      * Graficos interativos de desempenho (IEP, mortalidade, peso, CA) por granja/galpao/lote.
+      * Ranking de lotes por IEP.
+      * Comparativo inter-granja e inter-lote com filtros por periodo.
+      * Mapa de calor: visualizacao geografica das granjas com indicadores.
+      * Exportacao de relatorios em PDF/CSV/Excel com graficos.
+      * Gerenciamento de usuarios (produtores, tecnicos, vinculos).
+      * Visualizacao do historico de comunicacao produtor-tecnico.
+      * Painel de alertas ativos de todas as granjas.
+      * Dados IoT em tempo real (quando disponivel).
+
+#### **4.18. Integracao IoT** *(NOVO v4 -- promovido de futuro para v1)*
+
+  * **Arquitetura:**
+    ```
+    Sensores -> LoRaWAN/Zigbee -> Gateway -> MQTT Broker (Mosquitto)
+                                                |
+                                          Backend Go (subscriber MQTT)
+                                                |
+                                    +-----+-----+-----+
+                                    |     |     |     |
+                                  PostgreSQL  WebSocket  Push   Gemini
+                                              (app)    (alerta) (analise)
+    ```
+
+  * **Sensores suportados:**
+
+  | Sensor | Protocolo | Dado | Frequencia |
+  |--------|-----------|------|------------|
+  | Temperatura (NTC/DS18B20) | LoRaWAN/MQTT | Temp. interna (3-6 pontos) | 5 min |
+  | Umidade (capacitivo) | LoRaWAN/MQTT | Umidade relativa | 5 min |
+  | Amonia NH3 (DOL 53) | 0-10V via gateway | ppm | 15 min |
+  | CO2 (NDIR) | Gateway/MQTT | ppm | 15 min |
+  | Balanca automatica | Wi-Fi/MQTT | Peso medio | Continuo |
+  | Hidrometro digital | Pulso/gateway | Consumo agua (L) | Continuo |
+  | Celula de carga silo | Gateway | Consumo racao (kg) | Continuo |
+  | Luminosidade (LDR) | Gateway | lux | 30 min |
+
+  * **Backend MQTT Subscriber:**
+      * O backend Go conecta ao broker MQTT e escuta topicos por galpao: `egranja/{galpao_id}/temperatura`, `egranja/{galpao_id}/umidade`, etc.
+      * Dados recebidos sao salvos em `registros_ambientais` com `origem = 'iot'`.
+      * Quando dados ultrapassam limites (ex: temp > 33C, NH3 > 20ppm), alerta push e disparado imediatamente.
+      * Dados de peso e consumo (agua/racao) automaticos atualizam os registros do lote sem intervencao manual.
+
+  * **Tela IoT no app:**
+      * Novo item no drawer: "Sensores".
+      * Dashboard em tempo real: temperatura, umidade, NH3, CO2 com graficos live (via WebSocket).
+      * Historico de dados ambientais com graficos de 24h/7dias/30dias.
+      * Status de cada sensor: online/offline/bateria.
+
+  * **Endpoint IoT:**
+      * `POST /api/v1/iot/{galpao_id}/dados` -- Recebe payload JSON de sensores (autenticado por API key do gateway).
+      * `GET /api/v1/iot/{galpao_id}/status` -- Status dos sensores.
+      * `GET /api/v1/iot/{galpao_id}/historico` -- Historico de dados ambientais.
+
+#### **4.19. Blockchain para Rastreabilidade** *(NOVO v4)*
+
+  * **Objetivo:** Registrar eventos criticos do ciclo de vida do lote de forma imutavel para rastreabilidade farm-to-table.
+  * **Eventos registrados on-chain:**
+      * Alojamento do lote (data, quantidade, linhagem, galpao)
+      * Vacinacoes e medicamentos
+      * Finalizacao do lote (peso, mortalidade, CA, IEP)
+      * GTA emitida
+  * **Implementacao:** Hash SHA-256 dos dados do evento armazenado em uma blockchain simples (pode ser Hyperledger Fabric, Polygon ou registro proprio com cadeia de hashes no PostgreSQL como MVP).
+  * **Consulta:** QR Code gerado por lote que permite verificar historico imutavel.
+  * **Nota:** Para v1.0, implementar como cadeia de hashes no PostgreSQL (blockchain simplificada). Migracao para blockchain publica como evolucao futura.
+
+#### **4.20. Integracao com Previsao do Tempo** *(NOVO v4)*
+
+  * **Objetivo:** Fornecer ao produtor alertas meteorologicos automaticos e dados de previsao do tempo contextualizados ao manejo avicola.
+
+  * **Provedor:** Open-Meteo (https://open-meteo.com) -- API gratuita, sem necessidade de chave para ate 10.000 req/dia. Fallback: OpenWeatherMap (free tier 1.000 req/dia).
+
+  * **Dados coletados:**
+      * Temperatura atual, minima e maxima (proximas 48h e 7 dias)
+      * Umidade relativa do ar
+      * Probabilidade de chuva e precipitacao (mm)
+      * Velocidade e direcao do vento
+      * Indice UV (relevante para galpoes com cortinas)
+
+  * **Funcionalidades:**
+
+      * **Widget climatico na Home:** Card compacto na tela Home mostrando temperatura atual + min/max do dia + previsao 48h. Dados baseados nas coordenadas da granja.
+
+      * **Alertas meteorologicos automaticos:**
+
+      | Alerta | Condicao | Acao sugerida |
+      |--------|----------|---------------|
+      | Onda de calor | Previsao > 35C nas proximas 24h | Verificar nebulizacao, ventilacao, nivel de agua |
+      | Queda brusca de temperatura | Queda > 10C em 24h | Preparar aquecimento, fechar cortinas |
+      | Frio intenso | Previsao < 10C | Ativar aquecimento, verificar pintainhos |
+      | Chuva forte / temporal | Precipitacao > 50mm prevista | Verificar calhas, cortinas, evitar transporte |
+      | Vento forte | Velocidade > 60 km/h | Reforcar cortinas, verificar estrutura |
+      | Umidade extrema baixa | UR < 30% | Ativar nebulizacao, risco de poeira e desidratacao |
+
+      * **Integracao com IA (Gemini):** Os dados meteorologicos sao incluidos no contexto enviado ao Gemini para recomendacoes de manejo mais precisas. Ex: "Temperatura prevista de 38C amanha. Com lote de 32 dias (Cobb 500, 2.100g), recomenda-se: aumentar ventilacao para 2.5 m/s, nebulizacao intermitente, agua fresca, reduzir densidade se possivel."
+
+      * **Historico climatico:** Dados meteorologicos salvos junto com registros ambientais para correlacao posterior (analise de impacto do clima no desempenho do lote).
+
+  * **Implementacao tecnica:**
+      * Backend Go busca previsao 2x/dia (6h e 18h) via cron job por granja com coordenadas.
+      * Cache em tabela `previsoes_tempo` (evita chamadas excessivas).
+      * Dados exibidos no app via endpoint REST.
+      * Se coordenadas da granja nao configuradas, solicita ao usuario no primeiro acesso.
+      * Fallback: se API indisponivel, app funciona normalmente sem dados meteorologicos.
+
 ---
 
 ### **5. Indices Zootecnicos e Calculos** *(NOVO - secao dedicada)*
@@ -558,6 +787,13 @@ CREATE TABLE galpaos (
     usuario_id UUID NOT NULL REFERENCES usuarios(id),
     nome VARCHAR(100) NOT NULL,
     capacidade INTEGER,
+    latitude NUMERIC(10,7),
+    longitude NUMERIC(10,7),
+    orientacao_graus INTEGER CHECK (orientacao_graus >= 0 AND orientacao_graus < 360),
+    comprimento_m NUMERIC(8,2),
+    largura_m NUMERIC(8,2),
+    tipo_ventilacao VARCHAR(30) CHECK (tipo_ventilacao IN ('convencional','tunel','dark_house','misto')),
+    lado_cortinas VARCHAR(20) CHECK (lado_cortinas IN ('ambos','norte','sul','leste','oeste','nenhum')),
     created_at TIMESTAMP NOT NULL DEFAULT now(),
     updated_at TIMESTAMP NOT NULL DEFAULT now(),
     UNIQUE(usuario_id, nome)
@@ -736,7 +972,7 @@ CREATE TABLE whatsapp_send_histories (
 );
 CREATE INDEX idx_wsh_recipient ON whatsapp_send_histories(whatsapp_recipient_id);
 
--- Benchmarks de Linhagem (tabela de referencia embutida)
+-- Benchmarks de Linhagem
 CREATE TABLE benchmarks_linhagem (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     linhagem VARCHAR(50) NOT NULL,
@@ -747,6 +983,152 @@ CREATE TABLE benchmarks_linhagem (
     gpd_g NUMERIC(6,2),
     UNIQUE(linhagem, dia)
 );
+
+-- Granjas (Multi-granja)
+CREATE TABLE granjas (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    usuario_id UUID NOT NULL REFERENCES usuarios(id),
+    nome VARCHAR(200) NOT NULL,
+    endereco TEXT,
+    cidade VARCHAR(100),
+    estado VARCHAR(2),
+    latitude NUMERIC(10,7),
+    longitude NUMERIC(10,7),
+    created_at TIMESTAMP NOT NULL DEFAULT now(),
+    updated_at TIMESTAMP NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_granjas_usuario ON granjas(usuario_id);
+-- NOTA: tabela galpaos recebe FK granja_id (ALTER TABLE galpaos ADD COLUMN granja_id UUID REFERENCES granjas(id))
+
+-- Vacinacoes
+CREATE TABLE vacinacoes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lote_id UUID NOT NULL REFERENCES lotes(id) ON DELETE CASCADE,
+    data DATE NOT NULL,
+    vacina VARCHAR(200) NOT NULL,
+    lote_produto VARCHAR(100),
+    via_administracao VARCHAR(50),
+    responsavel VARCHAR(200),
+    observacao TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_vacinacoes_lote ON vacinacoes(lote_id);
+
+-- Medicamentos
+CREATE TABLE medicamentos (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lote_id UUID NOT NULL REFERENCES lotes(id) ON DELETE CASCADE,
+    data_inicio DATE NOT NULL,
+    data_fim DATE,
+    medicamento VARCHAR(200) NOT NULL,
+    dosagem VARCHAR(100),
+    via VARCHAR(50),
+    periodo_carencia_dias INTEGER DEFAULT 0,
+    responsavel VARCHAR(200),
+    observacao TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_medicamentos_lote ON medicamentos(lote_id);
+
+-- Visitantes (Livro de Registro)
+CREATE TABLE visitantes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    granja_id UUID NOT NULL REFERENCES granjas(id),
+    nome VARCHAR(200) NOT NULL,
+    documento VARCHAR(50),
+    origem VARCHAR(200),
+    motivo VARCHAR(200),
+    ultimo_contato_aves DATE,
+    placa_veiculo VARCHAR(20),
+    data_entrada TIMESTAMP NOT NULL,
+    data_saida TIMESTAMP,
+    observacao TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_visitantes_granja ON visitantes(granja_id, data_entrada DESC);
+
+-- Custos de Producao
+CREATE TABLE custos_lote (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lote_id UUID NOT NULL REFERENCES lotes(id) ON DELETE CASCADE,
+    categoria VARCHAR(50) NOT NULL
+        CHECK (categoria IN ('mao_de_obra','energia','aquecimento','cama','manutencao','depreciacao','agua','outros')),
+    descricao VARCHAR(200),
+    valor NUMERIC(12,2) NOT NULL,
+    data DATE,
+    created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_custos_lote ON custos_lote(lote_id);
+
+-- Remuneracao da Integradora
+CREATE TABLE remuneracoes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lote_id UUID NOT NULL REFERENCES lotes(id) ON DELETE CASCADE,
+    valor NUMERIC(12,2) NOT NULL,
+    tipo VARCHAR(30) CHECK (tipo IN ('por_kg', 'por_ave', 'por_iep', 'outro')),
+    data_pagamento DATE,
+    observacao TEXT,
+    created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+
+-- Registros IoT (dados de sensores em alta frequencia)
+CREATE TABLE iot_readings (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    galpao_id UUID NOT NULL REFERENCES galpaos(id),
+    sensor_tipo VARCHAR(30) NOT NULL
+        CHECK (sensor_tipo IN ('temperatura','umidade','nh3','co2','peso','agua','racao','luminosidade')),
+    valor NUMERIC(12,3) NOT NULL,
+    unidade VARCHAR(10) NOT NULL,
+    timestamp TIMESTAMP NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_iot_galpao_tipo ON iot_readings(galpao_id, sensor_tipo, timestamp DESC);
+-- Particionar por mes para performance com alto volume de dados
+
+-- Cadeia de Rastreabilidade (blockchain simplificada)
+CREATE TABLE rastreabilidade_chain (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lote_id UUID NOT NULL REFERENCES lotes(id),
+    evento VARCHAR(50) NOT NULL,
+    dados JSONB NOT NULL,
+    hash_atual VARCHAR(64) NOT NULL,
+    hash_anterior VARCHAR(64),
+    created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_rastreabilidade_lote ON rastreabilidade_chain(lote_id, created_at);
+
+-- Interacoes com IA (cache de respostas Gemini)
+CREATE TABLE ia_interacoes (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lote_id UUID REFERENCES lotes(id),
+    usuario_id UUID NOT NULL REFERENCES usuarios(id),
+    tipo VARCHAR(30) NOT NULL
+        CHECK (tipo IN ('predicao_peso','anomalia','recomendacao','analise_foto','chat_assistente')),
+    prompt_resumo TEXT,
+    resposta TEXT NOT NULL,
+    modelo VARCHAR(50) NOT NULL DEFAULT 'gemini-2.0-flash',
+    tokens_usados INTEGER,
+    created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_ia_lote ON ia_interacoes(lote_id, created_at DESC);
+
+-- Previsoes do Tempo (cache por granja)
+CREATE TABLE previsoes_tempo (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    granja_id UUID NOT NULL REFERENCES granjas(id),
+    data DATE NOT NULL,
+    temperatura_min NUMERIC(5,2),
+    temperatura_max NUMERIC(5,2),
+    umidade_min NUMERIC(5,2),
+    umidade_max NUMERIC(5,2),
+    precipitacao_mm NUMERIC(8,2),
+    probabilidade_chuva INTEGER,
+    vento_velocidade_kmh NUMERIC(6,2),
+    vento_direcao INTEGER,
+    indice_uv NUMERIC(4,1),
+    provedor VARCHAR(30) NOT NULL DEFAULT 'open-meteo',
+    created_at TIMESTAMP NOT NULL DEFAULT now()
+);
+CREATE INDEX idx_previsoes_granja_data ON previsoes_tempo(granja_id, data DESC);
 ```
 
 #### **7.3. Endpoints da API REST (Prefixo: `/api/v1`)**
@@ -831,6 +1213,51 @@ CREATE TABLE benchmarks_linhagem (
   * `GET /tecnico/lotes` -- Lista todos os lotes dos produtores vinculados
   * `GET /tecnico/alertas` -- Lista alertas ativos de todos os produtores
 
+**Granjas (Multi-granja):**
+  * `GET /granjas` -- Lista granjas do usuario
+  * `POST /granjas` -- Cria granja
+  * `GET /granjas/{id}` -- Detalhes com galpoes e lotes
+  * `GET /granjas/dashboard` -- Dashboard consolidado de todas as granjas
+  * `GET /granjas/comparativo` -- Ranking de desempenho inter-granja
+
+**Sanidade e Rastreabilidade:**
+  * `GET /lotes/{id}/vacinacoes` -- Lista vacinacoes
+  * `POST /lotes/{id}/vacinacoes` -- Registra vacinacao
+  * `GET /lotes/{id}/medicamentos` -- Lista medicamentos
+  * `POST /lotes/{id}/medicamentos` -- Registra medicamento
+  * `GET /granjas/{id}/visitantes` -- Lista visitantes
+  * `POST /granjas/{id}/visitantes` -- Registra entrada de visitante
+  * `PATCH /granjas/{id}/visitantes/{vid}/saida` -- Registra saida
+  * `GET /lotes/{id}/gta` -- Gera formulario GTA em PDF
+  * `GET /lotes/{id}/rastreabilidade` -- Cadeia de rastreabilidade do lote
+
+**Financeiro:**
+  * `GET /lotes/{id}/custos` -- Lista custos do lote
+  * `POST /lotes/{id}/custos` -- Registra custo
+  * `DELETE /lotes/{id}/custos/{cid}` -- Remove custo
+  * `POST /lotes/{id}/remuneracao` -- Registra remuneracao
+  * `GET /lotes/{id}/financeiro/resumo` -- Resultado liquido do lote
+  * `GET /lotes/{id}/financeiro/relatorio` -- PDF financeiro
+
+**IA (Gemini):**
+  * `GET /lotes/{id}/ia/predicao` -- Predicao de peso ao abate
+  * `GET /lotes/{id}/ia/anomalias` -- Deteccao de anomalias
+  * `GET /lotes/{id}/ia/recomendacoes` -- Recomendacoes de manejo
+  * `POST /ia/analisar-foto` -- Analise de foto do galpao via Gemini Vision
+  * `POST /ia/chat` -- Chat com assistente IA (contexto do lote)
+
+**IoT:**
+  * `POST /iot/{galpao_id}/dados` -- Recebe payload de sensores (auth por API key)
+  * `GET /iot/{galpao_id}/status` -- Status dos sensores
+  * `GET /iot/{galpao_id}/historico` -- Historico. Params: `sensor_tipo`, `periodo`
+  * `GET /iot/{galpao_id}/tempo-real` -- WebSocket para dados live
+
+**Previsao do Tempo:**
+  * `GET /granjas/{id}/clima/atual` -- Temperatura atual + previsao 48h
+  * `GET /granjas/{id}/clima/previsao` -- Previsao 7 dias
+  * `GET /granjas/{id}/clima/alertas` -- Alertas meteorologicos ativos
+  * `GET /granjas/{id}/clima/historico` -- Historico climatico. Params: `data_inicio`, `data_fim`
+
 #### **7.4. Formato de Resposta Padrao**
 
 ```json
@@ -850,7 +1277,7 @@ CREATE TABLE benchmarks_linhagem (
 
 ```
 egranja/
-├── mobile/
+├── mobile/                        # App React Native
 │   ├── src/
 │   │   ├── app/
 │   │   ├── components/
@@ -864,18 +1291,43 @@ egranja/
 │   │   │   ├── agua/
 │   │   │   ├── chat/
 │   │   │   ├── checklist/
+│   │   │   ├── sanidade/          # Vacinacoes, medicamentos
+│   │   │   ├── financeiro/        # Custos, remuneracao
+│   │   │   ├── iot/               # Dashboard sensores
+│   │   │   ├── ia/                # Assistente IA, predicoes
+│   │   │   ├── visitantes/        # Livro de registro
+│   │   │   ├── clima/             # Previsao do tempo, mapa galpoes
 │   │   │   └── relatorios/
 │   │   ├── services/
+│   │   │   ├── api.ts
+│   │   │   ├── sync.ts
+│   │   │   ├── gemini.ts          # Client para endpoints IA
+│   │   │   └── websocket.ts
 │   │   ├── stores/
 │   │   ├── database/
 │   │   ├── hooks/
 │   │   ├── utils/
-│   │   │   └── benchmarks/       # Tabelas Cobb/Ross embutidas
+│   │   │   └── benchmarks/
 │   │   └── theme/
 │   ├── app.json
 │   ├── package.json
 │   └── tsconfig.json
-├── backend/
+├── web/                           # Dashboard Web (React)
+│   ├── src/
+│   │   ├── pages/
+│   │   │   ├── dashboard/
+│   │   │   ├── granjas/
+│   │   │   ├── lotes/
+│   │   │   ├── comparativo/
+│   │   │   ├── alertas/
+│   │   │   ├── usuarios/
+│   │   │   └── iot/
+│   │   ├── components/
+│   │   ├── services/
+│   │   └── hooks/
+│   ├── package.json
+│   └── tsconfig.json
+├── backend/                       # API Go
 │   ├── cmd/server/main.go
 │   ├── internal/
 │   │   ├── config/
@@ -884,9 +1336,15 @@ egranja/
 │   │   ├── model/
 │   │   ├── repository/
 │   │   ├── service/
+│   │   │   ├── indicadores.go
+│   │   │   ├── gemini.go          # Client Gemini API
+│   │   │   ├── blockchain.go      # Cadeia de rastreabilidade
+│   │   │   ├── mqtt.go            # Subscriber MQTT para IoT
+│   │   │   ├── clima.go           # Client Open-Meteo / previsao do tempo
+│   │   │   └── pdf.go             # Geracao de relatorios
 │   │   ├── dto/
-│   │   ├── websocket/            # Chat em tempo real
-│   │   └── benchmark/            # Tabelas de referencia
+│   │   ├── websocket/
+│   │   └── benchmark/
 │   ├── migrations/
 │   ├── docs/
 │   ├── Dockerfile
@@ -920,7 +1378,12 @@ egranja/
     "expo-av": "^14.0.0",
     "react-native-gifted-chat": "^2.4.0",
     "react-native-share": "^10.0.0",
-    "react-native-pdf": "^6.7.0"
+    "react-native-pdf": "^6.7.0",
+    "react-native-maps": "^1.10.0",
+    "react-native-sensors": "^7.3.0",
+    "expo-location": "^17.0.0",
+    "@react-native-community/geolocation": "^3.3.0",
+    "react-native-svg": "^15.0.0"
   }
 }
 ```
@@ -942,6 +1405,10 @@ require (
     github.com/minio/minio-go/v7 v7.0+
     firebase.google.com/go/v4 v4.14+
     github.com/jung-kurt/gofpdf v1.16+
+    github.com/google/generative-ai-go v0.18+     # Gemini API SDK
+    github.com/eclipse/paho.mqtt.golang v1.5+      # MQTT client (IoT)
+    github.com/robfig/cron/v3 v3.0+                # Cron jobs (clima, IA)
+    google.golang.org/api v0.200+                   # Google API (auth Gemini)
 )
 ```
 
@@ -1006,6 +1473,22 @@ STORAGE_USE_SSL=false
 # Firebase (push notifications)
 FIREBASE_CREDENTIALS_FILE=./firebase-credentials.json
 
+# Gemini API (IA)
+GEMINI_API_KEY=sua-chave-gemini
+GEMINI_MODEL=gemini-2.0-flash
+GEMINI_MAX_CALLS_PER_USER_DAY=100
+
+# MQTT (IoT)
+MQTT_BROKER_URL=tcp://mosquitto:1883
+MQTT_USERNAME=egranja
+MQTT_PASSWORD=senha-mqtt
+MQTT_TOPIC_PREFIX=egranja/
+
+# Previsao do Tempo
+WEATHER_PROVIDER=open-meteo
+WEATHER_FALLBACK_API_KEY=sua-chave-openweathermap
+WEATHER_CRON_SCHEDULE=0 6,18 * * *
+
 # Mobile
 API_BASE_URL=https://api.egranja.com.br/api/v1
 WS_BASE_URL=wss://api.egranja.com.br/api/v1/ws
@@ -1013,81 +1496,115 @@ WS_BASE_URL=wss://api.egranja.com.br/api/v1/ws
 
 ---
 
-### **8. Integracao IoT (Preparacao Futura)** *(NOVO)*
+### **8. Criterios de Aceite**
 
-O modelo de dados ja inclui `registros_ambientais` com campo `origem` (manual/iot). A arquitetura esta preparada para receber dados de sensores no futuro.
-
-#### **8.1. Sensores Planejados (Fase 2)**
-
-| Sensor | Protocolo | Dado |
-|--------|-----------|------|
-| Temperatura (NTC/DS18B20) | LoRaWAN/MQTT | Temp. interna (3-6 pontos) |
-| Umidade (capacitivo) | LoRaWAN/MQTT | Umidade relativa |
-| Amonia NH3 (DOL 53) | 0-10V via gateway | ppm (alerta > 20 ppm) |
-| Balanca automatica (E-Wise) | Wi-Fi/MQTT | Peso medio continuo |
-| Hidrometro digital | Pulso/gateway | Consumo de agua automatico |
-| Celula de carga silo | Gateway | Consumo de racao automatico |
-
-#### **8.2. Arquitetura IoT Planejada**
-
-```
-Sensores -> LoRaWAN/Zigbee -> Gateway -> MQTT Broker -> Backend Go -> PostgreSQL
-                                                     -> WebSocket -> App Mobile (tempo real)
-                                                     -> Alertas Push
-```
-
-#### **8.3. Endpoint IoT (futuro)**
-
-  * `POST /api/v1/iot/{galpao_id}/dados` -- Recebe payload de sensores (autenticado por API key)
-
----
-
-### **9. Criterios de Aceite**
-
+**Base (autenticacao, lotes, registros):**
   * [ ] Login com token persistido pula tela de login.
   * [ ] Refresh token renova access token automaticamente.
   * [ ] Lotes, pesagens, mortalidade, racao e agua podem ser registrados offline e sincronizados.
   * [ ] Indicador online/offline + contagem de pendencias visivel.
   * [ ] Graficos de peso (real vs benchmark linhagem) e mortalidade funcionam.
   * [ ] Indices ICA, IEA, GPD, IEP, viabilidade calculados e atualizados em tempo real.
-  * [ ] Alertas automaticos disparam para mortalidade > 0,5%, peso < 90% do padrao, agua anormal.
-  * [ ] Chat produtor-tecnico funciona com texto, foto e audio.
-  * [ ] Solicitacoes do tecnico com prazo chegam como notificacao push ao produtor.
-  * [ ] Registro de visita tecnica com checklist e fotos.
-  * [ ] Checklist diario de manejo funciona e registra historico.
   * [ ] Card do lote na Home mostra aves vivas, peso com cor semantica vs benchmark.
-  * [ ] Envio via WhatsApp abre app nativo com mensagem formatada.
-  * [ ] Lote pode ser finalizado com registro de sobra de racao e geracao de relatorio PDF.
-  * [ ] Relatorio comparativo entre lotes funciona.
-  * [ ] Exportacao CSV dos dados brutos funciona.
   * [ ] Consumo de agua registravel com calculo automatico de relacao agua/racao.
   * [ ] Projecao de peso e data de abate exibida na aba Resumo.
+  * [ ] Lote pode ser finalizado com registro de sobra de racao e geracao de relatorio PDF.
   * [ ] API responde em formato padronizado com paginacao.
   * [ ] APK gerado com sucesso via CI/CD.
 
+**Alertas e checklist:**
+  * [ ] Alertas automaticos disparam para mortalidade > 0,5%, peso < 90% do padrao, agua anormal.
+  * [ ] Alertas CRITICOS geram notificacao push tambem para o tecnico vinculado.
+  * [ ] Checklist diario de manejo funciona e registra historico.
+
+**Comunicacao:**
+  * [ ] Chat produtor-tecnico funciona com texto, foto e audio.
+  * [ ] Solicitacoes do tecnico com prazo chegam como notificacao push ao produtor.
+  * [ ] Registro de visita tecnica com checklist e fotos.
+  * [ ] Envio via WhatsApp abre app nativo com mensagem formatada.
+
+**Relatorios e exportacao:**
+  * [ ] Relatorio de fechamento de lote em PDF com todos os indicadores.
+  * [ ] Relatorio comparativo entre lotes funciona.
+  * [ ] Exportacao CSV dos dados brutos funciona.
+  * [ ] Relatorio financeiro em PDF com breakdown de custos e receitas.
+
+**Multi-granja:**
+  * [ ] Usuario com multiplas granjas pode selecionar qual visualizar.
+  * [ ] Dashboard consolidado com indicadores agregados de todas as granjas.
+  * [ ] Comparativo inter-granja com ranking de desempenho.
+
+**Sanidade e rastreabilidade:**
+  * [ ] Registro de vacinacoes com calendario e lembretes push.
+  * [ ] Registro de medicamentos com alerta de periodo de carencia antes do abate.
+  * [ ] Livro de registro digital de visitantes com alerta de vazio sanitario (< 48h).
+  * [ ] Checklist de biosseguridade com score do galpao.
+  * [ ] GTA digital preenchivel e exportavel em PDF.
+  * [ ] Cadeia de rastreabilidade (hash chain) registra eventos criticos do lote.
+  * [ ] QR Code por lote permite verificar historico imutavel.
+
+**Modulo financeiro:**
+  * [ ] Registro de custos de producao por categoria (mao de obra, energia, aquecimento, etc.).
+  * [ ] Registro de remuneracao da integradora.
+  * [ ] Calculo automatico de resultado liquido, margem por kg e por ave.
+  * [ ] Comparativo de resultado entre lotes.
+
+**IA Preditiva (Gemini):**
+  * [ ] Predicao de peso ao abate com nivel de confianca exibida na aba Resumo.
+  * [ ] Deteccao de anomalias com alertas inteligentes e recomendacoes.
+  * [ ] Recomendacoes de manejo contextualizadas por fase e condicoes.
+  * [ ] Analise de fotos do galpao via Gemini Vision (condicao da cama, distribuicao das aves).
+  * [ ] Assistente virtual: produtor faz perguntas sobre manejo/sanidade com contexto do lote.
+  * [ ] Rate limit de 100 chamadas Gemini/dia por usuario.
+  * [ ] Fallback: app funciona normalmente se API Gemini indisponivel.
+
+**Dashboard Web:**
+  * [ ] Painel web acessivel via navegador com autenticacao JWT.
+  * [ ] Visao consolidada de granjas, galpoes e lotes com graficos interativos.
+  * [ ] Ranking de lotes por IEP e comparativo inter-granja.
+  * [ ] Mapa de calor com visualizacao geografica das granjas.
+  * [ ] Exportacao de relatorios em PDF/CSV/Excel com graficos.
+  * [ ] Gerenciamento de usuarios (produtores, tecnicos, vinculos).
+  * [ ] Painel de alertas ativos de todas as granjas.
+
+**Integracao IoT:**
+  * [ ] Backend MQTT subscriber conecta ao broker e escuta topicos por galpao.
+  * [ ] Dados de sensores (temperatura, umidade, NH3, CO2, peso, agua) salvos automaticamente.
+  * [ ] Alertas push imediatos quando limites ultrapassados (temp > 33C, NH3 > 20ppm).
+  * [ ] Dashboard IoT no app com graficos live via WebSocket.
+  * [ ] Status de cada sensor (online/offline/bateria).
+  * [ ] Endpoint REST para receber dados de gateways (autenticado por API key).
+
+**Previsao do Tempo e Geolocalizacao:**
+  * [ ] Widget climatico na Home com temperatura atual + previsao 48h por granja.
+  * [ ] Alertas meteorologicos automaticos: onda de calor, queda brusca de temperatura, chuva forte, vento forte.
+  * [ ] Dados meteorologicos incluidos no contexto da IA Gemini para recomendacoes precisas.
+  * [ ] Historico climatico salvo para correlacao com desempenho do lote.
+  * [ ] Cron job busca previsao 2x/dia (6h e 18h) por granja.
+  * [ ] Fallback: app funciona normalmente sem dados meteorologicos.
+  * [ ] Cadastro de galpao com GPS, orientacao (bussola), dimensoes, tipo ventilacao e lado cortinas.
+  * [ ] Mapa da granja com galpoes posicionados como retangulos orientados.
+  * [ ] Visualizacao grafica de incidencia do vento no galpao com laterais coloridas (verde/amarelo/vermelho).
+  * [ ] Simulacao por horario (slider 24h) da direcao do vento e impacto nos galpoes.
+  * [ ] Representacao grafica da trajetoria solar sobre o galpao.
+  * [ ] Alerta especifico cruzando direcao do vento com orientacao do galpao e posicao das cortinas.
+  * [ ] Calculo automatico de densidade (aves/m2) baseado nas dimensoes do galpao.
+
 ---
 
-### **10. Pontos de Extensao Futura**
+### **9. Pontos de Extensao Futura**
 
-  * Integracao IoT completa (sensores de temperatura, umidade, amonia, peso, agua).
-  * Push notifications automaticas para alertas criticos.
-  * Dashboard web agregado para administradores e integradoras.
-  * IA preditiva: predicao de peso ao abate, deteccao de anomalias (baseado em dados historicos).
   * Visao computacional para contagem de aves e estimativa de peso por camera.
-  * Integracao WhatsApp Business API para envios automatizados.
-  * Modo multi-granja: usuario gerencia propriedades diferentes.
-  * Registro de temperatura e umidade via sensores IoT.
-  * Registro de vacinacoes e medicamentos com rastreabilidade (Portaria SDA 798/2023).
-  * Controle de visitantes e biosseguridade (livro de registro digital).
-  * Geracao de GTA (Guia de Transito Animal) digital.
-  * Exportacao PDF/CSV avancada com graficos.
-  * Comparativo entre granjas (benchmark inter-produtor).
-  * Modulo financeiro: custos de producao, remuneracao da integradora, resultado liquido.
-  * Blockchain para rastreabilidade farm-to-table.
+  * Integracao WhatsApp Business API para envios automatizados (sem depender de deep link).
+  * Migracao da cadeia de hashes para blockchain publica (Hyperledger/Polygon).
+  * Integracao com ERPs de integradoras (BRF, Seara, JBS) via API.
+  * Marketplace de insumos avicolas integrado ao app.
+  * Modulo de gestao de matrizes e incubatorio.
+  * App para visitantes/motoristas (check-in/check-out digital com QR Code).
 
 ---
 
-### **11. Referencias e Fontes**
+### **10. Referencias e Fontes**
 
   * Embrapa -- Frango de Corte (Manejo, Sanidade, Desempenho Zootecnico, Nutricao)
   * Cobb 500 -- Performance & Nutrition Supplement 2022
@@ -1103,3 +1620,5 @@ Sensores -> LoRaWAN/Zigbee -> Gateway -> MQTT Broker -> Backend Go -> PostgreSQL
   * Agrisolus, E-Aware, Khomp, Sisgra -- Plataformas IoT avicolas
   * Agriness S4, Vilesoft, SAG, BRF AgroBRF, Seara SuperAgroTech -- Analise competitiva
   * PoultrySync, Poultrix, PoultryPlan, Amino (MTech) -- Benchmarks internacionais
+  * Open-Meteo -- API de previsao do tempo gratuita (https://open-meteo.com)
+  * OpenWeatherMap -- API meteorologica (fallback)
