@@ -16,25 +16,32 @@ import (
 
 // GranjaHandler gerencia os endpoints de granjas.
 type GranjaHandler struct {
-	granjaRepo *repository.GranjaRepository
-	loteRepo   *repository.LoteRepository
-	validate   *validator.Validate
-	logger     *zap.Logger
+	granjaRepo      *repository.GranjaRepository
+	loteRepo        *repository.LoteRepository
+	colaboradorRepo *repository.GranjaColaboradorRepository
+	validate        *validator.Validate
+	logger          *zap.Logger
 }
 
 // NewGranjaHandler cria uma nova instancia de GranjaHandler.
-func NewGranjaHandler(granjaRepo *repository.GranjaRepository, loteRepo *repository.LoteRepository, logger *zap.Logger) *GranjaHandler {
+func NewGranjaHandler(
+	granjaRepo *repository.GranjaRepository,
+	loteRepo *repository.LoteRepository,
+	colaboradorRepo *repository.GranjaColaboradorRepository,
+	logger *zap.Logger,
+) *GranjaHandler {
 	return &GranjaHandler{
-		granjaRepo: granjaRepo,
-		loteRepo:   loteRepo,
-		validate:   validator.New(),
-		logger:     logger,
+		granjaRepo:      granjaRepo,
+		loteRepo:        loteRepo,
+		colaboradorRepo: colaboradorRepo,
+		validate:        validator.New(),
+		logger:          logger,
 	}
 }
 
 // List godoc
 // @Summary      Listar granjas
-// @Description  Lista todas as granjas do usuario autenticado
+// @Description  Lista todas as granjas do usuario autenticado (proprias + colaboradas)
 // @Tags         granjas
 // @Produce      json
 // @Security     BearerAuth
@@ -48,7 +55,7 @@ func (h *GranjaHandler) List(c *gin.Context) {
 		return
 	}
 
-	granjas, err := h.granjaRepo.FindByUsuario(userID)
+	granjas, err := h.granjaRepo.FindAcessiveis(userID)
 	if err != nil {
 		h.logger.Error("Erro ao listar granjas", zap.Error(err))
 		dto.RespondInternalError(c, "Erro ao listar granjas.")
@@ -67,6 +74,7 @@ func (h *GranjaHandler) List(c *gin.Context) {
 			Latitude:     g.Latitude,
 			Longitude:    g.Longitude,
 			TotalGalpaos: len(g.Galpaos),
+			Permissao:    g.Permissao,
 			CreatedAt:    g.CreatedAt,
 			UpdatedAt:    g.UpdatedAt,
 		}
@@ -152,6 +160,7 @@ func (h *GranjaHandler) Create(c *gin.Context) {
 		Estado:    granja.Estado,
 		Latitude:  granja.Latitude,
 		Longitude: granja.Longitude,
+		Permissao: "proprietario",
 		CreatedAt: granja.CreatedAt,
 		UpdatedAt: granja.UpdatedAt,
 	}
@@ -193,7 +202,9 @@ func (h *GranjaHandler) Get(c *gin.Context) {
 		return
 	}
 
-	if granja.UsuarioID != userID {
+	// Verificar acesso: proprietario ou colaborador
+	permissao := h.getPermissaoGranja(granja, userID)
+	if permissao == "" {
 		dto.RespondForbidden(c, "Voce nao tem acesso a esta granja.")
 		return
 	}
@@ -211,6 +222,7 @@ func (h *GranjaHandler) Get(c *gin.Context) {
 		Longitude:        granja.Longitude,
 		TotalGalpaos:     len(granja.Galpaos),
 		TotalLotesAtivos: int(lotesAtivos),
+		Permissao:        permissao,
 		CreatedAt:        granja.CreatedAt,
 		UpdatedAt:        granja.UpdatedAt,
 	}
@@ -220,7 +232,7 @@ func (h *GranjaHandler) Get(c *gin.Context) {
 
 // Dashboard godoc
 // @Summary      Dashboard consolidado
-// @Description  Retorna o dashboard consolidado de todas as granjas do usuario
+// @Description  Retorna o dashboard consolidado de todas as granjas acessiveis
 // @Tags         granjas
 // @Produce      json
 // @Security     BearerAuth
@@ -233,7 +245,7 @@ func (h *GranjaHandler) Dashboard(c *gin.Context) {
 		return
 	}
 
-	granjas, err := h.granjaRepo.FindByUsuario(userID)
+	granjas, err := h.granjaRepo.FindAcessiveis(userID)
 	if err != nil {
 		h.logger.Error("Erro ao buscar granjas para dashboard", zap.Error(err))
 		dto.RespondInternalError(c, "Erro ao gerar dashboard.")
@@ -277,7 +289,7 @@ func (h *GranjaHandler) Comparativo(c *gin.Context) {
 		return
 	}
 
-	granjas, err := h.granjaRepo.FindByUsuario(userID)
+	granjas, err := h.granjaRepo.FindAcessiveis(userID)
 	if err != nil {
 		h.logger.Error("Erro ao buscar granjas para comparativo", zap.Error(err))
 		dto.RespondInternalError(c, "Erro ao gerar comparativo.")
@@ -298,4 +310,17 @@ func (h *GranjaHandler) Comparativo(c *gin.Context) {
 	}
 
 	dto.RespondSuccess(c, http.StatusOK, resp)
+}
+
+// getPermissaoGranja retorna a permissao do usuario na granja.
+// Retorna "proprietario", "editor", "visualizador" ou "" se sem acesso.
+func (h *GranjaHandler) getPermissaoGranja(granja *model.Granja, userID uuid.UUID) string {
+	if granja.UsuarioID == userID {
+		return "proprietario"
+	}
+	permissao, err := h.colaboradorRepo.UsuarioTemAcesso(granja.ID, userID)
+	if err != nil {
+		return ""
+	}
+	return permissao
 }

@@ -58,6 +58,20 @@ func (r *GalpaoRepository) FindByUsuario(usuarioID uuid.UUID) ([]model.Galpao, e
 	return galpaos, nil
 }
 
+// FindAcessiveis busca galpoes do usuario (proprios + de granjas colaboradas).
+func (r *GalpaoRepository) FindAcessiveis(usuarioID uuid.UUID, granjaIDsColaboradas []uuid.UUID) ([]model.Galpao, error) {
+	var galpaos []model.Galpao
+	query := r.db.Where("usuario_id = ?", usuarioID)
+	if len(granjaIDsColaboradas) > 0 {
+		query = r.db.Where("usuario_id = ? OR granja_id IN ?", usuarioID, granjaIDsColaboradas)
+	}
+	result := query.Order("nome ASC").Find(&galpaos)
+	if result.Error != nil {
+		return nil, result.Error
+	}
+	return galpaos, nil
+}
+
 // FindByGranja busca galpoes de uma granja.
 func (r *GalpaoRepository) FindByGranja(granjaID uuid.UUID) ([]model.Galpao, error) {
 	var galpaos []model.Galpao

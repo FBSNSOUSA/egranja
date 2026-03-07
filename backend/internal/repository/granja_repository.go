@@ -71,6 +71,38 @@ func (r *GranjaRepository) FindByUsuario(usuarioID uuid.UUID) ([]model.Granja, e
 	return granjas, nil
 }
 
+// FindAcessiveis retorna granjas onde o usuario e proprietario OU colaborador.
+// Cada granja vem com um campo extra "Permissao" indicando o tipo de acesso.
+type GranjaComPermissao struct {
+	model.Granja
+	Permissao string
+}
+
+func (r *GranjaRepository) FindAcessiveis(usuarioID uuid.UUID) ([]GranjaComPermissao, error) {
+	var granjas []GranjaComPermissao
+
+	// Granjas proprias + granjas colaboradas em uma unica query
+	result := r.db.Raw(`
+		SELECT g.*, 'proprietario' AS permissao FROM granjas g WHERE g.usuario_id = ?
+		UNION ALL
+		SELECT g.*, gc.permissao FROM granjas g
+		JOIN granja_colaboradores gc ON gc.granja_id = g.id
+		WHERE gc.usuario_id = ?
+		ORDER BY nome ASC
+	`, usuarioID, usuarioID).Scan(&granjas)
+
+	if result.Error != nil {
+		return nil, result.Error
+	}
+
+	// Preload galpoes para cada granja
+	for i := range granjas {
+		r.db.Model(&model.Galpao{}).Where("granja_id = ?", granjas[i].ID).Find(&granjas[i].Galpaos)
+	}
+
+	return granjas, nil
+}
+
 // CountGalpaos conta o numero de galpoes de uma granja.
 func (r *GranjaRepository) CountGalpaos(granjaID uuid.UUID) (int64, error) {
 	var count int64

@@ -15,23 +15,32 @@ import (
 
 // GalpaoHandler gerencia os endpoints de galpoes.
 type GalpaoHandler struct {
-	galpaoRepo *repository.GalpaoRepository
-	validate   *validator.Validate
-	logger     *zap.Logger
+	galpaoRepo      *repository.GalpaoRepository
+	granjaRepo      *repository.GranjaRepository
+	colaboradorRepo *repository.GranjaColaboradorRepository
+	validate        *validator.Validate
+	logger          *zap.Logger
 }
 
 // NewGalpaoHandler cria uma nova instancia de GalpaoHandler.
-func NewGalpaoHandler(galpaoRepo *repository.GalpaoRepository, logger *zap.Logger) *GalpaoHandler {
+func NewGalpaoHandler(
+	galpaoRepo *repository.GalpaoRepository,
+	granjaRepo *repository.GranjaRepository,
+	colaboradorRepo *repository.GranjaColaboradorRepository,
+	logger *zap.Logger,
+) *GalpaoHandler {
 	return &GalpaoHandler{
-		galpaoRepo: galpaoRepo,
-		validate:   validator.New(),
-		logger:     logger,
+		galpaoRepo:      galpaoRepo,
+		granjaRepo:      granjaRepo,
+		colaboradorRepo: colaboradorRepo,
+		validate:        validator.New(),
+		logger:          logger,
 	}
 }
 
 // List godoc
 // @Summary      Listar galpoes
-// @Description  Lista todos os galpoes do usuario autenticado
+// @Description  Lista todos os galpoes acessiveis ao usuario autenticado
 // @Tags         galpaos
 // @Produce      json
 // @Security     BearerAuth
@@ -45,7 +54,10 @@ func (h *GalpaoHandler) List(c *gin.Context) {
 		return
 	}
 
-	galpaos, err := h.galpaoRepo.FindByUsuario(userID)
+	// Buscar IDs de granjas colaboradas para incluir galpoes
+	granjaIDs, _ := h.colaboradorRepo.FindGranjaIDsAcessiveis(userID)
+
+	galpaos, err := h.galpaoRepo.FindAcessiveis(userID, granjaIDs)
 	if err != nil {
 		h.logger.Error("Erro ao listar galpoes", zap.Error(err))
 		dto.RespondInternalError(c, "Erro ao listar galpoes.")
@@ -117,6 +129,28 @@ func (h *GalpaoHandler) Create(c *gin.Context) {
 		}
 		dto.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "Erro de validacao.")
 		return
+	}
+
+	// Verificar acesso a granja (se vinculado a uma)
+	if req.GranjaID != nil {
+		granja, err := h.granjaRepo.FindByID(*req.GranjaID)
+		if err != nil {
+			if errors.Is(err, repository.ErrGranjaNotFound) {
+				dto.RespondNotFound(c, "Granja nao encontrada.")
+				return
+			}
+			h.logger.Error("Erro ao buscar granja", zap.Error(err))
+			dto.RespondInternalError(c, "Erro ao verificar granja.")
+			return
+		}
+		// Precisa ser proprietario ou editor da granja
+		if granja.UsuarioID != userID {
+			perm, err := h.colaboradorRepo.UsuarioTemAcesso(granja.ID, userID)
+			if err != nil || perm != "editor" {
+				dto.RespondForbidden(c, "Voce precisa ser proprietario ou editor da granja para criar galpoes.")
+				return
+			}
+		}
 	}
 
 	galpao := model.Galpao{

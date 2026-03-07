@@ -28,11 +28,12 @@ var upgrader = websocket.Upgrader{
 
 // WSHandler gerencia conexoes WebSocket para chat em tempo real.
 type WSHandler struct {
-	hub          *ws.Hub
-	mensagemRepo *repository.MensagemRepository
-	loteRepo     *repository.LoteRepository
-	jwtSecret    string
-	logger       *zap.Logger
+	hub             *ws.Hub
+	mensagemRepo    *repository.MensagemRepository
+	loteRepo        *repository.LoteRepository
+	colaboradorRepo *repository.GranjaColaboradorRepository
+	jwtSecret       string
+	logger          *zap.Logger
 }
 
 // WSMessageData representa os dados de uma mensagem recebida via WebSocket.
@@ -49,15 +50,17 @@ func NewWSHandler(
 	hub *ws.Hub,
 	mensagemRepo *repository.MensagemRepository,
 	loteRepo *repository.LoteRepository,
+	colaboradorRepo *repository.GranjaColaboradorRepository,
 	jwtSecret string,
 	logger *zap.Logger,
 ) *WSHandler {
 	h := &WSHandler{
-		hub:          hub,
-		mensagemRepo: mensagemRepo,
-		loteRepo:     loteRepo,
-		jwtSecret:    jwtSecret,
-		logger:       logger,
+		hub:             hub,
+		mensagemRepo:    mensagemRepo,
+		loteRepo:        loteRepo,
+		colaboradorRepo: colaboradorRepo,
+		jwtSecret:       jwtSecret,
+		logger:          logger,
 	}
 
 	// Configurar o callback de mensagens no hub
@@ -112,15 +115,22 @@ func (h *WSHandler) HandleWebSocket(c *gin.Context) {
 		return
 	}
 
-	// Verificar acesso: produtor do lote ou tecnico vinculado
+	// Verificar acesso: produtor do lote, tecnico vinculado ou colaborador
 	if lote.UsuarioID != userID {
-		// Se nao e o produtor, verificar se e tecnico (tipo no JWT)
-		if claims.Tipo != "tecnico" {
+		acessoOk := false
+		// Verificar se e tecnico
+		if claims.Tipo == "tecnico" {
+			acessoOk = true
+		}
+		// Verificar se e colaborador da granja
+		if !acessoOk && lote.Galpao.GranjaID != nil {
+			_, colabErr := h.colaboradorRepo.UsuarioTemAcesso(*lote.Galpao.GranjaID, userID)
+			acessoOk = colabErr == nil
+		}
+		if !acessoOk {
 			dto.RespondForbidden(c, "Voce nao tem acesso a este lote.")
 			return
 		}
-		// Tecnicos tem acesso aos lotes dos produtores vinculados
-		// A verificacao completa seria no banco, mas confiamos no token JWT
 	}
 
 	// Fazer upgrade para WebSocket

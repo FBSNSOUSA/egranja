@@ -17,12 +17,13 @@ import (
 
 // IAHandler gerencia os endpoints de IA (assistente virtual Gemini).
 type IAHandler struct {
-	iaService *service.IAService
-	iaRepo    *repository.IARepository
-	loteRepo  *repository.LoteRepository
-	validate  *validator.Validate
-	logger    *zap.Logger
-	maxCalls  int
+	iaService       *service.IAService
+	iaRepo          *repository.IARepository
+	loteRepo        *repository.LoteRepository
+	colaboradorRepo *repository.GranjaColaboradorRepository
+	validate        *validator.Validate
+	logger          *zap.Logger
+	maxCalls        int
 }
 
 // NewIAHandler cria uma nova instancia de IAHandler.
@@ -30,16 +31,18 @@ func NewIAHandler(
 	iaService *service.IAService,
 	iaRepo *repository.IARepository,
 	loteRepo *repository.LoteRepository,
+	colaboradorRepo *repository.GranjaColaboradorRepository,
 	maxCalls int,
 	logger *zap.Logger,
 ) *IAHandler {
 	return &IAHandler{
-		iaService: iaService,
-		iaRepo:    iaRepo,
-		loteRepo:  loteRepo,
-		validate:  validator.New(),
-		logger:    logger,
-		maxCalls:  maxCalls,
+		iaService:       iaService,
+		iaRepo:          iaRepo,
+		loteRepo:        loteRepo,
+		colaboradorRepo: colaboradorRepo,
+		validate:        validator.New(),
+		logger:          logger,
+		maxCalls:        maxCalls,
 	}
 }
 
@@ -263,8 +266,17 @@ func (h *IAHandler) getLoteAutenticado(c *gin.Context, userID uuid.UUID) (*model
 	}
 
 	if lote.UsuarioID != userID {
-		dto.RespondForbidden(c, "Voce nao tem acesso a este lote.")
-		return nil, errors.New("acesso negado")
+		// Verificar acesso via colaboracao
+		if lote.Galpao.GranjaID != nil {
+			_, colabErr := h.colaboradorRepo.UsuarioTemAcesso(*lote.Galpao.GranjaID, userID)
+			if colabErr != nil {
+				dto.RespondForbidden(c, "Voce nao tem acesso a este lote.")
+				return nil, errors.New("acesso negado")
+			}
+		} else {
+			dto.RespondForbidden(c, "Voce nao tem acesso a este lote.")
+			return nil, errors.New("acesso negado")
+		}
 	}
 
 	return lote, nil

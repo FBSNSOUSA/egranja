@@ -18,35 +18,41 @@ import (
 
 // LoteHandler gerencia os endpoints de lotes.
 type LoteHandler struct {
-	loteRepo    *repository.LoteRepository
-	galpaoRepo  *repository.GalpaoRepository
-	indicadores *service.IndicadoresService
-	blockchain  *service.BlockchainService
-	validate    *validator.Validate
-	logger      *zap.Logger
+	loteRepo        *repository.LoteRepository
+	galpaoRepo      *repository.GalpaoRepository
+	granjaRepo      *repository.GranjaRepository
+	colaboradorRepo *repository.GranjaColaboradorRepository
+	indicadores     *service.IndicadoresService
+	blockchain      *service.BlockchainService
+	validate        *validator.Validate
+	logger          *zap.Logger
 }
 
 // NewLoteHandler cria uma nova instancia de LoteHandler.
 func NewLoteHandler(
 	loteRepo *repository.LoteRepository,
 	galpaoRepo *repository.GalpaoRepository,
+	granjaRepo *repository.GranjaRepository,
+	colaboradorRepo *repository.GranjaColaboradorRepository,
 	indicadores *service.IndicadoresService,
 	blockchain *service.BlockchainService,
 	logger *zap.Logger,
 ) *LoteHandler {
 	return &LoteHandler{
-		loteRepo:    loteRepo,
-		galpaoRepo:  galpaoRepo,
-		indicadores: indicadores,
-		blockchain:  blockchain,
-		validate:    validator.New(),
-		logger:      logger,
+		loteRepo:        loteRepo,
+		galpaoRepo:      galpaoRepo,
+		granjaRepo:      granjaRepo,
+		colaboradorRepo: colaboradorRepo,
+		indicadores:     indicadores,
+		blockchain:      blockchain,
+		validate:        validator.New(),
+		logger:          logger,
 	}
 }
 
 // List godoc
 // @Summary      Listar lotes
-// @Description  Lista lotes do usuario autenticado com paginacao e filtro de status
+// @Description  Lista lotes acessiveis ao usuario autenticado com paginacao e filtro de status
 // @Tags         lotes
 // @Produce      json
 // @Security     BearerAuth
@@ -65,7 +71,10 @@ func (h *LoteHandler) List(c *gin.Context) {
 	status := c.Query("status")
 	page, perPage := dto.ParsePagination(c)
 
-	lotes, total, err := h.loteRepo.FindByUsuario(userID, status, page, perPage)
+	// Buscar IDs de granjas colaboradas para incluir lotes
+	granjaIDs, _ := h.colaboradorRepo.FindGranjaIDsAcessiveis(userID)
+
+	lotes, total, err := h.loteRepo.FindAcessiveis(userID, granjaIDs, status, page, perPage)
 	if err != nil {
 		h.logger.Error("Erro ao listar lotes", zap.Error(err))
 		dto.RespondInternalError(c, "Erro ao listar lotes.")
@@ -124,7 +133,7 @@ func (h *LoteHandler) Create(c *gin.Context) {
 		return
 	}
 
-	// Verificar se o galpao pertence ao usuario
+	// Verificar se o galpao pertence ao usuario ou a uma granja colaborada
 	galpao, err := h.galpaoRepo.FindByID(req.GalpaoID)
 	if err != nil {
 		if errors.Is(err, repository.ErrGalpaoNotFound) {
@@ -135,8 +144,8 @@ func (h *LoteHandler) Create(c *gin.Context) {
 		dto.RespondInternalError(c, "Erro ao verificar galpao.")
 		return
 	}
-	if galpao.UsuarioID != userID {
-		dto.RespondForbidden(c, "Voce nao tem acesso a este galpao.")
+	if !h.usuarioTemAcessoGalpao(galpao, userID, "editor") {
+		dto.RespondForbidden(c, "Voce nao tem permissao para criar lotes neste galpao.")
 		return
 	}
 
@@ -276,9 +285,9 @@ func (h *LoteHandler) Finalizar(c *gin.Context) {
 	// Registrar na cadeia de rastreabilidade
 	if h.blockchain != nil {
 		_ = h.blockchain.RegistrarEvento(lote.ID, "finalizacao", map[string]interface{}{
-			"data_finalizacao":     dataFinalizacao.Format("2006-01-02"),
-			"aves_entregues":       req.AvesEntregues,
-			"peso_total_entregue":  req.PesoTotalEntregue,
+			"data_finalizacao":    dataFinalizacao.Format("2006-01-02"),
+			"aves_entregues":     req.AvesEntregues,
+			"peso_total_entregue": req.PesoTotalEntregue,
 		})
 	}
 
@@ -286,7 +295,8 @@ func (h *LoteHandler) Finalizar(c *gin.Context) {
 	dto.RespondSuccess(c, http.StatusOK, resp)
 }
 
-// getLoteAutenticado busca um lote pelo ID do path e verifica pertence ao usuario.
+// getLoteAutenticado busca um lote pelo ID do path e verifica se o usuario
+// e proprietario ou colaborador da granja a qual o galpao do lote pertence.
 func (h *LoteHandler) getLoteAutenticado(c *gin.Context, userID uuid.UUID) (*model.Lote, error) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
@@ -305,12 +315,43 @@ func (h *LoteHandler) getLoteAutenticado(c *gin.Context, userID uuid.UUID) (*mod
 		return nil, err
 	}
 
-	if lote.UsuarioID != userID {
-		dto.RespondForbidden(c, "Voce nao tem acesso a este lote.")
-		return nil, errors.New("acesso negado")
+	// Proprietario direto do lote
+	if lote.UsuarioID == userID {
+		return lote, nil
 	}
 
-	return lote, nil
+	// Verificar se e colaborador da granja do galpao
+	if lote.Galpao.GranjaID != nil {
+		_, colabErr := h.colaboradorRepo.UsuarioTemAcesso(*lote.Galpao.GranjaID, userID)
+		if colabErr == nil {
+			return lote, nil
+		}
+	}
+
+	dto.RespondForbidden(c, "Voce nao tem acesso a este lote.")
+	return nil, errors.New("acesso negado")
+}
+
+// usuarioTemAcessoGalpao verifica se o usuario tem acesso a um galpao.
+// Para escrita (editor), verifica se e proprietario ou editor da granja.
+// Para leitura, aceita qualquer permissao de colaborador.
+func (h *LoteHandler) usuarioTemAcessoGalpao(galpao *model.Galpao, userID uuid.UUID, permissaoMinima string) bool {
+	// Proprietario direto
+	if galpao.UsuarioID == userID {
+		return true
+	}
+	// Verificar via granja
+	if galpao.GranjaID != nil {
+		perm, err := h.colaboradorRepo.UsuarioTemAcesso(*galpao.GranjaID, userID)
+		if err != nil {
+			return false
+		}
+		if permissaoMinima == "editor" {
+			return perm == "editor"
+		}
+		return true // visualizador ou editor
+	}
+	return false
 }
 
 // buildLoteResponse constroi a resposta de um lote.

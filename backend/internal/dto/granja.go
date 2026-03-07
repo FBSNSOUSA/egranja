@@ -28,6 +28,7 @@ type GranjaResponse struct {
 	Longitude   *float64        `json:"longitude,omitempty"`
 	TotalGalpaos int            `json:"total_galpaos"`
 	TotalLotesAtivos int        `json:"total_lotes_ativos"`
+	Permissao   string          `json:"permissao,omitempty"`
 	CreatedAt   time.Time       `json:"created_at"`
 	UpdatedAt   time.Time       `json:"updated_at"`
 }

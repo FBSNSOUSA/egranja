@@ -15,21 +15,24 @@ import (
 
 // AlertaHandler gerencia os endpoints de alertas automaticos.
 type AlertaHandler struct {
-	alertaService *service.AlertaService
-	loteRepo      *repository.LoteRepository
-	logger        *zap.Logger
+	alertaService   *service.AlertaService
+	loteRepo        *repository.LoteRepository
+	colaboradorRepo *repository.GranjaColaboradorRepository
+	logger          *zap.Logger
 }
 
 // NewAlertaHandler cria uma nova instancia de AlertaHandler.
 func NewAlertaHandler(
 	alertaService *service.AlertaService,
 	loteRepo *repository.LoteRepository,
+	colaboradorRepo *repository.GranjaColaboradorRepository,
 	logger *zap.Logger,
 ) *AlertaHandler {
 	return &AlertaHandler{
-		alertaService: alertaService,
-		loteRepo:      loteRepo,
-		logger:        logger,
+		alertaService:   alertaService,
+		loteRepo:        loteRepo,
+		colaboradorRepo: colaboradorRepo,
+		logger:          logger,
 	}
 }
 
@@ -67,11 +70,19 @@ func (h *AlertaHandler) ListByLote(c *gin.Context) {
 		return
 	}
 
-	// Verificar acesso: produtor do lote ou tecnico
+	// Verificar acesso: produtor do lote, tecnico ou colaborador
 	userTipo, _ := middleware.GetUserTipoFromContext(c)
 	if lote.UsuarioID != userID && userTipo != "tecnico" {
-		dto.RespondForbidden(c, "Voce nao tem acesso a este lote.")
-		return
+		// Verificar acesso via colaboracao
+		acessoOk := false
+		if lote.Galpao.GranjaID != nil {
+			_, colabErr := h.colaboradorRepo.UsuarioTemAcesso(*lote.Galpao.GranjaID, userID)
+			acessoOk = colabErr == nil
+		}
+		if !acessoOk {
+			dto.RespondForbidden(c, "Voce nao tem acesso a este lote.")
+			return
+		}
 	}
 
 	alertas := h.alertaService.VerificarAlertas(lote)

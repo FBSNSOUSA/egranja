@@ -240,7 +240,8 @@ func buildPesagemResponse(p *model.Pesagem) dto.PesagemResponse {
 }
 
 // getLoteAutenticadoHelper e uma funcao helper para buscar e validar lote.
-func getLoteAutenticadoHelper(c *gin.Context, loteRepo *repository.LoteRepository, userID uuid.UUID, logger *zap.Logger) (*model.Lote, error) {
+// Verifica se o usuario e proprietario do lote OU colaborador da granja do galpao.
+func getLoteAutenticadoHelper(c *gin.Context, loteRepo *repository.LoteRepository, userID uuid.UUID, logger *zap.Logger, colaboradorRepo ...*repository.GranjaColaboradorRepository) (*model.Lote, error) {
 	id, err := uuid.Parse(c.Param("id"))
 	if err != nil {
 		dto.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "ID do lote invalido.")
@@ -258,10 +259,19 @@ func getLoteAutenticadoHelper(c *gin.Context, loteRepo *repository.LoteRepositor
 		return nil, err
 	}
 
-	if lote.UsuarioID != userID {
-		dto.RespondForbidden(c, "Voce nao tem acesso a este lote.")
-		return nil, errors.New("acesso negado")
+	// Proprietario direto
+	if lote.UsuarioID == userID {
+		return lote, nil
 	}
 
-	return lote, nil
+	// Verificar acesso via colaboracao na granja do galpao
+	if len(colaboradorRepo) > 0 && colaboradorRepo[0] != nil && lote.Galpao.GranjaID != nil {
+		_, colabErr := colaboradorRepo[0].UsuarioTemAcesso(*lote.Galpao.GranjaID, userID)
+		if colabErr == nil {
+			return lote, nil
+		}
+	}
+
+	dto.RespondForbidden(c, "Voce nao tem acesso a este lote.")
+	return nil, errors.New("acesso negado")
 }

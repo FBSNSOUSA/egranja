@@ -19,14 +19,16 @@ import (
 type BlockchainHandler struct {
 	blockchainService *service.BlockchainService
 	loteRepo          *repository.LoteRepository
+	colaboradorRepo   *repository.GranjaColaboradorRepository
 	logger            *zap.Logger
 }
 
 // NewBlockchainHandler cria uma nova instancia de BlockchainHandler.
-func NewBlockchainHandler(blockchainService *service.BlockchainService, loteRepo *repository.LoteRepository, logger *zap.Logger) *BlockchainHandler {
+func NewBlockchainHandler(blockchainService *service.BlockchainService, loteRepo *repository.LoteRepository, colaboradorRepo *repository.GranjaColaboradorRepository, logger *zap.Logger) *BlockchainHandler {
 	return &BlockchainHandler{
 		blockchainService: blockchainService,
 		loteRepo:          loteRepo,
+		colaboradorRepo:   colaboradorRepo,
 		logger:            logger,
 	}
 }
@@ -224,8 +226,16 @@ func (h *BlockchainHandler) getLoteIDAutenticado(c *gin.Context, userID uuid.UUI
 	}
 
 	if lote.UsuarioID != userID {
-		dto.RespondForbidden(c, "Voce nao tem acesso a este lote.")
-		return uuid.Nil, errors.New("acesso negado")
+		if lote.Galpao.GranjaID != nil {
+			_, colabErr := h.colaboradorRepo.UsuarioTemAcesso(*lote.Galpao.GranjaID, userID)
+			if colabErr != nil {
+				dto.RespondForbidden(c, "Voce nao tem acesso a este lote.")
+				return uuid.Nil, errors.New("acesso negado")
+			}
+		} else {
+			dto.RespondForbidden(c, "Voce nao tem acesso a este lote.")
+			return uuid.Nil, errors.New("acesso negado")
+		}
 	}
 
 	return lote.ID, nil

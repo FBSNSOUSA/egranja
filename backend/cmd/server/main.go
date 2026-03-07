@@ -66,6 +66,7 @@ func main() {
 	iaRepo := repository.NewIARepository(db)
 	iotRepo := repository.NewIoTRepository(db)
 	climaRepo := repository.NewClimaRepository(db)
+	colaboradorRepo := repository.NewGranjaColaboradorRepository(db)
 
 	// ── Services ────────────────────────────────────────────────────────
 	authService := service.NewAuthService(usuarioRepo, cfg, logger)
@@ -101,9 +102,10 @@ func main() {
 	// ── Handlers ────────────────────────────────────────────────────────
 	authHandler := handler.NewAuthHandler(authService, logger)
 	healthHandler := handler.NewHealthHandler(db)
-	granjaHandler := handler.NewGranjaHandler(granjaRepo, loteRepo, logger)
-	galpaoHandler := handler.NewGalpaoHandler(galpaoRepo, logger)
-	loteHandler := handler.NewLoteHandler(loteRepo, galpaoRepo, indicadoresService, blockchainService, logger)
+	granjaHandler := handler.NewGranjaHandler(granjaRepo, loteRepo, colaboradorRepo, logger)
+	galpaoHandler := handler.NewGalpaoHandler(galpaoRepo, granjaRepo, colaboradorRepo, logger)
+	loteHandler := handler.NewLoteHandler(loteRepo, galpaoRepo, granjaRepo, colaboradorRepo, indicadoresService, blockchainService, logger)
+	colaboradorHandler := handler.NewColaboradorHandler(colaboradorRepo, granjaRepo, usuarioRepo, logger)
 	pesagemHandler := handler.NewPesagemHandler(pesagemRepo, loteRepo, blockchainService, logger)
 	mortalidadeHandler := handler.NewMortalidadeHandler(mortalidadeRepo, loteRepo, blockchainService, logger)
 	racaoHandler := handler.NewRacaoHandler(feedRepo, loteRepo, logger)
@@ -116,7 +118,7 @@ func main() {
 	benchmarkHandler := handler.NewBenchmarkHandler(logger)
 	sanidadeHandler := handler.NewSanidadeHandler(
 		vacinacaoRepo, medicamentoRepo, visitanteRepo, granjaRepo, loteRepo,
-		blockchainService, logger,
+		colaboradorRepo, blockchainService, logger,
 	)
 	financeiroHandler := handler.NewFinanceiroHandler(custoRepo, remuneracaoRepo, loteRepo, logger)
 	relatorioHandler := handler.NewRelatorioHandler(relatorioService, loteRepo, logger)
@@ -124,14 +126,14 @@ func main() {
 	syncHandler := handler.NewSyncHandler(db, logger)
 	uploadHandler := handler.NewUploadHandler(uploadService, logger)
 	tipoRacaoHandler := handler.NewTipoRacaoHandler(tipoRacaoRepo, logger)
-	wsHandler := handler.NewWSHandler(wsHub, mensagemRepo, loteRepo, cfg.JWTSecret, logger)
-	alertaHandler := handler.NewAlertaHandler(alertaService, loteRepo, logger)
+	wsHandler := handler.NewWSHandler(wsHub, mensagemRepo, loteRepo, colaboradorRepo, cfg.JWTSecret, logger)
+	alertaHandler := handler.NewAlertaHandler(alertaService, loteRepo, colaboradorRepo, logger)
 
 	// Fase 4: Handlers avancados
-	iaHandler := handler.NewIAHandler(iaService, iaRepo, loteRepo, cfg.GeminiMaxCallsPerUserDay, logger)
-	iotHandler := handler.NewIoTHandler(iotRepo, galpaoRepo, logger)
-	climaHandler := handler.NewClimaHandler(climaService, galpaoRepo, logger)
-	blockchainHandler := handler.NewBlockchainHandler(blockchainService, loteRepo, logger)
+	iaHandler := handler.NewIAHandler(iaService, iaRepo, loteRepo, colaboradorRepo, cfg.GeminiMaxCallsPerUserDay, logger)
+	iotHandler := handler.NewIoTHandler(iotRepo, galpaoRepo, colaboradorRepo, logger)
+	climaHandler := handler.NewClimaHandler(climaService, galpaoRepo, colaboradorRepo, logger)
+	blockchainHandler := handler.NewBlockchainHandler(blockchainService, loteRepo, colaboradorRepo, logger)
 
 	// ── Gin Router ──────────────────────────────────────────────────────
 	gin.SetMode(cfg.GinMode)
@@ -177,6 +179,11 @@ func main() {
 		protected.GET("/granjas/dashboard", granjaHandler.Dashboard)
 		protected.GET("/granjas/comparativo", granjaHandler.Comparativo)
 		protected.GET("/granjas/:id", granjaHandler.Get)
+
+		// Colaboradores (vinculados a granja)
+		protected.GET("/granjas/:id/colaboradores", colaboradorHandler.List)
+		protected.POST("/granjas/:id/colaboradores", colaboradorHandler.Add)
+		protected.DELETE("/granjas/:id/colaboradores/:uid", colaboradorHandler.Remove)
 
 		// Galpaos
 		protected.GET("/galpaos", galpaoHandler.List)

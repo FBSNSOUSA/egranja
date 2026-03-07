@@ -15,17 +15,19 @@ import (
 
 // IoTHandler gerencia os endpoints de leituras IoT.
 type IoTHandler struct {
-	iotRepo    *repository.IoTRepository
-	galpaoRepo *repository.GalpaoRepository
-	logger     *zap.Logger
+	iotRepo         *repository.IoTRepository
+	galpaoRepo      *repository.GalpaoRepository
+	colaboradorRepo *repository.GranjaColaboradorRepository
+	logger          *zap.Logger
 }
 
 // NewIoTHandler cria uma nova instancia de IoTHandler.
-func NewIoTHandler(iotRepo *repository.IoTRepository, galpaoRepo *repository.GalpaoRepository, logger *zap.Logger) *IoTHandler {
+func NewIoTHandler(iotRepo *repository.IoTRepository, galpaoRepo *repository.GalpaoRepository, colaboradorRepo *repository.GranjaColaboradorRepository, logger *zap.Logger) *IoTHandler {
 	return &IoTHandler{
-		iotRepo:    iotRepo,
-		galpaoRepo: galpaoRepo,
-		logger:     logger,
+		iotRepo:         iotRepo,
+		galpaoRepo:      galpaoRepo,
+		colaboradorRepo: colaboradorRepo,
+		logger:          logger,
 	}
 }
 
@@ -243,8 +245,17 @@ func (h *IoTHandler) getGalpaoAutenticado(c *gin.Context, userID uuid.UUID) (*st
 	}
 
 	if galpao.UsuarioID != userID {
-		dto.RespondForbidden(c, "Voce nao tem acesso a este galpao.")
-		return nil, errors.New("acesso negado")
+		// Verificar acesso via colaboracao
+		if galpao.GranjaID != nil {
+			_, colabErr := h.colaboradorRepo.UsuarioTemAcesso(*galpao.GranjaID, userID)
+			if colabErr != nil {
+				dto.RespondForbidden(c, "Voce nao tem acesso a este galpao.")
+				return nil, errors.New("acesso negado")
+			}
+		} else {
+			dto.RespondForbidden(c, "Voce nao tem acesso a este galpao.")
+			return nil, errors.New("acesso negado")
+		}
 	}
 
 	return &struct{ ID uuid.UUID }{ID: galpao.ID}, nil

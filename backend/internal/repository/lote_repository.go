@@ -94,6 +94,44 @@ func (r *LoteRepository) FindByUsuario(usuarioID uuid.UUID, status string, page,
 	return lotes, total, nil
 }
 
+// FindAcessiveis busca lotes do usuario (proprios + de galpoes de granjas colaboradas).
+func (r *LoteRepository) FindAcessiveis(usuarioID uuid.UUID, granjaIDsColaboradas []uuid.UUID, status string, page, perPage int) ([]model.Lote, int64, error) {
+	var lotes []model.Lote
+	var total int64
+
+	query := r.db.Model(&model.Lote{})
+	if len(granjaIDsColaboradas) > 0 {
+		query = query.Where(
+			"usuario_id = ? OR galpao_id IN (SELECT id FROM galpaos WHERE granja_id IN ?)",
+			usuarioID, granjaIDsColaboradas,
+		)
+	} else {
+		query = query.Where("usuario_id = ?", usuarioID)
+	}
+
+	if status != "" {
+		query = query.Where("status = ?", status)
+	}
+
+	if err := query.Count(&total).Error; err != nil {
+		return nil, 0, err
+	}
+
+	offset := (page - 1) * perPage
+	result := query.
+		Preload("Galpao").
+		Order("created_at DESC").
+		Offset(offset).
+		Limit(perPage).
+		Find(&lotes)
+
+	if result.Error != nil {
+		return nil, 0, result.Error
+	}
+
+	return lotes, total, nil
+}
+
 // FindAtivos busca todos os lotes ativos de um usuario.
 func (r *LoteRepository) FindAtivos(usuarioID uuid.UUID) ([]model.Lote, error) {
 	var lotes []model.Lote

@@ -24,6 +24,7 @@ type SanidadeHandler struct {
 	visitanteRepo   *repository.VisitanteRepository
 	granjaRepo      *repository.GranjaRepository
 	loteRepo        *repository.LoteRepository
+	colaboradorRepo *repository.GranjaColaboradorRepository
 	blockchain      *service.BlockchainService
 	validate        *validator.Validate
 	logger          *zap.Logger
@@ -36,6 +37,7 @@ func NewSanidadeHandler(
 	visitanteRepo *repository.VisitanteRepository,
 	granjaRepo *repository.GranjaRepository,
 	loteRepo *repository.LoteRepository,
+	colaboradorRepo *repository.GranjaColaboradorRepository,
 	blockchain *service.BlockchainService,
 	logger *zap.Logger,
 ) *SanidadeHandler {
@@ -45,10 +47,20 @@ func NewSanidadeHandler(
 		visitanteRepo:   visitanteRepo,
 		granjaRepo:      granjaRepo,
 		loteRepo:        loteRepo,
+		colaboradorRepo: colaboradorRepo,
 		blockchain:      blockchain,
 		validate:        validator.New(),
 		logger:          logger,
 	}
+}
+
+// granjaAcessivel verifica se o usuario e proprietario ou colaborador da granja.
+func (h *SanidadeHandler) granjaAcessivel(granja *model.Granja, userID uuid.UUID) bool {
+	if granja.UsuarioID == userID {
+		return true
+	}
+	_, err := h.colaboradorRepo.UsuarioTemAcesso(granja.ID, userID)
+	return err == nil
 }
 
 // ListVacinacoes godoc
@@ -334,7 +346,7 @@ func (h *SanidadeHandler) ListVisitantes(c *gin.Context) {
 		dto.RespondNotFound(c, "Granja nao encontrada.")
 		return
 	}
-	if granja.UsuarioID != userID {
+	if !h.granjaAcessivel(granja, userID) {
 		dto.RespondForbidden(c, "Acesso negado.")
 		return
 	}
@@ -391,7 +403,7 @@ func (h *SanidadeHandler) CreateVisitante(c *gin.Context) {
 		dto.RespondNotFound(c, "Granja nao encontrada.")
 		return
 	}
-	if granja.UsuarioID != userID {
+	if !h.granjaAcessivel(granja, userID) {
 		dto.RespondForbidden(c, "Acesso negado.")
 		return
 	}
@@ -486,7 +498,7 @@ func (h *SanidadeHandler) RegistrarSaidaVisitante(c *gin.Context) {
 		dto.RespondNotFound(c, "Granja nao encontrada.")
 		return
 	}
-	if granja.UsuarioID != userID {
+	if !h.granjaAcessivel(granja, userID) {
 		dto.RespondForbidden(c, "Acesso negado.")
 		return
 	}

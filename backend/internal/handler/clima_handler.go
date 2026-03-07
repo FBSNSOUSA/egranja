@@ -15,17 +15,19 @@ import (
 
 // ClimaHandler gerencia os endpoints de previsao do tempo.
 type ClimaHandler struct {
-	climaService *service.ClimaService
-	galpaoRepo   *repository.GalpaoRepository
-	logger       *zap.Logger
+	climaService    *service.ClimaService
+	galpaoRepo      *repository.GalpaoRepository
+	colaboradorRepo *repository.GranjaColaboradorRepository
+	logger          *zap.Logger
 }
 
 // NewClimaHandler cria uma nova instancia de ClimaHandler.
-func NewClimaHandler(climaService *service.ClimaService, galpaoRepo *repository.GalpaoRepository, logger *zap.Logger) *ClimaHandler {
+func NewClimaHandler(climaService *service.ClimaService, galpaoRepo *repository.GalpaoRepository, colaboradorRepo *repository.GranjaColaboradorRepository, logger *zap.Logger) *ClimaHandler {
 	return &ClimaHandler{
-		climaService: climaService,
-		galpaoRepo:   galpaoRepo,
-		logger:       logger,
+		climaService:    climaService,
+		galpaoRepo:      galpaoRepo,
+		colaboradorRepo: colaboradorRepo,
+		logger:          logger,
 	}
 }
 
@@ -145,8 +147,16 @@ func (h *ClimaHandler) getGalpaoAutenticado(c *gin.Context, userID uuid.UUID) (*
 	}
 
 	if galpao.UsuarioID != userID {
-		dto.RespondForbidden(c, "Voce nao tem acesso a este galpao.")
-		return nil, errors.New("acesso negado")
+		if galpao.GranjaID != nil {
+			_, colabErr := h.colaboradorRepo.UsuarioTemAcesso(*galpao.GranjaID, userID)
+			if colabErr != nil {
+				dto.RespondForbidden(c, "Voce nao tem acesso a este galpao.")
+				return nil, errors.New("acesso negado")
+			}
+		} else {
+			dto.RespondForbidden(c, "Voce nao tem acesso a este galpao.")
+			return nil, errors.New("acesso negado")
+		}
 	}
 
 	return &galpaoResult{
