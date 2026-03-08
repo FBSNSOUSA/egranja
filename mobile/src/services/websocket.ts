@@ -16,7 +16,7 @@ import { getToken } from './auth';
 // CONFIGURACAO
 // ==========================================
 
-const WS_BASE_URL = process.env.WS_BASE_URL || 'wss://api.egranja.com.br/api/v1/ws';
+const WS_BASE_URL = process.env.EXPO_PUBLIC_WS_URL || 'ws://10.0.170.0:8080/api/v1/ws';
 
 /** Intervalo de heartbeat (ms) */
 const HEARTBEAT_INTERVAL = 30000;
