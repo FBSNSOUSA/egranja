@@ -175,9 +175,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = const AuthState(status: AuthStatus.unauthenticated);
   }
 
-  /// Limpa a mensagem de erro, retornando ao estado anterior.
+  /// Limpa a mensagem de erro ou estado de loading travado,
+  /// retornando para unauthenticated.
   void clearError() {
-    if (state.status == AuthStatus.error) {
+    if (state.status == AuthStatus.error ||
+        state.status == AuthStatus.loading) {
       state = const AuthState(status: AuthStatus.unauthenticated);
     }
   }

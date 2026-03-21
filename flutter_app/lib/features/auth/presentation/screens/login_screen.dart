@@ -29,6 +29,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   bool _obscurePassword = true;
   bool _hasCheckedAuth = false;
+  bool _isManualLogin = false;
 
   @override
   void initState() {
@@ -49,10 +50,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   /// Verifica se ha sessao valida para auto-login.
+  /// Usa timeout de 5 segundos para evitar travar na web.
   Future<void> _checkAutoLogin() async {
     if (_hasCheckedAuth) return;
     _hasCheckedAuth = true;
-    await ref.read(authNotifierProvider.notifier).checkAuth();
+
+    try {
+      await ref
+          .read(authNotifierProvider.notifier)
+          .checkAuth()
+          .timeout(const Duration(seconds: 5));
+    } catch (e) {
+      // Timeout ou erro: prosseguir sem auto-login
+      debugPrint('[LoginScreen] Auto-login falhou ou timeout: $e');
+      if (mounted) {
+        ref.read(authNotifierProvider.notifier).clearError();
+      }
+    }
   }
 
   /// Submete o formulario de login.
@@ -62,16 +76,23 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     // Esconder teclado
     FocusScope.of(context).unfocus();
 
+    setState(() => _isManualLogin = true);
+
     await ref.read(authNotifierProvider.notifier).login(
           _usernameController.text.trim(),
           _passwordController.text,
         );
+
+    if (mounted) {
+      setState(() => _isManualLogin = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
-    final isLoading = authState.status == AuthStatus.loading;
+    // Campos desabilitados APENAS durante login manual, nao durante auto-login
+    final isLoading = _isManualLogin && authState.status == AuthStatus.loading;
     final isInitialOrLoading = authState.status == AuthStatus.initial ||
         (authState.status == AuthStatus.loading && !_hasCheckedAuth);
 
