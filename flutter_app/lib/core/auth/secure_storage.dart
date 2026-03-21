@@ -1,9 +1,11 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 /// Wrapper em torno do [FlutterSecureStorage] para gerenciar tokens JWT.
 ///
 /// Armazena access token e refresh token de forma segura usando
-/// Keychain (iOS) / Keystore (Android).
+/// Keychain (iOS) / Keystore (Android). Na web, usa localStorage
+/// via flutter_secure_storage_web.
 class SecureStorage {
   final FlutterSecureStorage _storage;
 
@@ -12,8 +14,14 @@ class SecureStorage {
 
   SecureStorage({FlutterSecureStorage? storage})
       : _storage = storage ??
-            const FlutterSecureStorage(
-              aOptions: AndroidOptions(encryptedSharedPreferences: true),
+            FlutterSecureStorage(
+              aOptions: kIsWeb
+                  ? const AndroidOptions()
+                  : const AndroidOptions(encryptedSharedPreferences: true),
+              webOptions: const WebOptions(
+                dbName: 'egranja_auth',
+                publicKey: 'egranja_web_key',
+              ),
             );
 
   /// Salva o access token no armazenamento seguro.
