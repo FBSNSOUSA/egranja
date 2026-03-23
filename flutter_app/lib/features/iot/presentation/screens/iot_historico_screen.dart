@@ -53,27 +53,22 @@ class _IoTHistoricoScreenState extends ConsumerState<IoTHistoricoScreen> {
     final state = ref.watch(iotHistoricoProvider(widget.galpaoId));
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Historico Sensores'),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Seletor de sensor
-            _buildSensorSelector(state, theme),
-            const SizedBox(height: 12),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Seletor de sensor
+          _buildSensorSelector(state, theme),
+          const SizedBox(height: 12),
 
-            // Seletor de periodo
-            _buildPeriodoSelector(state, theme),
-            const SizedBox(height: 20),
+          // Seletor de periodo
+          _buildPeriodoSelector(state, theme),
+          const SizedBox(height: 20),
 
-            // Conteudo principal
-            _buildContent(state, theme),
-          ],
-        ),
+          // Conteudo principal
+          _buildContent(state, theme),
+        ],
       ),
     );
   }

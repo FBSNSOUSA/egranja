@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:egranja_flutter/core/theme/app_colors.dart';
 import 'package:egranja_flutter/core/sync/sync_state.dart';
 import 'package:egranja_flutter/features/auth/presentation/providers/auth_provider.dart';
+import 'package:egranja_flutter/features/config/presentation/providers/whatsapp_config_provider.dart';
 
 /// Tela de Configuracoes do eGranja.
 ///
@@ -33,6 +34,16 @@ class _ConfiguracoesScreenState extends ConsumerState<ConfiguracoesScreen> {
   };
 
   bool _isSyncing = false;
+
+  // WhatsApp
+  final _whatsappController = TextEditingController();
+  bool _whatsappInitialized = false;
+
+  @override
+  void dispose() {
+    _whatsappController.dispose();
+    super.dispose();
+  }
 
   void _toggleNotificacao(String key) {
     setState(() {
@@ -79,6 +90,93 @@ class _ConfiguracoesScreenState extends ConsumerState<ConfiguracoesScreen> {
     }
   }
 
+  Widget _buildWhatsAppSection(BuildContext context) {
+    final whatsappState = ref.watch(whatsappConfigProvider);
+
+    // Inicializar o controller com o valor armazenado (apenas uma vez)
+    if (!_whatsappInitialized && whatsappState.phone.isNotEmpty) {
+      _whatsappController.text = whatsappState.phone;
+      _whatsappInitialized = true;
+    }
+
+    return _SecaoCard(
+      icon: Icons.chat,
+      titulo: 'WhatsApp Integrador',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Configure o numero do integrador para compartilhar '
+            'resumos de pesagem, mortalidade e checklist via WhatsApp.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: AppColors.textSecondary,
+                ),
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _whatsappController,
+            keyboardType: TextInputType.phone,
+            decoration: InputDecoration(
+              labelText: 'Numero do integrador',
+              hintText: '5511999998888',
+              helperText: 'Formato internacional sem + (ex: 5511999998888)',
+              prefixIcon: const Icon(Icons.phone),
+              filled: true,
+              fillColor: AppColors.gray50,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              suffixIcon: whatsappState.phone.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 20),
+                      onPressed: () {
+                        _whatsappController.clear();
+                        ref
+                            .read(whatsappConfigProvider.notifier)
+                            .salvarNumero('');
+                      },
+                    )
+                  : null,
+            ),
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: whatsappState.isSaving
+                  ? null
+                  : () {
+                      ref
+                          .read(whatsappConfigProvider.notifier)
+                          .salvarNumero(_whatsappController.text.trim());
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Numero do integrador salvo!'),
+                          behavior: SnackBarBehavior.floating,
+                          duration: Duration(seconds: 2),
+                        ),
+                      );
+                    },
+              icon: whatsappState.isSaving
+                  ? const SizedBox(
+                      width: 18,
+                      height: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.white,
+                      ),
+                    )
+                  : const Icon(Icons.save),
+              label: Text(
+                whatsappState.isSaving ? 'Salvando...' : 'Salvar numero',
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authNotifierProvider);
@@ -94,9 +192,7 @@ class _ConfiguracoesScreenState extends ConsumerState<ConfiguracoesScreen> {
       // syncProvider nao disponivel
     }
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Configuracoes')),
-      body: ListView(
+    return ListView(
         padding: const EdgeInsets.all(16),
         children: [
           // ── Secao 1: Perfil ──────────────────────────────────────────
@@ -231,6 +327,11 @@ class _ConfiguracoesScreenState extends ConsumerState<ConfiguracoesScreen> {
 
           const SizedBox(height: 16),
 
+          // ── Secao 2.5: WhatsApp ────────────────────────────────────
+          _buildWhatsAppSection(context),
+
+          const SizedBox(height: 16),
+
           // ── Secao 3: Dados ───────────────────────────────────────────
           _SecaoCard(
             icon: Icons.storage,
@@ -326,7 +427,6 @@ class _ConfiguracoesScreenState extends ConsumerState<ConfiguracoesScreen> {
 
           const SizedBox(height: 32),
         ],
-      ),
     );
   }
 }

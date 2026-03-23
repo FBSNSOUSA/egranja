@@ -5,6 +5,7 @@ void main() {
   group('LoteModel', () {
     final sampleJson = {
       'id': 'lote-001',
+      'usuario_id': 'user-1',
       'galpao_id': 'galpao-1',
       'galpao_nome': 'Galpao Norte',
       'data_alojamento': '2025-03-01',
@@ -14,14 +15,8 @@ void main() {
       'linhagem': 'Cobb 500',
       'peso_inicial_g': 42.5,
       'status': 'ativo',
-      'mortalidade_acumulada': 120,
+      'mortalidade_total': 120,
       'ultimo_peso_medio': 1850.0,
-      'peso_benchmark': 1900.0,
-      'mortes_recentes': 5,
-      'data_mortes_recentes': '2025-03-20',
-      'mortalidade_recente_pct': 0.02,
-      'tem_alerta': true,
-      'quantidade_alertas': 2,
       'dias_de_vida': 21,
       'aves_vivas': 24880,
       'created_at': '2025-03-01T00:00:00Z',
@@ -33,6 +28,7 @@ void main() {
         final model = LoteModel.fromJson(sampleJson);
 
         expect(model.id, 'lote-001');
+        expect(model.usuarioId, 'user-1');
         expect(model.galpaoId, 'galpao-1');
         expect(model.galpaoNome, 'Galpao Norte');
         expect(model.dataAlojamento, '2025-03-01');
@@ -42,12 +38,8 @@ void main() {
         expect(model.linhagem, 'Cobb 500');
         expect(model.pesoInicialG, 42.5);
         expect(model.status, 'ativo');
-        expect(model.mortalidadeAcumulada, 120);
+        expect(model.mortalidadeTotal, 120);
         expect(model.ultimoPesoMedio, 1850.0);
-        expect(model.pesoBenchmark, 1900.0);
-        expect(model.mortesRecentes, 5);
-        expect(model.temAlerta, true);
-        expect(model.quantidadeAlertas, 2);
         expect(model.diasDeVida, 21);
         expect(model.avesVivas, 24880);
       });
@@ -57,7 +49,6 @@ void main() {
           'id': 'lote-002',
           'galpao_id': 'galpao-2',
           'data_alojamento': '2025-03-10',
-          'data_prevista_abate': '2025-04-25',
           'quantidade': 20000,
           'tipo': 'Femea',
           'peso_inicial_g': 40,
@@ -70,10 +61,13 @@ void main() {
 
         expect(model.id, 'lote-002');
         expect(model.galpaoNome, ''); // default quando ausente
+        expect(model.usuarioId, isNull);
+        expect(model.dataPrevistaAbate, isNull);
         expect(model.linhagem, isNull);
-        expect(model.mortalidadeAcumulada, isNull);
+        expect(model.mortalidadeTotal, isNull);
         expect(model.ultimoPesoMedio, isNull);
-        expect(model.temAlerta, isNull);
+        expect(model.diasDeVida, isNull);
+        expect(model.avesVivas, isNull);
       });
     });
 
@@ -83,11 +77,14 @@ void main() {
         final json = model.toJson();
 
         expect(json['id'], 'lote-001');
+        expect(json['usuario_id'], 'user-1');
         expect(json['galpao_id'], 'galpao-1');
         expect(json['galpao_nome'], 'Galpao Norte');
         expect(json['quantidade'], 25000);
         expect(json['peso_inicial_g'], 42.5);
         expect(json['status'], 'ativo');
+        expect(json['mortalidade_total'], 120);
+        expect(json['ultimo_peso_medio'], 1850.0);
         expect(json['dias_de_vida'], 21);
         expect(json['aves_vivas'], 24880);
       });
@@ -99,14 +96,17 @@ void main() {
         final reconstructed = LoteModel.fromJson(original.toJson());
 
         expect(reconstructed.id, original.id);
+        expect(reconstructed.usuarioId, original.usuarioId);
         expect(reconstructed.galpaoId, original.galpaoId);
         expect(reconstructed.galpaoNome, original.galpaoNome);
         expect(reconstructed.quantidade, original.quantidade);
         expect(reconstructed.pesoInicialG, original.pesoInicialG);
         expect(reconstructed.status, original.status);
         expect(reconstructed.linhagem, original.linhagem);
-        expect(reconstructed.mortalidadeAcumulada, original.mortalidadeAcumulada);
+        expect(reconstructed.mortalidadeTotal, original.mortalidadeTotal);
+        expect(reconstructed.ultimoPesoMedio, original.ultimoPesoMedio);
         expect(reconstructed.diasDeVida, original.diasDeVida);
+        expect(reconstructed.avesVivas, original.avesVivas);
       });
     });
   });

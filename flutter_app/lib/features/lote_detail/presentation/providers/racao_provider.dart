@@ -74,22 +74,26 @@ class RacaoNotifier extends StateNotifier<RacaoState> {
     try {
       final recebimentosResponse =
           await _api.apiGet<List<RecebimentoRacao>>(
-        '/lotes/$_loteId/racao/recebimentos',
+        '/lotes/$_loteId/feed_receipts',
         queryParams: {'page': 1, 'per_page': 50},
-        fromJson: (json) => (json as List<dynamic>)
-            .map((e) =>
-                RecebimentoRacao.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        fromJson: (json) => (json as List<dynamic>?)
+                ?.map((e) =>
+                    RecebimentoRacao.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            [],
       );
 
       final consumosResponse = await _api.apiGet<List<ConsumoRacao>>(
-        '/lotes/$_loteId/racao/consumos',
+        '/lotes/$_loteId/feed_consumptions',
         queryParams: {'page': 1, 'per_page': 50},
-        fromJson: (json) => (json as List<dynamic>)
-            .map((e) => ConsumoRacao.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        fromJson: (json) => (json as List<dynamic>?)
+                ?.map(
+                    (e) => ConsumoRacao.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            [],
       );
 
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         recebimentos: recebimentosResponse.data,
@@ -98,12 +102,14 @@ class RacaoNotifier extends StateNotifier<RacaoState> {
         paginationConsumos: consumosResponse.meta,
       );
     } on NetworkException {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Sem conexao. Tente novamente.',
       );
     } catch (e) {
       debugPrint('[RacaoNotifier] Erro ao buscar racao: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Erro ao carregar dados de racao.',
@@ -124,7 +130,7 @@ class RacaoNotifier extends StateNotifier<RacaoState> {
 
     try {
       await _api.apiPost<RecebimentoRacao>(
-        '/lotes/$_loteId/racao/recebimentos',
+        '/lotes/$_loteId/feed_receipts',
         data: {
           'data_recebimento': dataRecebimento,
           'quantidade_kg': quantidadeKg,
@@ -139,6 +145,7 @@ class RacaoNotifier extends StateNotifier<RacaoState> {
             RecebimentoRacao.fromJson(json as Map<String, dynamic>),
       );
 
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         successMessage: 'Recebimento registrado com sucesso!',
@@ -146,6 +153,7 @@ class RacaoNotifier extends StateNotifier<RacaoState> {
       await fetch();
       return true;
     } on NetworkException {
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         successMessage: 'Salvo localmente. Sera sincronizado quando online.',
@@ -153,6 +161,7 @@ class RacaoNotifier extends StateNotifier<RacaoState> {
       return true;
     } catch (e) {
       debugPrint('[RacaoNotifier] Erro ao criar recebimento: $e');
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         errorMessage: 'Erro ao salvar recebimento. Tente novamente.',
@@ -170,7 +179,7 @@ class RacaoNotifier extends StateNotifier<RacaoState> {
 
     try {
       await _api.apiPost<ConsumoRacao>(
-        '/lotes/$_loteId/racao/consumos',
+        '/lotes/$_loteId/feed_consumptions',
         data: {
           'data': data,
           'quantidade_kg': quantidadeKg,
@@ -179,6 +188,7 @@ class RacaoNotifier extends StateNotifier<RacaoState> {
             ConsumoRacao.fromJson(json as Map<String, dynamic>),
       );
 
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         successMessage: 'Consumo registrado com sucesso!',
@@ -186,6 +196,7 @@ class RacaoNotifier extends StateNotifier<RacaoState> {
       await fetch();
       return true;
     } on NetworkException {
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         successMessage: 'Salvo localmente. Sera sincronizado quando online.',
@@ -193,6 +204,7 @@ class RacaoNotifier extends StateNotifier<RacaoState> {
       return true;
     } catch (e) {
       debugPrint('[RacaoNotifier] Erro ao criar consumo: $e');
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         errorMessage: 'Erro ao salvar consumo. Tente novamente.',

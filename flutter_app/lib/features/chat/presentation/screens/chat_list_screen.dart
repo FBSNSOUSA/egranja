@@ -41,14 +41,14 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
 
   String _getMessagePreview(Conversa conversa) {
     switch (conversa.ultimaMensagemTipo) {
-      case 'photo':
+      case 'foto':
         return 'Foto enviada';
       case 'audio':
         return 'Audio enviado';
       case 'solicitacao':
         return 'Solicitacao formal';
-      case 'system':
-        return 'Alerta do sistema';
+      case 'visita':
+        return 'Visita tecnica';
       default:
         return conversa.ultimaMensagem ?? '';
     }
@@ -82,18 +82,16 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
     final theme = Theme.of(context);
     final conversasFiltradas = _getConversasFiltradas(state.conversas);
 
-    return Scaffold(
-      body: Column(
-        children: [
-          // Filtros
-          _buildFiltros(theme),
+    return Column(
+      children: [
+        // Filtros
+        _buildFiltros(theme),
 
-          // Lista de conversas
-          Expanded(
-            child: _buildContent(state, conversasFiltradas, theme),
-          ),
-        ],
-      ),
+        // Lista de conversas
+        Expanded(
+          child: _buildContent(state, conversasFiltradas, theme),
+        ),
+      ],
     );
   }
 
@@ -213,7 +211,7 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
         // Marcar como lida localmente
         ref.read(conversaListProvider.notifier).marcarComoLida(conversa.loteId);
 
-        context.goNamed(
+        context.pushNamed(
           RouteNames.chat,
           pathParameters: {'chatId': conversa.loteId},
           extra: conversa.loteNome,
@@ -228,11 +226,11 @@ class _ChatListScreenState extends ConsumerState<ChatListScreen> {
               children: [
                 CircleAvatar(
                   radius: 26,
-                  backgroundColor: AppColors.secondary,
+                  backgroundColor: AppColors.primary,
                   child: Text(
                     initial,
                     style: theme.textTheme.titleMedium?.copyWith(
-                      color: AppColors.textOnSecondary,
+                      color: AppColors.textOnPrimary,
                       fontWeight: FontWeight.bold,
                     ),
                   ),

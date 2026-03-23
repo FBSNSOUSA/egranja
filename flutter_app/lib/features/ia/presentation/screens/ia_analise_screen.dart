@@ -68,25 +68,18 @@ class _IAAnaliseScreenState extends ConsumerState<IAAnaliseScreen> {
     final homeState = ref.watch(homeProvider);
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Analise IA'),
-        backgroundColor: AppColors.secondary,
-        foregroundColor: AppColors.white,
-      ),
-      body: Column(
-        children: [
-          // Seletor de lote
-          _buildLoteSelector(homeState, theme),
+    return Column(
+      children: [
+        // Seletor de lote
+        _buildLoteSelector(homeState, theme),
 
-          // Conteudo
-          Expanded(
-            child: _selectedLoteId.isEmpty
-                ? _buildSelectLotePrompt(theme)
-                : _buildBody(iaState, theme),
-          ),
-        ],
-      ),
+        // Conteudo
+        Expanded(
+          child: _selectedLoteId.isEmpty
+              ? _buildSelectLotePrompt(theme)
+              : _buildBody(iaState, theme),
+        ),
+      ],
     );
   }
 

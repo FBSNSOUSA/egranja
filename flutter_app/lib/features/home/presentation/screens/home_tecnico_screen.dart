@@ -69,12 +69,17 @@ class _HomeTecnicoScreenState extends ConsumerState<HomeTecnicoScreen> {
   List<Lote> _filterLotes(List<Lote> lotes) {
     var filtered = lotes;
 
-    // Filtro de alertas
+    // Filtro de alertas (based on mortalidade_total for now,
+    // since the backend doesn't return a dedicated alert field)
     switch (_alertFilter) {
       case _AlertFilter.comAlertas:
-        filtered = filtered.where((l) => l.temAlerta == true).toList();
+        filtered = filtered
+            .where((l) => (l.mortalidadeTotal ?? 0) > 0)
+            .toList();
       case _AlertFilter.semAlertas:
-        filtered = filtered.where((l) => l.temAlerta != true).toList();
+        filtered = filtered
+            .where((l) => (l.mortalidadeTotal ?? 0) == 0)
+            .toList();
       case _AlertFilter.todos:
         break;
     }
@@ -108,25 +113,23 @@ class _HomeTecnicoScreenState extends ConsumerState<HomeTecnicoScreen> {
 
     final filteredLotes = _filterLotes(state.lotesAtivos);
 
-    return Scaffold(
-      body: Column(
-        children: [
-          const OfflineIndicator(),
-          _buildGreetingHeader(theme, firstName, isOnline),
+    return Column(
+      children: [
+        const OfflineIndicator(),
+        _buildGreetingHeader(theme, firstName, isOnline),
 
-          // Stats bar
-          if (!state.isLoading || state.lotesAtivos.isNotEmpty)
-            _buildStatsBar(theme, state.lotesAtivos),
+        // Stats bar
+        if (!state.isLoading || state.lotesAtivos.isNotEmpty)
+          _buildStatsBar(theme, state.lotesAtivos),
 
-          // Search and filter
-          _buildSearchAndFilter(theme),
+        // Search and filter
+        _buildSearchAndFilter(theme),
 
-          // Content
-          Expanded(
-            child: _buildContent(state, filteredLotes, theme),
-          ),
-        ],
-      ),
+        // Content
+        Expanded(
+          child: _buildContent(state, filteredLotes, theme),
+        ),
+      ],
     );
   }
 
@@ -183,7 +186,7 @@ class _HomeTecnicoScreenState extends ConsumerState<HomeTecnicoScreen> {
   Widget _buildStatsBar(ThemeData theme, List<Lote> lotes) {
     final totalLotes = lotes.length;
     final totalAlertas =
-        lotes.where((l) => l.temAlerta == true).length;
+        lotes.where((l) => (l.mortalidadeTotal ?? 0) > 0).length;
     final totalAves = lotes.fold<int>(
       0,
       (sum, l) => sum + (l.avesVivas ?? l.quantidade),
@@ -386,10 +389,22 @@ class _HomeTecnicoScreenState extends ConsumerState<HomeTecnicoScreen> {
             padding: const EdgeInsets.only(bottom: 8),
             child: LoteCard(
               data: cardData,
-              onTap: () => context.goNamed(
+              onTap: () => context.pushNamed(
                 RouteNames.loteDetail,
                 pathParameters: {'loteId': lote.id},
               ),
+              onPesagem: lote.status == 'ativo'
+                  ? () => context.pushNamed(
+                        RouteNames.novaPesagem,
+                        pathParameters: {'loteId': lote.id},
+                      )
+                  : null,
+              onMortalidade: lote.status == 'ativo'
+                  ? () => context.pushNamed(
+                        RouteNames.novaMortalidade,
+                        pathParameters: {'loteId': lote.id},
+                      )
+                  : null,
             ),
           );
         },
@@ -457,20 +472,6 @@ class _HomeTecnicoScreenState extends ConsumerState<HomeTecnicoScreen> {
       }
     }
 
-    DateTime? dataMortesRecentes;
-    if (lote.dataMortesRecentes != null) {
-      try {
-        dataMortesRecentes = DateTime.parse(lote.dataMortesRecentes!);
-      } catch (_) {
-        try {
-          dataMortesRecentes =
-              DateFormat('dd/MM/yyyy').parse(lote.dataMortesRecentes!);
-        } catch (_) {
-          dataMortesRecentes = null;
-        }
-      }
-    }
-
     return LoteCardData(
       id: lote.id,
       galpaoNome: lote.galpaoNome,
@@ -478,14 +479,9 @@ class _HomeTecnicoScreenState extends ConsumerState<HomeTecnicoScreen> {
       tipo: lote.tipo,
       linhagem: lote.linhagem ?? 'N/A',
       quantidadeOriginal: lote.quantidade,
-      mortalidadeAcumulada: lote.mortalidadeAcumulada ?? 0,
-      ultimoPesoMedio: lote.ultimoPesoMedio,
-      pesoBenchmark: lote.pesoBenchmark,
-      mortesRecentes: lote.mortesRecentes,
-      dataMortesRecentes: dataMortesRecentes,
-      mortalidadeRecentePct: lote.mortalidadeRecentePct,
-      temAlerta: lote.temAlerta ?? false,
-      quantidadeAlertas: lote.quantidadeAlertas ?? 0,
+      mortalidadeAcumulada: lote.mortalidadeTotal ?? 0,
+      diasDeVida: lote.diasDeVida,
+      avesVivas: lote.avesVivas,
     );
   }
 }

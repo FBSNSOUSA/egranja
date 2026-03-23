@@ -73,6 +73,7 @@ class ConversaListNotifier extends StateNotifier<ConversaListState> {
 
     try {
       final conversas = await _repository.fetchConversas();
+      if (!mounted) return;
       // Ordenar por mais recente
       conversas.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
       state = state.copyWith(
@@ -81,6 +82,7 @@ class ConversaListNotifier extends StateNotifier<ConversaListState> {
       );
     } catch (e) {
       debugPrint('[ConversaListNotifier] Erro ao buscar conversas: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         error: _extractErrorMessage(e),
@@ -92,10 +94,12 @@ class ConversaListNotifier extends StateNotifier<ConversaListState> {
   Future<void> refresh() async {
     try {
       final conversas = await _repository.fetchConversas();
+      if (!mounted) return;
       conversas.sort((a, b) => b.updatedAt.compareTo(a.updatedAt));
       state = ConversaListState(conversas: conversas);
     } catch (e) {
       debugPrint('[ConversaListNotifier] Erro ao recarregar conversas: $e');
+      if (!mounted) return;
       state = state.copyWith(
         error: _extractErrorMessage(e),
       );

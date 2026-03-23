@@ -25,15 +25,24 @@ func NewPesagemRepository(db *gorm.DB) *PesagemRepository {
 // Create cria uma nova pesagem com seus items em uma transacao.
 func (r *PesagemRepository) Create(pesagem *model.Pesagem) error {
 	return r.db.Transaction(func(tx *gorm.DB) error {
+		// Salva os items e remove da struct para evitar que GORM
+		// insira automaticamente via associacao (causaria duplicata).
+		items := pesagem.Items
+		pesagem.Items = nil
+
 		if err := tx.Create(pesagem).Error; err != nil {
 			return err
 		}
-		for i := range pesagem.Items {
-			pesagem.Items[i].PesagemID = pesagem.ID
-			if err := tx.Create(&pesagem.Items[i]).Error; err != nil {
+
+		for i := range items {
+			items[i].PesagemID = pesagem.ID
+			if err := tx.Create(&items[i]).Error; err != nil {
 				return err
 			}
 		}
+
+		// Restaura os items na struct para o chamador.
+		pesagem.Items = items
 		return nil
 	})
 }

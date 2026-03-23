@@ -1,59 +1,68 @@
 /// Dados comparativos de desempenho de um lote.
 ///
 /// Usado na tela de comparativo para exibir indicadores
-/// lado a lado entre lotes finalizados.
+/// lado a lado entre lotes do mesmo galpao.
 class LoteComparativo {
   final String loteId;
-  final String loteNome;
-  final double pesoMedioG;
+  final String dataAlojamento;
+  final int diasDeVida;
+  final int quantidade;
+  final int mortalidade;
   final double mortalidadePct;
-  final double conversaoAlimentar;
-  final double iep;
-  final double gpd;
-  final double viabilidadePct;
-  final int totalAvesAlojadas;
-  final int totalAvesAbatidas;
+  final double? pesoMedio;
+  final double? ica;
+  final double? iep;
+  final double? gpd;
 
   const LoteComparativo({
     required this.loteId,
-    required this.loteNome,
-    required this.pesoMedioG,
+    required this.dataAlojamento,
+    required this.diasDeVida,
+    required this.quantidade,
+    required this.mortalidade,
     required this.mortalidadePct,
-    required this.conversaoAlimentar,
-    required this.iep,
-    required this.gpd,
-    required this.viabilidadePct,
-    required this.totalAvesAlojadas,
-    required this.totalAvesAbatidas,
+    this.pesoMedio,
+    this.ica,
+    this.iep,
+    this.gpd,
   });
+
+  /// Label curto para identificar o lote na UI (primeiros 8 chars do ID).
+  String get loteLabel {
+    if (loteId.length >= 8) return loteId.substring(0, 8);
+    return loteId;
+  }
+
+  /// Viabilidade percentual derivada: 100 - mortalidade %.
+  double get viabilidadePct => 100.0 - mortalidadePct;
 
   factory LoteComparativo.fromJson(Map<String, dynamic> json) {
     return LoteComparativo(
       loteId: json['lote_id'] as String,
-      loteNome: json['lote_nome'] as String,
-      pesoMedioG: (json['peso_medio_g'] as num).toDouble(),
-      mortalidadePct: (json['mortalidade_pct'] as num).toDouble(),
-      conversaoAlimentar: (json['conversao_alimentar'] as num).toDouble(),
-      iep: (json['iep'] as num).toDouble(),
-      gpd: (json['gpd'] as num).toDouble(),
-      viabilidadePct: (json['viabilidade_pct'] as num).toDouble(),
-      totalAvesAlojadas: json['total_aves_alojadas'] as int,
-      totalAvesAbatidas: json['total_aves_abatidas'] as int,
+      dataAlojamento: json['data_alojamento'] as String? ?? '',
+      diasDeVida: (json['dias_de_vida'] as num?)?.toInt() ?? 0,
+      quantidade: (json['quantidade'] as num?)?.toInt() ?? 0,
+      mortalidade: (json['mortalidade'] as num?)?.toInt() ?? 0,
+      mortalidadePct: (json['mortalidade_pct'] as num?)?.toDouble() ?? 0.0,
+      pesoMedio: (json['peso_medio'] as num?)?.toDouble(),
+      ica: (json['ica'] as num?)?.toDouble(),
+      iep: (json['iep'] as num?)?.toDouble(),
+      gpd: (json['gpd'] as num?)?.toDouble(),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'lote_id': loteId,
-      'lote_nome': loteNome,
-      'peso_medio_g': pesoMedioG,
+      'data_alojamento': dataAlojamento,
+      'dias_de_vida': diasDeVida,
+      'quantidade': quantidade,
+      'mortalidade': mortalidade,
       'mortalidade_pct': mortalidadePct,
-      'conversao_alimentar': conversaoAlimentar,
-      'iep': iep,
-      'gpd': gpd,
-      'viabilidade_pct': viabilidadePct,
-      'total_aves_alojadas': totalAvesAlojadas,
-      'total_aves_abatidas': totalAvesAbatidas,
+      if (pesoMedio != null) 'peso_medio': pesoMedio,
+      if (ica != null) 'ica': ica,
+      if (iep != null) 'iep': iep,
+      if (gpd != null) 'gpd': gpd,
     };
   }
 }

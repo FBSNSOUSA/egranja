@@ -1,4 +1,3 @@
-import 'package:egranja_flutter/features/checklist/data/models/checklist_item_model.dart';
 import 'package:egranja_flutter/features/checklist/domain/entities/checklist.dart';
 import 'package:egranja_flutter/features/checklist/domain/entities/checklist_item.dart';
 
@@ -9,33 +8,29 @@ class ChecklistModel extends Checklist {
     required super.loteId,
     required super.data,
     required super.itens,
-    required super.totalItens,
-    required super.itensConcluidos,
-    required super.percentualConcluido,
+    required super.completado,
+    required super.porcentagemConclusao,
+    required super.createdAt,
+    required super.updatedAt,
   });
 
   /// Cria uma instancia a partir de JSON da API.
   factory ChecklistModel.fromJson(Map<String, dynamic> json) {
     final itensList = (json['itens'] as List<dynamic>?)
-            ?.map((e) =>
-                ChecklistItemModel.fromJson(e as Map<String, dynamic>))
+            ?.map((e) => ChecklistItem.fromJson(e as Map<String, dynamic>))
             .toList() ??
         <ChecklistItem>[];
-
-    final total = json['total_itens'] as int? ?? itensList.length;
-    final concluidos = json['itens_concluidos'] as int? ??
-        itensList.where((item) => item.concluido).length;
-    final percentual = json['percentual_concluido'] as num? ??
-        (total > 0 ? (concluidos / total) * 100 : 0);
 
     return ChecklistModel(
       id: json['id'] as String? ?? '',
       loteId: json['lote_id'] as String? ?? '',
       data: json['data'] as String? ?? '',
       itens: itensList,
-      totalItens: total,
-      itensConcluidos: concluidos,
-      percentualConcluido: percentual.toDouble(),
+      completado: json['completado'] as bool? ?? false,
+      porcentagemConclusao:
+          (json['porcentagem_conclusao'] as num?)?.toDouble() ?? 0.0,
+      createdAt: json['created_at'] as String? ?? '',
+      updatedAt: json['updated_at'] as String? ?? '',
     );
   }
 
@@ -45,19 +40,11 @@ class ChecklistModel extends Checklist {
       'id': id,
       'lote_id': loteId,
       'data': data,
-      'itens': itens
-          .map((e) => e is ChecklistItemModel
-              ? e.toJson()
-              : {
-                  'id': e.id,
-                  'descricao': e.descricao,
-                  'categoria': e.categoria,
-                  'concluido': e.concluido,
-                })
-          .toList(),
-      'total_itens': totalItens,
-      'itens_concluidos': itensConcluidos,
-      'percentual_concluido': percentualConcluido,
+      'itens': itens.map((e) => e.toJson()).toList(),
+      'completado': completado,
+      'porcentagem_conclusao': porcentagemConclusao,
+      'created_at': createdAt,
+      'updated_at': updatedAt,
     };
   }
 }

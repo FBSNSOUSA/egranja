@@ -7,6 +7,8 @@ class RouteNames {
 
   // ── Auth ──────────────────────────────────────────────────────────────
   static const String login = 'login';
+  static const String register = 'register';
+  static const String forgotPassword = 'forgot-password';
 
   // ── Home ──────────────────────────────────────────────────────────────
   static const String home = 'home';
@@ -45,6 +47,10 @@ class RouteNames {
   // ── Relatorios ────────────────────────────────────────────────────────
   static const String relatorios = 'relatorios';
   static const String comparativoLotes = 'comparativo-lotes';
+  static const String relatorioPesagens = 'relatorio-pesagens';
+  static const String relatorioMortalidade = 'relatorio-mortalidade';
+  static const String relatorioConversao = 'relatorio-conversao';
+  static const String relatorioConsumo = 'relatorio-consumo';
 
   // ── IA ────────────────────────────────────────────────────────────────
   static const String iaAssistente = 'ia-assistente';
@@ -53,6 +59,7 @@ class RouteNames {
   // ── IoT ───────────────────────────────────────────────────────────────
   static const String iotDashboard = 'iot-dashboard';
   static const String iotHistorico = 'iot-historico';
+  static const String iotConfig = 'iot-config';
 
   // ── Clima ─────────────────────────────────────────────────────────────
   static const String clima = 'clima';
@@ -61,6 +68,19 @@ class RouteNames {
   static const String mapaGalpoes = 'mapa-galpoes';
   static const String galpaoDetalhe = 'galpao-detalhe';
 
+  // ── Granja ──────────────────────────────────────────────────────────
+  static const String granjaList = 'granja-list';
+  static const String granjaDetail = 'granja-detail';
+  static const String granjaForm = 'granja-form';
+  static const String granjaFormEdit = 'granja-form-edit';
+
   // ── Configuracoes ─────────────────────────────────────────────────────
   static const String configuracoes = 'configuracoes';
+  static const String editarPerfil = 'editar-perfil';
+
+  // ── Notificacoes ────────────────────────────────────────────────────
+  static const String notificacoes = 'notificacoes';
+
+  // ── Produtores (visao tecnico) ──────────────────────────────────────
+  static const String produtores = 'produtores';
 }

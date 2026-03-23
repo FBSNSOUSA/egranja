@@ -118,28 +118,21 @@ class _IAAssistenteScreenState extends ConsumerState<IAAssistenteScreen> {
       },
     );
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Assistente IA'),
-        backgroundColor: AppColors.secondary,
-        foregroundColor: AppColors.white,
-      ),
-      body: Column(
-        children: [
-          // Seletor de lote
-          _buildLoteSelector(homeState, theme),
+    return Column(
+      children: [
+        // Seletor de lote
+        _buildLoteSelector(homeState, theme),
 
-          // Mensagens ou estado vazio
-          Expanded(
-            child: _selectedLoteId.isEmpty
-                ? _buildSelectLotePrompt(theme)
-                : _buildMessages(iaState, theme),
-          ),
+        // Mensagens ou estado vazio
+        Expanded(
+          child: _selectedLoteId.isEmpty
+              ? _buildSelectLotePrompt(theme)
+              : _buildMessages(iaState, theme),
+        ),
 
-          // Input
-          _buildInputBar(iaState, theme),
-        ],
-      ),
+        // Input
+        _buildInputBar(iaState, theme),
+      ],
     );
   }
 
@@ -398,7 +391,7 @@ class _IAAssistenteScreenState extends ConsumerState<IAAssistenteScreen> {
                 vertical: 10,
               ),
               decoration: BoxDecoration(
-                color: isUser ? AppColors.secondary : AppColors.surface,
+                color: isUser ? AppColors.primary : AppColors.surface,
                 borderRadius: BorderRadius.only(
                   topLeft: const Radius.circular(16),
                   topRight: const Radius.circular(16),
@@ -444,7 +437,7 @@ class _IAAssistenteScreenState extends ConsumerState<IAAssistenteScreen> {
 
   /// Renders text with simple markdown support for **bold** and bullet lists.
   Widget _buildMessageText(String text, bool isUser, ThemeData theme) {
-    final baseColor = isUser ? AppColors.textOnSecondary : AppColors.textPrimary;
+    final baseColor = isUser ? AppColors.textOnPrimary : AppColors.textPrimary;
     final lines = text.split('\n');
 
     final children = <Widget>[];

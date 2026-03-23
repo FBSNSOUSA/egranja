@@ -17,6 +17,28 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<String> register({
+    required String nome,
+    required String email,
+    required String telefone,
+    required String senha,
+    required String tipo,
+  }) {
+    return _authService.register(
+      nome: nome,
+      email: email,
+      telefone: telefone,
+      senha: senha,
+      tipo: tipo,
+    );
+  }
+
+  @override
+  Future<String> forgotPassword(String email) {
+    return _authService.forgotPassword(email);
+  }
+
+  @override
   Future<void> logout() {
     return _authService.logout();
   }

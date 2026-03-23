@@ -107,10 +107,6 @@ class _LoteResumoTabState extends ConsumerState<LoteResumoTab>
             _buildGraficoMortalidade(state),
             const SizedBox(height: 16),
 
-            // ── Projecao ─────────────────────────────────────────────
-            _buildProjecao(indicadores, theme),
-            const SizedBox(height: 16),
-
             // ── Botao Finalizar ──────────────────────────────────────
             if (isProdutor && isAtivo) ...[
               SizedBox(
@@ -139,14 +135,23 @@ class _LoteResumoTabState extends ConsumerState<LoteResumoTab>
   }
 
   Widget _buildIndicadoresGrid(Indicadores indicadores, ThemeData theme) {
+    // Cor da viabilidade: verde se >=97%, amarelo 95-97%, vermelho <95%
+    Color viabilidadeCor = AppColors.success;
+    if (indicadores.viabilidade < 95) {
+      viabilidadeCor = AppColors.danger;
+    } else if (indicadores.viabilidade < 97) {
+      viabilidadeCor = AppColors.warning;
+    }
+
     return GridView.count(
       crossAxisCount: 2,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 8,
-      crossAxisSpacing: 8,
-      childAspectRatio: 1.4,
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: 1.3,
       children: [
+        // -- Indicadores primarios (sempre visiveis) --
         IndicatorCard(
           label: 'Dias de Vida',
           valor: '${indicadores.diasDeVida}',
@@ -156,80 +161,115 @@ class _LoteResumoTabState extends ConsumerState<LoteResumoTab>
         IndicatorCard(
           label: 'Aves Vivas',
           valor: '${indicadores.avesVivas}',
-          subtitulo: 'de ${indicadores.quantidadeOriginal}',
+          subtitulo: 'de ${indicadores.avesAlojadas} alojadas',
           icone: Icons.pets,
           compacto: true,
         ),
         IndicatorCard(
           label: 'Mortalidade',
-          valor: '${indicadores.mortalidadeAcumuladaPct.toStringAsFixed(1)}%',
-          subtitulo: 'Dia: ${indicadores.mortalidadeDiaPct.toStringAsFixed(2)}%',
+          valor: '${indicadores.mortalidadePct.toStringAsFixed(2)}%',
+          subtitulo: '${indicadores.mortalidadeTotal} mortes',
           cor: IndicatorColors.getMortalityColor(
-              indicadores.mortalidadeDiaPct),
+              indicadores.mortalidadePct),
           icone: Icons.warning_amber,
-          compacto: true,
-        ),
-        IndicatorCard(
-          label: 'Peso Medio',
-          valor: '${indicadores.ultimoPesoMedio.toStringAsFixed(0)} g',
-          subtitulo:
-              'Bench: ${indicadores.pesoBenchmark.toStringAsFixed(0)} g',
-          cor: IndicatorColors.getWeightColor(
-              indicadores.ultimoPesoMedio, indicadores.pesoBenchmark),
-          icone: Icons.monitor_weight,
-          compacto: true,
-        ),
-        IndicatorCard(
-          label: 'GPD',
-          valor: '${indicadores.gpd.toStringAsFixed(1)} g',
-          icone: Icons.trending_up,
-          compacto: true,
-        ),
-        IndicatorCard(
-          label: 'ICA',
-          valor: indicadores.ica.toStringAsFixed(3),
-          icone: Icons.swap_horiz,
-          compacto: true,
-        ),
-        IndicatorCard(
-          label: 'IEP',
-          valor: indicadores.iep.toStringAsFixed(0),
-          subtitulo: indicadores.iepClassificacao,
-          cor: IndicatorColors.getIEPColor(indicadores.iep),
-          icone: Icons.speed,
           compacto: true,
         ),
         IndicatorCard(
           label: 'Viabilidade',
           valor: '${indicadores.viabilidade.toStringAsFixed(1)}%',
           icone: Icons.check_circle_outline,
-          cor: AppColors.success,
+          cor: viabilidadeCor,
           compacto: true,
         ),
-        IndicatorCard(
-          label: 'Saldo Racao',
-          valor: '${indicadores.saldoRacao.toStringAsFixed(0)} kg',
-          subtitulo:
-              '${indicadores.diasRestantesRacao} dias restantes',
-          icone: Icons.restaurant,
-          compacto: true,
-        ),
-        IndicatorCard(
-          label: 'Consumo Agua',
-          valor: '${indicadores.consumoAguaDia.toStringAsFixed(0)} L',
-          subtitulo:
-              '${indicadores.consumoAguaPorAve.toStringAsFixed(0)} mL/ave',
-          icone: Icons.water_drop,
-          compacto: true,
-        ),
-        IndicatorCard(
-          label: 'Agua/Racao',
-          valor: indicadores.relacaoAguaRacao.toStringAsFixed(2),
-          cor: IndicatorColors.getWaterFeedRatioColor(
-              indicadores.relacaoAguaRacao),
-          icone: Icons.compare_arrows,
-          compacto: true,
-        ),
+
+        // -- Indicadores de peso --
+        if (indicadores.ultimoPesoMedio != null)
+          IndicatorCard(
+            label: 'Peso Medio',
+            valor: '${indicadores.ultimoPesoMedio!.toStringAsFixed(0)} g',
+            subtitulo: indicadores.pesoPadraoG != null
+                ? 'Padrao: ${indicadores.pesoPadraoG!.toStringAsFixed(0)} g'
+                : null,
+            cor: indicadores.pesoPadraoG != null
+                ? IndicatorColors.getWeightColor(
+                    indicadores.ultimoPesoMedio!, indicadores.pesoPadraoG!)
+                : null,
+            icone: Icons.monitor_weight,
+            compacto: true,
+          ),
+        if (indicadores.gpd != null)
+          IndicatorCard(
+            label: 'GPD',
+            valor: '${indicadores.gpd!.toStringAsFixed(1)} g/dia',
+            subtitulo: 'Ganho de peso diario',
+            icone: Icons.trending_up,
+            compacto: true,
+          ),
+
+        // -- Indices zootecnicos (ICA e IEP sao os mais importantes) --
+        if (indicadores.ica != null)
+          IndicatorCard(
+            label: 'ICA',
+            valor: indicadores.ica!.toStringAsFixed(3),
+            subtitulo: 'Conversao alimentar',
+            cor: IndicatorColors.getICAColor(indicadores.ica!),
+            icone: Icons.swap_horiz,
+            compacto: true,
+          ),
+        if (indicadores.iep != null)
+          IndicatorCard(
+            label: 'IEP',
+            valor: indicadores.iep!.toStringAsFixed(0),
+            subtitulo: indicadores.classificacaoIep,
+            cor: IndicatorColors.getIEPColor(indicadores.iep!),
+            icone: Icons.speed,
+            compacto: true,
+          ),
+
+        // -- Consumo de racao --
+        if (indicadores.consumoRacaoPorAve != null)
+          IndicatorCard(
+            label: 'Racao/Ave',
+            valor: '${indicadores.consumoRacaoPorAve!.toStringAsFixed(2)} kg',
+            subtitulo: 'Consumo acumulado',
+            icone: Icons.restaurant,
+            compacto: true,
+          ),
+        if (indicadores.saldoRacaoKg != null)
+          IndicatorCard(
+            label: 'Saldo Racao',
+            valor: '${indicadores.saldoRacaoKg!.toStringAsFixed(0)} kg',
+            subtitulo: indicadores.diasEstoqueRacao != null
+                ? '~${indicadores.diasEstoqueRacao!.toStringAsFixed(0)} dias estoque'
+                : null,
+            cor: indicadores.diasEstoqueRacao != null && indicadores.diasEstoqueRacao! < 2
+                ? AppColors.danger
+                : indicadores.diasEstoqueRacao != null && indicadores.diasEstoqueRacao! < 4
+                    ? AppColors.warning
+                    : null,
+            icone: Icons.inventory_2,
+            compacto: true,
+          ),
+
+        // -- Consumo de agua e relacao agua/racao --
+        if (indicadores.consumoAguaDiaL != null)
+          IndicatorCard(
+            label: 'Agua Hoje',
+            valor: '${indicadores.consumoAguaDiaL!.toStringAsFixed(0)} L',
+            subtitulo: 'Consumo do dia',
+            icone: Icons.water_drop,
+            compacto: true,
+          ),
+        if (indicadores.relacaoAguaRacao != null)
+          IndicatorCard(
+            label: 'Agua/Racao',
+            valor: indicadores.relacaoAguaRacao!.toStringAsFixed(2),
+            subtitulo: 'Ideal: 1.6 - 2.0',
+            cor: IndicatorColors.getWaterFeedRatioColor(
+                indicadores.relacaoAguaRacao!),
+            icone: Icons.compare_arrows,
+            compacto: true,
+          ),
       ],
     );
   }
@@ -280,76 +320,4 @@ class _LoteResumoTabState extends ConsumerState<LoteResumoTab>
     );
   }
 
-  Widget _buildProjecao(Indicadores indicadores, ThemeData theme) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Projecao',
-              style: theme.textTheme.titleSmall,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              indicadores.projecaoTexto,
-              style: theme.textTheme.bodyMedium,
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _ProjecaoItem(
-                    label: 'Peso projetado',
-                    valor:
-                        '${indicadores.pesoProjetadoAbate.toStringAsFixed(0)} g',
-                  ),
-                ),
-                Expanded(
-                  child: _ProjecaoItem(
-                    label: 'Dias para alvo',
-                    valor: '${indicadores.diasParaPesoAlvo}',
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _ProjecaoItem extends StatelessWidget {
-  const _ProjecaoItem({
-    required this.label,
-    required this.valor,
-  });
-
-  final String label;
-  final String valor;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
-        ),
-        const SizedBox(height: 2),
-        Text(
-          valor,
-          style: theme.textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-      ],
-    );
-  }
 }

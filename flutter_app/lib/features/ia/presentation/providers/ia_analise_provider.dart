@@ -54,35 +54,64 @@ class IAAnaliseNotifier extends StateNotifier<IAAnaliseState> {
         super(const IAAnaliseState());
 
   /// Carrega a analise mais recente do lote.
+  ///
+  /// O backend so possui POST /lotes/{id}/ia/analisar (nao GET).
+  /// Tentamos buscar do historico; se nao houver, mostramos estado vazio
+  /// para que o usuario clique em "Gerar analise".
   Future<void> carregarAnalise() async {
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     try {
-      final response = await _api.apiGet<AnaliseIA>(
-        '/lotes/$_loteId/ia/analisar',
-        fromJson: (json) =>
-            AnaliseIA.fromJson(json as Map<String, dynamic>),
+      // Buscar ultima interacao do tipo 'analise' no historico
+      final response = await _api.apiGet<AnaliseIA?>(
+        '/lotes/$_loteId/ia/historico',
+        queryParams: {'per_page': '1'},
+        fromJson: (json) {
+          if (json == null) return null;
+          final list = json as List<dynamic>;
+          // Procurar a interacao mais recente do tipo 'analise'
+          for (final item in list) {
+            final map = item as Map<String, dynamic>;
+            if (map['tipo'] == 'analise') {
+              return AnaliseIA.fromJson(map);
+            }
+          }
+          // Se nao encontrou analise, usar a primeira interacao
+          if (list.isNotEmpty) {
+            final map = list.first as Map<String, dynamic>;
+            if (map['tipo'] == 'analise') {
+              return AnaliseIA.fromJson(map);
+            }
+          }
+          return null;
+        },
       );
 
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         analise: response.data,
       );
     } on NetworkException {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Sem conexao. Tente novamente.',
       );
     } catch (e) {
       debugPrint('[IAAnaliseNotifier] Erro ao carregar analise: $e');
+      if (!mounted) return;
+      // Nao tratar como erro critico -- pode simplesmente nao ter analise
       state = state.copyWith(
         isLoading: false,
-        errorMessage: 'Erro ao carregar analise.',
       );
     }
   }
 
   /// Gera uma nova analise do lote via POST.
+  ///
+  /// Backend endpoint: POST /lotes/{id}/ia/analisar
+  /// Backend DTO: IAAnaliseResponse { "resposta": "...", "tokens": ... }
   Future<void> gerarNovaAnalise() async {
     state = state.copyWith(isGerando: true, errorMessage: null);
 
@@ -93,17 +122,20 @@ class IAAnaliseNotifier extends StateNotifier<IAAnaliseState> {
             AnaliseIA.fromJson(json as Map<String, dynamic>),
       );
 
+      if (!mounted) return;
       state = state.copyWith(
         isGerando: false,
         analise: response.data,
       );
     } on NetworkException {
+      if (!mounted) return;
       state = state.copyWith(
         isGerando: false,
         errorMessage: 'Sem conexao. Tente novamente.',
       );
     } catch (e) {
       debugPrint('[IAAnaliseNotifier] Erro ao gerar analise: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isGerando: false,
         errorMessage: 'Erro ao gerar analise. Tente novamente.',

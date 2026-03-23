@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:egranja_flutter/core/theme/indicator_colors.dart';
+import 'package:egranja_flutter/core/router/route_names.dart';
 import 'package:egranja_flutter/core/widgets/empty_state.dart';
-import 'package:egranja_flutter/core/widgets/fab_menu.dart';
 import 'package:egranja_flutter/core/widgets/loading_skeleton.dart';
 import 'package:egranja_flutter/core/widgets/error_widget.dart';
-import 'package:egranja_flutter/core/router/route_names.dart';
 import 'package:egranja_flutter/features/lote_detail/domain/entities/agua.dart';
 import '../../providers/agua_provider.dart';
 
@@ -59,23 +57,7 @@ class _LoteAguaTabState extends ConsumerState<LoteAguaTab>
     final state = ref.watch(aguaProvider(widget.loteId));
     final theme = Theme.of(context);
 
-    return Scaffold(
-      body: _buildBody(state, theme),
-      floatingActionButton: FABMenu(
-        actions: [
-          FABAction(
-            label: 'Novo Consumo de Agua',
-            icon: Icons.water_drop,
-            onPress: () {
-              context.pushNamed(
-                RouteNames.novoConsumoAgua,
-                pathParameters: {'loteId': widget.loteId},
-              );
-            },
-          ),
-        ],
-      ),
-    );
+    return _buildBody(state, theme);
   }
 
   Widget _buildBody(AguaState state, ThemeData theme) {
@@ -153,51 +135,22 @@ class _ConsumoAguaCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final aguaRacaoColor = consumo.relacaoAguaRacao != null
-        ? IndicatorColors.getWaterFeedRatioColor(
-            consumo.relacaoAguaRacao!)
-        : null;
-
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
         padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  _formatDate(consumo.data),
-                  style: theme.textTheme.titleSmall,
-                ),
-                Text(
-                  '${consumo.quantidadeLitros.toStringAsFixed(0)} L',
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
+            Text(
+              _formatDate(consumo.data),
+              style: theme.textTheme.titleSmall,
             ),
-            const SizedBox(height: 4),
-            Wrap(
-              spacing: 16,
-              children: [
-                if (consumo.consumoPorAve != null)
-                  Text(
-                    '${consumo.consumoPorAve!.toStringAsFixed(0)} mL/ave',
-                    style: theme.textTheme.bodySmall,
-                  ),
-                if (consumo.relacaoAguaRacao != null)
-                  Text(
-                    'Agua/Racao: ${consumo.relacaoAguaRacao!.toStringAsFixed(2)}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: aguaRacaoColor,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-              ],
+            Text(
+              '${consumo.quantidadeLitros.toStringAsFixed(0)} L',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
             ),
           ],
         ),

@@ -71,23 +71,28 @@ class VacinacoesNotifier extends StateNotifier<VacinacoesState> {
       final response = await _api.apiGet<List<Vacinacao>>(
         '/lotes/$_loteId/vacinacoes',
         queryParams: {'page': 1, 'per_page': 20},
-        fromJson: (json) => (json as List<dynamic>)
-            .map((e) => Vacinacao.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        fromJson: (json) => json == null
+            ? <Vacinacao>[]
+            : (json as List<dynamic>)
+                .map((e) => Vacinacao.fromJson(e as Map<String, dynamic>))
+                .toList(),
       );
 
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         vacinacoes: response.data,
         pagination: response.meta,
       );
     } on NetworkException {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Sem conexao. Tente novamente.',
       );
     } catch (e) {
       debugPrint('[VacinacoesNotifier] Erro ao buscar vacinacoes: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Erro ao carregar vacinacoes.',
@@ -106,11 +111,14 @@ class VacinacoesNotifier extends StateNotifier<VacinacoesState> {
       final response = await _api.apiGet<List<Vacinacao>>(
         '/lotes/$_loteId/vacinacoes',
         queryParams: {'page': nextPage, 'per_page': 20},
-        fromJson: (json) => (json as List<dynamic>)
-            .map((e) => Vacinacao.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        fromJson: (json) => json == null
+            ? <Vacinacao>[]
+            : (json as List<dynamic>)
+                .map((e) => Vacinacao.fromJson(e as Map<String, dynamic>))
+                .toList(),
       );
 
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         vacinacoes: [...state.vacinacoes, ...response.data],
@@ -118,18 +126,25 @@ class VacinacoesNotifier extends StateNotifier<VacinacoesState> {
       );
     } catch (e) {
       debugPrint('[VacinacoesNotifier] Erro ao carregar mais: $e');
+      if (!mounted) return;
       state = state.copyWith(isLoading: false);
     }
   }
 
   /// Cria nova vacinacao.
+  ///
+  /// Backend expects CreateVacinacaoRequest:
+  /// - data (YYYY-MM-DD) - required
+  /// - vacina - required
+  /// - lote_produto - optional
+  /// - via_administracao - optional
+  /// - responsavel - optional
+  /// - observacao - optional
   Future<bool> criar({
-    required String nome,
-    required String dataAplicacao,
-    String? fabricante,
-    String? lote,
-    double? doseMl,
-    String? viaAplicacao,
+    required String vacina,
+    required String data,
+    String? loteProduto,
+    String? viaAdministracao,
     String? responsavel,
     String? observacao,
   }) async {
@@ -139,14 +154,12 @@ class VacinacoesNotifier extends StateNotifier<VacinacoesState> {
       await _api.apiPost<Vacinacao>(
         '/lotes/$_loteId/vacinacoes',
         data: {
-          'nome': nome,
-          'data_aplicacao': dataAplicacao,
-          if (fabricante != null && fabricante.isNotEmpty)
-            'fabricante': fabricante,
-          if (lote != null && lote.isNotEmpty) 'lote': lote,
-          'dose_ml': ?doseMl,
-          if (viaAplicacao != null && viaAplicacao.isNotEmpty)
-            'via_aplicacao': viaAplicacao,
+          'data': data,
+          'vacina': vacina,
+          if (loteProduto != null && loteProduto.isNotEmpty)
+            'lote_produto': loteProduto,
+          if (viaAdministracao != null && viaAdministracao.isNotEmpty)
+            'via_administracao': viaAdministracao,
           if (responsavel != null && responsavel.isNotEmpty)
             'responsavel': responsavel,
           if (observacao != null && observacao.isNotEmpty)
@@ -155,6 +168,7 @@ class VacinacoesNotifier extends StateNotifier<VacinacoesState> {
         fromJson: (json) => Vacinacao.fromJson(json as Map<String, dynamic>),
       );
 
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         successMessage: 'Vacinacao registrada com sucesso!',
@@ -162,6 +176,7 @@ class VacinacoesNotifier extends StateNotifier<VacinacoesState> {
       await fetch();
       return true;
     } on NetworkException {
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         successMessage: 'Salvo localmente. Sera sincronizado quando online.',
@@ -169,6 +184,7 @@ class VacinacoesNotifier extends StateNotifier<VacinacoesState> {
       return true;
     } catch (e) {
       debugPrint('[VacinacoesNotifier] Erro ao criar vacinacao: $e');
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         errorMessage: 'Erro ao salvar vacinacao. Tente novamente.',

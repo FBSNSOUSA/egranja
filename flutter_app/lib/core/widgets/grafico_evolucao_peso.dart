@@ -52,20 +52,39 @@ class GraficoEvolucaoPeso extends StatelessWidget {
           : 'Grafico de evolucao de peso, sem dados',
       child: Card(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Titulo
-              Text(
-                'Evolucao de Peso',
-                style: theme.textTheme.titleSmall,
+              // Titulo with icon
+              Row(
+                children: [
+                  Icon(
+                    Icons.show_chart,
+                    size: 20,
+                    color: AppColors.secondary,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Curva de Peso',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
-              if (linhagem.isNotEmpty)
-                Text(
-                  'Linhagem: $linhagem',
-                  style: theme.textTheme.labelSmall,
+              const SizedBox(height: 2),
+              Padding(
+                padding: const EdgeInsets.only(left: 28),
+                child: Text(
+                  linhagem.isNotEmpty
+                      ? 'Peso (g) x Idade (dias) - $linhagem'
+                      : 'Peso (g) x Idade (dias)',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
                 ),
+              ),
               const SizedBox(height: 16),
 
               // Grafico ou estado vazio
@@ -93,15 +112,25 @@ class GraficoEvolucaoPeso extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.show_chart_outlined,
-              size: 40,
-              color: theme.colorScheme.onSurfaceVariant.withAlpha(100),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: AppColors.gray100,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.show_chart_outlined,
+                size: 28,
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+              ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Text(
               'Sem dados de pesagem',
-              style: theme.textTheme.bodySmall,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -247,13 +276,13 @@ class GraficoEvolucaoPeso extends StatelessWidget {
       children: [
         _LegendItem(
           color: AppColors.secondary,
-          label: 'Peso real',
+          label: 'Peso real (g)',
           dashed: false,
         ),
         const SizedBox(width: 20),
         _LegendItem(
           color: AppColors.success,
-          label: 'Benchmark',
+          label: 'Padrao linhagem',
           dashed: true,
         ),
       ],

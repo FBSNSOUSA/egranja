@@ -7,6 +7,8 @@ import 'package:egranja_flutter/core/error/exceptions.dart';
 import 'package:egranja_flutter/features/lote_detail/domain/entities/indicadores.dart';
 import 'package:egranja_flutter/features/lote_detail/domain/entities/lote.dart';
 import 'package:egranja_flutter/features/lote_detail/domain/entities/grafico_data.dart';
+import 'package:egranja_flutter/features/lote_detail/domain/entities/mortalidade.dart';
+import 'package:egranja_flutter/features/lote_detail/domain/entities/pesagem.dart';
 import 'package:egranja_flutter/features/lote_detail/domain/entities/finalizar_lote_payload.dart';
 
 // ── Estado ──────────────────────────────────────────────────────────────
@@ -95,6 +97,7 @@ class LoteDetailNotifier extends StateNotifier<LoteDetailState> {
             Indicadores.fromJson(json as Map<String, dynamic>),
       );
 
+      if (!mounted) return;
       _lastFetchIndicadores = now;
       state = state.copyWith(
         isLoading: false,
@@ -102,6 +105,7 @@ class LoteDetailNotifier extends StateNotifier<LoteDetailState> {
         indicadores: indicadoresResponse.data,
       );
     } on NetworkException {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage:
@@ -109,6 +113,7 @@ class LoteDetailNotifier extends StateNotifier<LoteDetailState> {
       );
     } catch (e) {
       debugPrint('[LoteDetailNotifier] Erro ao buscar indicadores: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Erro ao carregar indicadores. Tente novamente.',
@@ -117,32 +122,89 @@ class LoteDetailNotifier extends StateNotifier<LoteDetailState> {
   }
 
   /// Busca dados para o grafico de evolucao de peso.
+  ///
+  /// O backend nao possui endpoint dedicado para dados de grafico.
+  /// Busca a lista de pesagens e constroi os dados do grafico client-side.
   Future<void> fetchDadosGraficoPeso() async {
     if (state.dadosGraficoPeso != null) return;
 
     try {
-      final response = await _api.apiGet<DadosGraficoPeso>(
-        '/lotes/$_loteId/grafico-peso',
-        fromJson: (json) =>
-            DadosGraficoPeso.fromJson(json as Map<String, dynamic>),
+      final response = await _api.apiGet<List<Pesagem>>(
+        '/lotes/$_loteId/pesagens',
+        queryParams: {'per_page': 100},
+        fromJson: (json) => (json as List<dynamic>?)
+                ?.map((e) => Pesagem.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            [],
       );
-      state = state.copyWith(dadosGraficoPeso: response.data);
+
+      if (!mounted) return;
+      final pesagens = response.data;
+      final pesoReal = pesagens.map((p) {
+        final date = DateTime.tryParse(p.data);
+        final label = date != null
+            ? '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}'
+            : p.data;
+        return PontoGrafico(label: label, valor: p.pesoMedio);
+      }).toList();
+
+      state = state.copyWith(
+        dadosGraficoPeso: DadosGraficoPeso(
+          pesoReal: pesoReal,
+          pesoBenchmark: const [],
+        ),
+      );
     } catch (e) {
       debugPrint('[LoteDetailNotifier] Erro ao buscar grafico peso: $e');
     }
   }
 
   /// Busca dados para o grafico de mortalidade.
+  ///
+  /// O backend nao possui endpoint dedicado para dados de grafico.
+  /// Busca a lista de mortalidades e constroi os dados do grafico client-side.
   Future<void> fetchDadosGraficoMortalidade() async {
     if (state.dadosGraficoMortalidade != null) return;
 
     try {
-      final response = await _api.apiGet<DadosGraficoMortalidade>(
-        '/lotes/$_loteId/grafico-mortalidade',
-        fromJson: (json) =>
-            DadosGraficoMortalidade.fromJson(json as Map<String, dynamic>),
+      final response = await _api.apiGet<List<Mortalidade>>(
+        '/lotes/$_loteId/mortalidades',
+        queryParams: {'per_page': 100},
+        fromJson: (json) => (json as List<dynamic>?)
+                ?.map(
+                    (e) => Mortalidade.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            [],
       );
-      state = state.copyWith(dadosGraficoMortalidade: response.data);
+
+      final mortalidades = response.data;
+
+      // Ordenar por data
+      final sorted = List<Mortalidade>.from(mortalidades)
+        ..sort((a, b) => a.data.compareTo(b.data));
+
+      final diaria = <PontoGrafico>[];
+      final acumulada = <PontoGrafico>[];
+      int acum = 0;
+
+      for (final m in sorted) {
+        final date = DateTime.tryParse(m.data);
+        final label = date != null
+            ? '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}'
+            : m.data;
+        diaria
+            .add(PontoGrafico(label: label, valor: m.quantidade.toDouble()));
+        acum += m.quantidade;
+        acumulada.add(PontoGrafico(label: label, valor: acum.toDouble()));
+      }
+
+      if (!mounted) return;
+      state = state.copyWith(
+        dadosGraficoMortalidade: DadosGraficoMortalidade(
+          mortalidadeDiaria: diaria,
+          mortalidadeAcumulada: acumulada,
+        ),
+      );
     } catch (e) {
       debugPrint(
           '[LoteDetailNotifier] Erro ao buscar grafico mortalidade: $e');
@@ -160,12 +222,14 @@ class LoteDetailNotifier extends StateNotifier<LoteDetailState> {
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
+      if (!mounted) return false;
       state = state.copyWith(
         isFinalizando: false,
         successMessage: 'Lote finalizado com sucesso!',
       );
       return true;
     } on NetworkException {
+      if (!mounted) return false;
       state = state.copyWith(
         isFinalizando: false,
         successMessage: 'Salvo localmente. Sera sincronizado quando online.',
@@ -173,6 +237,7 @@ class LoteDetailNotifier extends StateNotifier<LoteDetailState> {
       return true;
     } catch (e) {
       debugPrint('[LoteDetailNotifier] Erro ao finalizar lote: $e');
+      if (!mounted) return false;
       state = state.copyWith(
         isFinalizando: false,
         errorMessage: 'Erro ao finalizar lote. Tente novamente.',

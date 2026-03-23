@@ -32,9 +32,11 @@ class SanidadeRepositoryImpl implements SanidadeRepository {
     final response = await _apiClient.apiGet<List<Vacinacao>>(
       '/lotes/$loteId/vacinacoes',
       queryParams: {'page': page, 'per_page': _perPage},
-      fromJson: (json) => (json as List<dynamic>)
-          .map((e) => Vacinacao.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      fromJson: (json) => json == null
+          ? <Vacinacao>[]
+          : (json as List<dynamic>)
+              .map((e) => Vacinacao.fromJson(e as Map<String, dynamic>))
+              .toList(),
     );
     return (response.data, response.meta);
   }
@@ -64,9 +66,11 @@ class SanidadeRepositoryImpl implements SanidadeRepository {
     final response = await _apiClient.apiGet<List<Medicamento>>(
       '/lotes/$loteId/medicamentos',
       queryParams: {'page': page, 'per_page': _perPage},
-      fromJson: (json) => (json as List<dynamic>)
-          .map((e) => Medicamento.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      fromJson: (json) => json == null
+          ? <Medicamento>[]
+          : (json as List<dynamic>)
+              .map((e) => Medicamento.fromJson(e as Map<String, dynamic>))
+              .toList(),
     );
     return (response.data, response.meta);
   }
@@ -90,29 +94,39 @@ class SanidadeRepositoryImpl implements SanidadeRepository {
 
   @override
   Future<(List<Visitante>, PaginationMeta?)> fetchVisitantes(
-    String loteId, {
+    String granjaId, {
     int page = 1,
   }) async {
     final response = await _apiClient.apiGet<List<Visitante>>(
-      '/lotes/$loteId/visitantes',
+      '/granjas/$granjaId/visitantes',
       queryParams: {'page': page, 'per_page': _perPage},
-      fromJson: (json) => (json as List<dynamic>)
-          .map((e) => Visitante.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      fromJson: (json) => json == null
+          ? <Visitante>[]
+          : (json as List<dynamic>)
+              .map((e) => Visitante.fromJson(e as Map<String, dynamic>))
+              .toList(),
     );
     return (response.data, response.meta);
   }
 
   @override
   Future<Visitante> criarVisitante(
-    String loteId,
+    String granjaId,
     Map<String, dynamic> data,
   ) async {
     final response = await _apiClient.apiPost<Visitante>(
-      '/lotes/$loteId/visitantes',
+      '/granjas/$granjaId/visitantes',
       data: data,
       fromJson: (json) => Visitante.fromJson(json as Map<String, dynamic>),
     );
     return response.data;
+  }
+
+  @override
+  Future<void> registrarSaida(String granjaId, String visitanteId) async {
+    await _apiClient.apiPatch<Map<String, dynamic>>(
+      '/granjas/$granjaId/visitantes/$visitanteId/saida',
+      fromJson: (json) => json as Map<String, dynamic>,
+    );
   }
 }

@@ -4,21 +4,21 @@ enum MensagemTipo {
   foto,
   audio,
   solicitacao,
-  sistema;
+  visita;
 
   /// Converte string da API para enum.
   static MensagemTipo fromString(String value) {
     switch (value) {
-      case 'text':
+      case 'texto':
         return MensagemTipo.texto;
-      case 'photo':
+      case 'foto':
         return MensagemTipo.foto;
       case 'audio':
         return MensagemTipo.audio;
       case 'solicitacao':
         return MensagemTipo.solicitacao;
-      case 'system':
-        return MensagemTipo.sistema;
+      case 'visita':
+        return MensagemTipo.visita;
       default:
         return MensagemTipo.texto;
     }
@@ -28,15 +28,15 @@ enum MensagemTipo {
   String toApiString() {
     switch (this) {
       case MensagemTipo.texto:
-        return 'text';
+        return 'texto';
       case MensagemTipo.foto:
-        return 'photo';
+        return 'foto';
       case MensagemTipo.audio:
         return 'audio';
       case MensagemTipo.solicitacao:
         return 'solicitacao';
-      case MensagemTipo.sistema:
-        return 'system';
+      case MensagemTipo.visita:
+        return 'visita';
     }
   }
 }
@@ -54,10 +54,16 @@ class Mensagem {
   final DateTime createdAt;
 
   /// URL de midia para mensagens de foto ou audio.
-  final String? mediaUrl;
+  final String? midiaUrl;
 
   /// URL do thumbnail para mensagens de foto.
-  final String? thumbnailUrl;
+  final String? midiaThumbnailUrl;
+
+  /// Status da solicitacao (pendente, respondida, expirada).
+  final String? solicitacaoStatus;
+
+  /// Prazo da solicitacao.
+  final DateTime? solicitacaoPrazo;
 
   const Mensagem({
     required this.id,
@@ -69,8 +75,10 @@ class Mensagem {
     required this.remetenteTipo,
     required this.lida,
     required this.createdAt,
-    this.mediaUrl,
-    this.thumbnailUrl,
+    this.midiaUrl,
+    this.midiaThumbnailUrl,
+    this.solicitacaoStatus,
+    this.solicitacaoPrazo,
   });
 
   @override

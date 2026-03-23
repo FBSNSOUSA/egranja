@@ -50,27 +50,49 @@ class GalpaoDetalheNotifier extends StateNotifier<GalpaoDetalheState> {
         super(const GalpaoDetalheState());
 
   /// Busca detalhes do galpao.
+  ///
+  /// O backend nao possui endpoint GET por ID para galpaos,
+  /// entao buscamos a lista completa e filtramos pelo ID desejado.
   Future<void> fetch() async {
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     try {
-      final response = await _api.apiGet<GalpaoDetalhe>(
-        '/galpoes/$_galpaoId',
-        fromJson: (json) =>
-            GalpaoDetalhe.fromJson(json as Map<String, dynamic>),
+      final response = await _api.apiGet<List<GalpaoDetalhe>>(
+        '/galpaos',
+        fromJson: (json) => json == null
+            ? <GalpaoDetalhe>[]
+            : (json as List<dynamic>)
+                .map((e) => GalpaoDetalhe.fromJson(e as Map<String, dynamic>))
+                .toList(),
       );
+
+      if (!mounted) return;
+      final galpao = response.data.cast<GalpaoDetalhe?>().firstWhere(
+            (g) => g!.id == _galpaoId,
+            orElse: () => null,
+          );
+
+      if (galpao == null) {
+        state = state.copyWith(
+          isLoading: false,
+          errorMessage: 'Galpao nao encontrado.',
+        );
+        return;
+      }
 
       state = state.copyWith(
         isLoading: false,
-        galpao: response.data,
+        galpao: galpao,
       );
     } on NetworkException {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Sem conexao. Tente novamente.',
       );
     } catch (e) {
       debugPrint('[GalpaoDetalheNotifier] Erro ao buscar detalhe: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Erro ao carregar detalhes do galpao.',

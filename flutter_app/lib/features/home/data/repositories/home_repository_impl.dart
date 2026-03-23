@@ -24,7 +24,7 @@ class HomeRepositoryImpl implements HomeRepository {
         'page': page,
       },
       fromJson: (json) {
-        final list = json as List<dynamic>;
+        final list = (json as List<dynamic>?) ?? [];
         return list
             .map((e) => LoteModel.fromJson(e as Map<String, dynamic>))
             .toList();
@@ -46,9 +46,9 @@ class HomeRepositoryImpl implements HomeRepository {
   @override
   Future<List<Galpao>> fetchGalpaos() async {
     final response = await _apiClient.apiGet<List<GalpaoModel>>(
-      '/galpoes',
+      '/galpaos',
       fromJson: (json) {
-        final list = json as List<dynamic>;
+        final list = (json as List<dynamic>?) ?? [];
         return list
             .map((e) => GalpaoModel.fromJson(e as Map<String, dynamic>))
             .toList();

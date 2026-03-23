@@ -22,11 +22,7 @@ void main() {
     'quantidade_total': 10,
     'peso_total': 25000.0,
     'peso_medio': 2500.0,
-    'peso_benchmark': null,
-    'desvio_pct': null,
-    'uniformidade_cv': null,
-    'idade': 28,
-    'itens': <dynamic>[],
+    'items': <dynamic>[],
     'created_at': '2025-06-15T10:00:00Z',
   });
 
@@ -119,11 +115,7 @@ void main() {
           'quantidade_total': 15,
           'peso_total': 38000.0,
           'peso_medio': 2533.0,
-          'peso_benchmark': null,
-          'desvio_pct': null,
-          'uniformidade_cv': null,
-          'idade': 29,
-          'itens': <dynamic>[],
+          'items': <dynamic>[],
           'created_at': '2025-06-16T10:00:00Z',
         });
 
@@ -194,7 +186,8 @@ void main() {
             ));
 
         final result = await notifier.criar(
-          itens: [
+          data: '2024-01-15',
+          items: [
             {'quantidade': 10, 'peso': 25000.0},
           ],
         );
@@ -213,7 +206,8 @@ void main() {
             )).thenThrow(const NetworkException());
 
         final result = await notifier.criar(
-          itens: [
+          data: '2024-01-15',
+          items: [
             {'quantidade': 10, 'peso': 25000.0},
           ],
         );
@@ -232,7 +226,8 @@ void main() {
             )).thenThrow(Exception('Falha ao salvar'));
 
         final result = await notifier.criar(
-          itens: [
+          data: '2024-01-15',
+          items: [
             {'quantidade': 10, 'peso': 25000.0},
           ],
         );
@@ -252,7 +247,7 @@ void main() {
               fromJson: any(named: 'fromJson'),
             )).thenThrow(const NetworkException());
 
-        await notifier.criar(itens: []);
+        await notifier.criar(data: '2024-01-15', items: []);
         expect(notifier.state.successMessage, isNotNull);
 
         notifier.clearMessages();

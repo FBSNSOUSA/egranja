@@ -132,227 +132,222 @@ class _NovoLoteScreenState extends ConsumerState<NovoLoteScreen> {
       error: (e, s) => true,
     );
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Novo Lote'),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Offline warning banner
-            if (!isOnline)
-              Container(
-                margin: const EdgeInsets.only(bottom: 16),
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: AppColors.warningLight,
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppColors.warning),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.wifi_off_outlined,
-                      color: AppColors.warning,
-                      size: 20,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Voce esta offline. O lote sera criado quando a conexao for restaurada.',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: AppColors.gray800,
-                        ),
+    return Form(
+      key: _formKey,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Offline warning banner
+          if (!isOnline)
+            Container(
+              margin: const EdgeInsets.only(bottom: 16),
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.warningLight,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.warning),
+              ),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.wifi_off_outlined,
+                    color: AppColors.warning,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      'Voce esta offline. O lote sera criado quando a conexao for restaurada.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.gray800,
                       ),
                     ),
-                  ],
-                ),
-              ),
-
-            // Galpao dropdown
-            galpaosAsync.when(
-              data: (galpoes) => DropdownField(
-                label: 'Galpao',
-                value: _selectedGalpaoId,
-                required: true,
-                options: galpoes
-                    .map(
-                      (g) => DropdownOption(
-                        value: g.id,
-                        label: g.nome,
-                        subtitle: g.capacidade != null
-                            ? 'Capacidade: ${g.capacidade} aves'
-                            : null,
-                      ),
-                    )
-                    .toList(),
-                onSelect: (option) {
-                  setState(() => _selectedGalpaoId = option.value);
-                },
-                placeholder: 'Selecione o galpao',
-              ),
-              loading: () => const DropdownField(
-                label: 'Galpao',
-                options: [],
-                required: true,
-                disabled: true,
-                placeholder: 'Carregando galpoes...',
-              ),
-              error: (e, s) => DropdownField(
-                label: 'Galpao',
-                options: const [],
-                required: true,
-                disabled: true,
-                error: 'Erro ao carregar galpoes',
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 16),
 
-            // Data alojamento
-            DatePickerField(
-              label: 'Data de Alojamento',
-              value: _dataAlojamento,
+          // Galpao dropdown
+          galpaosAsync.when(
+            data: (galpoes) => DropdownField(
+              label: 'Galpao',
+              value: _selectedGalpaoId,
               required: true,
-              maximumDate: DateTime.now(),
-              onChange: (date) {
-                setState(() {
-                  _dataAlojamento = date;
-                  // Auto-calcular abate (+42 dias)
-                  _dataPrevistaAbate =
-                      date.add(const Duration(days: 42));
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Data prevista abate
-            DatePickerField(
-              label: 'Data Prevista de Abate',
-              value: _dataPrevistaAbate,
-              required: true,
-              minimumDate: _dataAlojamento.add(const Duration(days: 1)),
-              onChange: (date) {
-                setState(() => _dataPrevistaAbate = date);
-              },
-              helperText: 'Auto-calculada: alojamento + 42 dias',
-            ),
-            const SizedBox(height: 16),
-
-            // Quantidade
-            FormFieldWidget(
-              label: 'Quantidade de Aves',
-              controller: _quantidadeController,
-              required: true,
-              keyboardType: TextInputType.number,
-              leftIcon: Icons.pets_outlined,
-              placeholder: 'Ex: 25000',
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Informe a quantidade de aves';
-                }
-                final qty = int.tryParse(value.trim());
-                if (qty == null || qty <= 0) {
-                  return 'A quantidade deve ser maior que zero';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
-
-            // Tipo (segmented button)
-            Text(
-              'Tipo *',
-              style: theme.textTheme.bodyMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-            const SizedBox(height: 8),
-            SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(
-                  value: 'Femea',
-                  label: Text('Femea'),
-                  icon: Icon(Icons.female),
-                ),
-                ButtonSegment(
-                  value: 'Macho',
-                  label: Text('Macho'),
-                  icon: Icon(Icons.male),
-                ),
-                ButtonSegment(
-                  value: 'Misto',
-                  label: Text('Misto'),
-                  icon: Icon(Icons.people_outline),
-                ),
-              ],
-              selected: {_tipo},
-              onSelectionChanged: (selected) {
-                setState(() => _tipo = selected.first);
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Linhagem
-            DropdownField(
-              label: 'Linhagem',
-              value: _linhagem,
-              options: _linhagens
-                  .map((l) => DropdownOption(value: l, label: l))
+              options: galpoes
+                  .map(
+                    (g) => DropdownOption(
+                      value: g.id,
+                      label: g.nome,
+                      subtitle: g.capacidade != null
+                          ? 'Capacidade: ${g.capacidade} aves'
+                          : null,
+                    ),
+                  )
                   .toList(),
               onSelect: (option) {
-                setState(() => _linhagem = option.value);
+                setState(() => _selectedGalpaoId = option.value);
               },
-              placeholder: 'Selecione a linhagem',
+              placeholder: 'Selecione o galpao',
             ),
-            const SizedBox(height: 16),
-
-            // Peso inicial
-            FormFieldWidget(
-              label: 'Peso Inicial',
-              controller: _pesoController,
+            loading: () => const DropdownField(
+              label: 'Galpao',
+              options: [],
               required: true,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              suffix: 'g',
-              leftIcon: Icons.monitor_weight_outlined,
-              helperText: 'Peso medio dos pintainhos ao alojar',
-              validator: (value) {
-                if (value == null || value.trim().isEmpty) {
-                  return 'Informe o peso inicial';
-                }
-                final peso =
-                    double.tryParse(value.trim().replaceAll(',', '.'));
-                if (peso == null || peso <= 0) {
-                  return 'O peso deve ser maior que zero';
-                }
-                return null;
-              },
+              disabled: true,
+              placeholder: 'Carregando galpoes...',
             ),
-            const SizedBox(height: 32),
+            error: (e, s) => DropdownField(
+              label: 'Galpao',
+              options: const [],
+              required: true,
+              disabled: true,
+              error: 'Erro ao carregar galpoes',
+            ),
+          ),
+          const SizedBox(height: 16),
 
-            // Save button
-            FilledButton.icon(
-              onPressed: _isSaving ? null : _salvar,
-              icon: _isSaving
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: AppColors.white,
-                      ),
-                    )
-                  : const Icon(Icons.save_outlined),
-              label: Text(_isSaving ? 'Salvando...' : 'Criar Lote'),
-              style: FilledButton.styleFrom(
-                minimumSize: const Size(double.infinity, 48),
-              ),
+          // Data alojamento
+          DatePickerField(
+            label: 'Data de Alojamento',
+            value: _dataAlojamento,
+            required: true,
+            maximumDate: DateTime.now(),
+            onChange: (date) {
+              setState(() {
+                _dataAlojamento = date;
+                // Auto-calcular abate (+42 dias)
+                _dataPrevistaAbate =
+                    date.add(const Duration(days: 42));
+              });
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // Data prevista abate
+          DatePickerField(
+            label: 'Data Prevista de Abate',
+            value: _dataPrevistaAbate,
+            required: true,
+            minimumDate: _dataAlojamento.add(const Duration(days: 1)),
+            onChange: (date) {
+              setState(() => _dataPrevistaAbate = date);
+            },
+            helperText: 'Auto-calculada: alojamento + 42 dias',
+          ),
+          const SizedBox(height: 16),
+
+          // Quantidade
+          FormFieldWidget(
+            label: 'Quantidade de Aves',
+            controller: _quantidadeController,
+            required: true,
+            keyboardType: TextInputType.number,
+            leftIcon: Icons.pets_outlined,
+            placeholder: 'Ex: 25000',
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Informe a quantidade de aves';
+              }
+              final qty = int.tryParse(value.trim());
+              if (qty == null || qty <= 0) {
+                return 'A quantidade deve ser maior que zero';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 24),
+
+          // Tipo (segmented button)
+          Text(
+            'Tipo *',
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
             ),
-            const SizedBox(height: 16),
-          ],
-        ),
+          ),
+          const SizedBox(height: 8),
+          SegmentedButton<String>(
+            segments: const [
+              ButtonSegment(
+                value: 'Femea',
+                label: Text('Femea'),
+                icon: Icon(Icons.female),
+              ),
+              ButtonSegment(
+                value: 'Macho',
+                label: Text('Macho'),
+                icon: Icon(Icons.male),
+              ),
+              ButtonSegment(
+                value: 'Misto',
+                label: Text('Misto'),
+                icon: Icon(Icons.people_outline),
+              ),
+            ],
+            selected: {_tipo},
+            onSelectionChanged: (selected) {
+              setState(() => _tipo = selected.first);
+            },
+          ),
+          const SizedBox(height: 16),
+
+          // Linhagem
+          DropdownField(
+            label: 'Linhagem',
+            value: _linhagem,
+            options: _linhagens
+                .map((l) => DropdownOption(value: l, label: l))
+                .toList(),
+            onSelect: (option) {
+              setState(() => _linhagem = option.value);
+            },
+            placeholder: 'Selecione a linhagem',
+          ),
+          const SizedBox(height: 16),
+
+          // Peso inicial
+          FormFieldWidget(
+            label: 'Peso Inicial',
+            controller: _pesoController,
+            required: true,
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+            suffix: 'g',
+            leftIcon: Icons.monitor_weight_outlined,
+            helperText: 'Peso medio dos pintainhos ao alojar',
+            validator: (value) {
+              if (value == null || value.trim().isEmpty) {
+                return 'Informe o peso inicial';
+              }
+              final peso =
+                  double.tryParse(value.trim().replaceAll(',', '.'));
+              if (peso == null || peso <= 0) {
+                return 'O peso deve ser maior que zero';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 32),
+
+          // Save button
+          FilledButton.icon(
+            onPressed: _isSaving ? null : _salvar,
+            icon: _isSaving
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: AppColors.white,
+                    ),
+                  )
+                : const Icon(Icons.save_outlined),
+            label: Text(_isSaving ? 'Salvando...' : 'Criar Lote'),
+            style: FilledButton.styleFrom(
+              minimumSize: const Size(double.infinity, 48),
+            ),
+          ),
+          const SizedBox(height: 16),
+        ],
       ),
     );
   }

@@ -9,19 +9,27 @@ class Checklist {
   final String loteId;
   final String data;
   final List<ChecklistItem> itens;
-  final int totalItens;
-  final int itensConcluidos;
-  final double percentualConcluido;
+  final bool completado;
+  final double porcentagemConclusao;
+  final String createdAt;
+  final String updatedAt;
 
   const Checklist({
     required this.id,
     required this.loteId,
     required this.data,
     required this.itens,
-    required this.totalItens,
-    required this.itensConcluidos,
-    required this.percentualConcluido,
+    required this.completado,
+    required this.porcentagemConclusao,
+    required this.createdAt,
+    required this.updatedAt,
   });
+
+  /// Total de itens no checklist.
+  int get totalItens => itens.length;
+
+  /// Quantidade de itens completados.
+  int get itensCompletados => itens.where((i) => i.completado).length;
 
   /// Cria uma copia com campos alterados.
   Checklist copyWith({
@@ -29,18 +37,20 @@ class Checklist {
     String? loteId,
     String? data,
     List<ChecklistItem>? itens,
-    int? totalItens,
-    int? itensConcluidos,
-    double? percentualConcluido,
+    bool? completado,
+    double? porcentagemConclusao,
+    String? createdAt,
+    String? updatedAt,
   }) {
     return Checklist(
       id: id ?? this.id,
       loteId: loteId ?? this.loteId,
       data: data ?? this.data,
       itens: itens ?? this.itens,
-      totalItens: totalItens ?? this.totalItens,
-      itensConcluidos: itensConcluidos ?? this.itensConcluidos,
-      percentualConcluido: percentualConcluido ?? this.percentualConcluido,
+      completado: completado ?? this.completado,
+      porcentagemConclusao: porcentagemConclusao ?? this.porcentagemConclusao,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
@@ -58,5 +68,5 @@ class Checklist {
   @override
   String toString() =>
       'Checklist(id: $id, loteId: $loteId, data: $data, '
-      'progresso: $itensConcluidos/$totalItens)';
+      'progresso: $itensCompletados/$totalItens)';
 }

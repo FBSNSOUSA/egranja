@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import 'package:egranja_flutter/core/theme/app_colors.dart';
 import 'package:egranja_flutter/features/auth/presentation/providers/auth_provider.dart';
@@ -244,7 +245,25 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                       },
                       onFieldSubmitted: (_) => _handleLogin(),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
+
+                    // ── Esqueceu a senha? ─────────────────────────────
+                    Align(
+                      alignment: Alignment.centerRight,
+                      child: TextButton(
+                        onPressed: isLoading
+                            ? null
+                            : () => context.go('/forgot-password'),
+                        child: Text(
+                          'Esqueceu a senha?',
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    color: AppColors.primary,
+                                  ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 4),
 
                     // ── Mensagem de erro ──────────────────────────────
                     if (authState.status == AuthStatus.error &&
@@ -280,7 +299,28 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             : const Text('Entrar'),
                       ),
                     ),
-                    const SizedBox(height: 48),
+                    const SizedBox(height: 16),
+
+                    // ── Criar Conta ──────────────────────────────────
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(
+                          'Nao tem conta? ',
+                          style:
+                              Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                    color: AppColors.textSecondary,
+                                  ),
+                        ),
+                        TextButton(
+                          onPressed: isLoading
+                              ? null
+                              : () => context.go('/register'),
+                          child: const Text('Criar Conta'),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 32),
 
                     // ── Footer ────────────────────────────────────────
                     Text(

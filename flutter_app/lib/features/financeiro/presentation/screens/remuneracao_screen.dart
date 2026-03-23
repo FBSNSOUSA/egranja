@@ -3,16 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:egranja_flutter/core/theme/app_colors.dart';
 import 'package:egranja_flutter/core/utils/number_utils.dart';
+import 'package:egranja_flutter/core/widgets/dropdown_field.dart';
 import 'package:egranja_flutter/core/widgets/empty_state.dart';
 import 'package:egranja_flutter/core/widgets/error_widget.dart';
 import 'package:egranja_flutter/core/widgets/loading_skeleton.dart';
 import 'package:egranja_flutter/features/financeiro/domain/entities/remuneracao.dart';
+import 'package:egranja_flutter/features/home/presentation/providers/home_provider.dart';
 import '../providers/financeiro_provider.dart';
 
 /// Tela de remuneracao do lote.
 ///
-/// Exibe lista de remuneracoes com detalhes: valor base,
-/// bonificacoes, descontos, valor liquido, periodo e status.
+/// Exibe lista de remuneracoes com detalhes: valor,
+/// tipo, data de pagamento e observacao.
 class RemuneracaoScreen extends ConsumerStatefulWidget {
   const RemuneracaoScreen({super.key, required this.loteId});
 
@@ -24,27 +26,90 @@ class RemuneracaoScreen extends ConsumerStatefulWidget {
 }
 
 class _RemuneracaoScreenState extends ConsumerState<RemuneracaoScreen> {
+  late String _selectedLoteId;
+
   @override
   void initState() {
     super.initState();
+    _selectedLoteId = widget.loteId;
     Future.microtask(() {
-      ref.read(remuneracaoProvider(widget.loteId).notifier).fetch();
+      ref.read(homeProvider.notifier).fetchLotes();
     });
+    if (_selectedLoteId.isNotEmpty) {
+      Future.microtask(() {
+        ref.read(remuneracaoProvider(_selectedLoteId).notifier).fetch();
+      });
+    }
   }
 
   Future<void> _onRefresh() async {
-    await ref.read(remuneracaoProvider(widget.loteId).notifier).fetch();
+    await ref.read(remuneracaoProvider(_selectedLoteId).notifier).fetch();
+  }
+
+  void _onLoteChanged(String loteId) {
+    setState(() {
+      _selectedLoteId = loteId;
+    });
+    if (loteId.isNotEmpty) {
+      ref.read(remuneracaoProvider(loteId).notifier).fetch();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(remuneracaoProvider(widget.loteId));
+    final homeState = ref.watch(homeProvider);
+    final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Remuneracao'),
+    // Auto-select first lote if none selected and lotes are loaded
+    final lotes = homeState.lotesAtivos;
+    if (_selectedLoteId.isEmpty && lotes.isNotEmpty) {
+      Future.microtask(() => _onLoteChanged(lotes.first.id));
+    }
+
+    final state = _selectedLoteId.isNotEmpty
+        ? ref.watch(remuneracaoProvider(_selectedLoteId))
+        : null;
+
+    return Column(
+      children: [
+        _buildLoteSelector(homeState, theme),
+        Expanded(
+          child: _selectedLoteId.isEmpty
+              ? const EmptyState(
+                  icon: Icons.payments_outlined,
+                  titulo: 'Selecione um lote',
+                  descricao:
+                      'Escolha um lote para visualizar as remuneracoes.',
+                )
+              : _buildBody(state!),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLoteSelector(HomeState homeState, ThemeData theme) {
+    final lotes = homeState.lotesAtivos;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(color: AppColors.divider),
+        ),
       ),
-      body: _buildBody(state),
+      child: DropdownField(
+        label: 'Lote',
+        value: _selectedLoteId.isNotEmpty ? _selectedLoteId : null,
+        options: lotes
+            .map((l) => DropdownOption(
+                  value: l.id,
+                  label: '${l.galpaoNome} - Dia ${l.diasDeVida ?? 0}',
+                ))
+            .toList(),
+        placeholder: 'Selecione um lote...',
+        onSelect: (option) => _onLoteChanged(option.value),
+      ),
     );
   }
 
@@ -65,7 +130,7 @@ class _RemuneracaoScreenState extends ConsumerState<RemuneracaoScreen> {
         icon: Icons.payments_outlined,
         titulo: 'Nenhuma remuneracao registrada',
         descricao:
-            'As remuneracoes serao exibidas aqui quando disponiveris.',
+            'As remuneracoes serao exibidas aqui quando disponiveis.',
       );
     }
 
@@ -84,14 +149,15 @@ class _RemuneracaoScreenState extends ConsumerState<RemuneracaoScreen> {
   }
 }
 
-/// Card detalhado de remuneracao com valor base, bonificacoes,
-/// descontos, valor liquido, periodo e badge de status.
+/// Card detalhado de remuneracao com valor, tipo, data de
+/// pagamento e observacao.
 class _RemuneracaoCard extends StatelessWidget {
   const _RemuneracaoCard({required this.remuneracao});
 
   final Remuneracao remuneracao;
 
-  String _formatData(String dataStr) {
+  String _formatData(String? dataStr) {
+    if (dataStr == null || dataStr.isEmpty) return '';
     try {
       final date = DateTime.parse(dataStr);
       final dia = date.day.toString().padLeft(2, '0');
@@ -103,22 +169,9 @@ class _RemuneracaoCard extends StatelessWidget {
     }
   }
 
-  Color _statusColor(String status) {
-    const colors = {
-      'pago': AppColors.success,
-      'pendente': AppColors.warning,
-      'atrasado': AppColors.danger,
-      'cancelado': AppColors.gray500,
-    };
-    return colors[status] ?? AppColors.gray500;
-  }
-
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final statusColor = _statusColor(remuneracao.status);
-    final periodo =
-        '${_formatData(remuneracao.periodoInicio)} - ${_formatData(remuneracao.periodoFim)}';
 
     return Card(
       child: Padding(
@@ -126,85 +179,78 @@ class _RemuneracaoCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: Valor liquido + status badge
+            // Header: Valor + tipo badge
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  NumberUtils.formatCurrency(remuneracao.valorLiquido),
+                  NumberUtils.formatCurrency(remuneracao.valor),
                   style: theme.textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: AppColors.success,
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: statusColor.withAlpha(30),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    Remuneracao.statusLabel(remuneracao.status),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: statusColor,
-                      fontWeight: FontWeight.w600,
+                if (remuneracao.tipo != null)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.secondary.withAlpha(30),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      Remuneracao.tipoLabel(remuneracao.tipo),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: AppColors.secondary,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
             const SizedBox(height: 4),
             Text(
-              'Valor liquido',
+              'Valor',
               style: theme.textTheme.labelSmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 12),
-            const Divider(height: 1),
-            const SizedBox(height: 12),
 
-            // Detalhamento
-            _DetalheRow(
-              label: 'Valor base',
-              valor: NumberUtils.formatCurrency(remuneracao.valorBase),
-            ),
-            const SizedBox(height: 6),
-            _DetalheRow(
-              label: 'Bonificacoes',
-              valor:
-                  '+ ${NumberUtils.formatCurrency(remuneracao.bonificacoes)}',
-              valorColor: AppColors.success,
-            ),
-            const SizedBox(height: 6),
-            _DetalheRow(
-              label: 'Descontos',
-              valor:
-                  '- ${NumberUtils.formatCurrency(remuneracao.descontos)}',
-              valorColor: AppColors.danger,
-            ),
-            const SizedBox(height: 12),
+            // Observacao
+            if (remuneracao.observacao != null &&
+                remuneracao.observacao!.isNotEmpty) ...[
+              const Divider(height: 1),
+              const SizedBox(height: 12),
+              _DetalheRow(
+                label: 'Observacao',
+                valor: remuneracao.observacao!,
+              ),
+              const SizedBox(height: 6),
+            ],
 
-            // Periodo
-            Row(
-              children: [
-                Icon(
-                  Icons.calendar_today_outlined,
-                  size: 14,
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  periodo,
-                  style: theme.textTheme.labelSmall?.copyWith(
+            // Data de pagamento
+            if (remuneracao.dataPagamento != null) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today_outlined,
+                    size: 14,
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
-                ),
-              ],
-            ),
+                  const SizedBox(width: 6),
+                  Text(
+                    'Pago em ${_formatData(remuneracao.dataPagamento)}',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),
@@ -217,12 +263,10 @@ class _DetalheRow extends StatelessWidget {
   const _DetalheRow({
     required this.label,
     required this.valor,
-    this.valorColor,
   });
 
   final String label;
   final String valor;
-  final Color? valorColor;
 
   @override
   Widget build(BuildContext context) {
@@ -241,7 +285,7 @@ class _DetalheRow extends StatelessWidget {
           valor,
           style: theme.textTheme.bodySmall?.copyWith(
             fontWeight: FontWeight.w600,
-            color: valorColor,
+            color: theme.colorScheme.onSurface,
           ),
         ),
       ],

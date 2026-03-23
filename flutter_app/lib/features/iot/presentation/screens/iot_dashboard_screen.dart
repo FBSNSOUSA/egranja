@@ -84,7 +84,10 @@ class _IoTDashboardScreenState extends ConsumerState<IoTDashboardScreen> {
 
     if (_selectedGalpaoId != null && _selectedGalpaoId!.isNotEmpty) {
       Future.microtask(() {
-        ref.read(iotDashboardProvider(_selectedGalpaoId!).notifier).fetch();
+        final notifier =
+            ref.read(iotDashboardProvider(_selectedGalpaoId!).notifier);
+        notifier.fetch();
+        notifier.startAutoRefresh();
       });
     }
   }
@@ -94,7 +97,9 @@ class _IoTDashboardScreenState extends ConsumerState<IoTDashboardScreen> {
     setState(() {
       _selectedGalpaoId = galpaoId;
     });
-    ref.read(iotDashboardProvider(galpaoId).notifier).fetch();
+    final notifier = ref.read(iotDashboardProvider(galpaoId).notifier);
+    notifier.fetch();
+    notifier.startAutoRefresh();
   }
 
   @override
@@ -102,34 +107,48 @@ class _IoTDashboardScreenState extends ConsumerState<IoTDashboardScreen> {
     final galpaosAsync = ref.watch(galpaosProvider);
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sensores IoT'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.history),
-            tooltip: 'Historico',
-            onPressed: _selectedGalpaoId != null &&
-                    _selectedGalpaoId!.isNotEmpty
-                ? () => context.goNamed(
-                      RouteNames.iotHistorico,
-                      queryParameters: {'galpaoId': _selectedGalpaoId!},
-                    )
-                : null,
+    return Column(
+      children: [
+        // Barra de acoes (anteriormente no AppBar)
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surface,
+            border: const Border(
+              bottom: BorderSide(color: AppColors.divider),
+            ),
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Seletor de galpao
-          _buildGalpaoSelector(galpaosAsync, theme),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              IconButton(
+                icon: const Icon(Icons.settings_outlined),
+                tooltip: 'Configuracao',
+                onPressed: () => context.pushNamed(RouteNames.iotConfig),
+              ),
+              IconButton(
+                icon: const Icon(Icons.history),
+                tooltip: 'Historico',
+                onPressed: _selectedGalpaoId != null &&
+                        _selectedGalpaoId!.isNotEmpty
+                    ? () => context.pushNamed(
+                          RouteNames.iotHistorico,
+                          queryParameters: {'galpaoId': _selectedGalpaoId!},
+                        )
+                    : null,
+              ),
+            ],
+          ),
+        ),
 
-          // Conteudo principal
-          Expanded(
-            child: _buildBody(theme),
-          ),
-        ],
-      ),
+        // Seletor de galpao
+        _buildGalpaoSelector(galpaosAsync, theme),
+
+        // Conteudo principal
+        Expanded(
+          child: _buildBody(theme),
+        ),
+      ],
     );
   }
 
@@ -158,9 +177,10 @@ class _IoTDashboardScreenState extends ConsumerState<IoTDashboardScreen> {
               setState(() {
                 _selectedGalpaoId = galpoes.first.id;
               });
-              ref
-                  .read(iotDashboardProvider(galpoes.first.id).notifier)
-                  .fetch();
+              final notifier =
+                  ref.read(iotDashboardProvider(galpoes.first.id).notifier);
+              notifier.fetch();
+              notifier.startAutoRefresh();
             });
           }
 
@@ -171,9 +191,10 @@ class _IoTDashboardScreenState extends ConsumerState<IoTDashboardScreen> {
               setState(() {
                 _selectedGalpaoId = galpoes.first.id;
               });
-              ref
-                  .read(iotDashboardProvider(galpoes.first.id).notifier)
-                  .fetch();
+              final notifier =
+                  ref.read(iotDashboardProvider(galpoes.first.id).notifier);
+              notifier.fetch();
+              notifier.startAutoRefresh();
             });
           }
 
@@ -279,47 +300,61 @@ class _IoTDashboardScreenState extends ConsumerState<IoTDashboardScreen> {
         ? DateTime.now().difference(state.ultimaLeitura!).inMinutes
         : 0;
 
-    return Row(
-      children: [
-        // Badge "Ao vivo"
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: AppColors.successLight,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 8,
-                height: 8,
-                decoration: const BoxDecoration(
-                  color: AppColors.success,
-                  shape: BoxShape.circle,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppColors.successLight,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          // Pulsing "Ao vivo" badge
+          Container(
+            width: 10,
+            height: 10,
+            decoration: BoxDecoration(
+              color: AppColors.success,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.success.withValues(alpha: 0.4),
+                  blurRadius: 6,
+                  spreadRadius: 1,
                 ),
-              ),
-              const SizedBox(width: 6),
-              Text(
-                'Ao vivo',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: AppColors.success,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-        const Spacer(),
-        // Timestamp
-        if (state.ultimaLeitura != null)
-          Text(
-            'Ultima leitura: $minutosAtras min atras',
-            style: theme.textTheme.bodySmall?.copyWith(
-              color: AppColors.textSecondary,
+              ],
             ),
           ),
-      ],
+          const SizedBox(width: 8),
+          Text(
+            'Ao vivo',
+            style: theme.textTheme.labelMedium?.copyWith(
+              color: AppColors.success,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const Spacer(),
+          // Timestamp
+          if (state.ultimaLeitura != null)
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.access_time,
+                  size: 14,
+                  color: AppColors.success.withValues(alpha: 0.7),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '$minutosAtras min atras',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppColors.success.withValues(alpha: 0.8),
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
+        ],
+      ),
     );
   }
 
@@ -357,7 +392,8 @@ class _SensorCard extends StatelessWidget {
 
     return Card(
       clipBehavior: Clip.antiAlias,
-      elevation: 1,
+      elevation: 2,
+      shadowColor: Colors.black.withValues(alpha: 0.1),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -369,7 +405,7 @@ class _SensorCard extends StatelessWidget {
 
           Expanded(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 10, 12, 8),
+              padding: const EdgeInsets.fromLTRB(14, 12, 14, 10),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -397,36 +433,36 @@ class _SensorCard extends StatelessWidget {
 
                   // Valor grande + unidade
                   Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
                     children: [
                       Text(
                         sensor.valor.toStringAsFixed(1),
-                        style: theme.textTheme.headlineSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: AppColors.textPrimary,
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: statusColor,
+                          height: 1.1,
                         ),
                       ),
-                      const SizedBox(width: 2),
-                      Padding(
-                        padding: const EdgeInsets.only(bottom: 3),
-                        child: Text(
-                          config?.unit ?? sensor.unidade,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondary,
-                          ),
+                      const SizedBox(width: 3),
+                      Text(
+                        config?.unit ?? sensor.unidade,
+                        style: theme.textTheme.labelMedium?.copyWith(
+                          color: AppColors.textSecondary,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 8),
 
                   // Badge de status
                   Container(
                     padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: statusColor.withAlpha(25),
-                      borderRadius: BorderRadius.circular(8),
+                      color: statusColor.withAlpha(30),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       statusLabel,
@@ -442,7 +478,7 @@ class _SensorCard extends StatelessWidget {
                   // Mini sparkline (ultimas 24h)
                   if (sensor.historico24h.isNotEmpty)
                     SizedBox(
-                      height: 32,
+                      height: 36,
                       child: _MiniSparkline(
                         data: sensor.historico24h,
                         color: statusColor,
@@ -515,12 +551,12 @@ class _MiniSparkline extends StatelessWidget {
             spots: spots,
             isCurved: true,
             color: color,
-            barWidth: 1.5,
+            barWidth: 2,
             isStrokeCapRound: true,
             dotData: const FlDotData(show: false),
             belowBarData: BarAreaData(
               show: true,
-              color: color.withAlpha(30),
+              color: color.withAlpha(40),
             ),
           ),
         ],

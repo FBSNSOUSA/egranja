@@ -1,4 +1,7 @@
 /// Registro de mortalidade diaria de um lote.
+///
+/// Campos mapeados a partir do endpoint GET /lotes/{id}/mortalidades.
+/// Backend retorna: id, lote_id, data, quantidade, causa, observacao?, created_at.
 class Mortalidade {
   final String id;
   final String loteId;
@@ -10,14 +13,8 @@ class Mortalidade {
   /// Causa da mortalidade.
   final String causa;
 
-  /// Observacao adicional.
+  /// Observacao adicional (opcional).
   final String? observacao;
-
-  /// URL da foto de evidencia.
-  final String? fotoUrl;
-
-  /// Percentual de mortalidade do dia.
-  final double? percentualDia;
 
   final String createdAt;
 
@@ -28,8 +25,6 @@ class Mortalidade {
     required this.quantidade,
     required this.causa,
     this.observacao,
-    this.fotoUrl,
-    this.percentualDia,
     required this.createdAt,
   });
 
@@ -38,11 +33,9 @@ class Mortalidade {
       id: json['id'] as String,
       loteId: json['lote_id'] as String,
       data: json['data'] as String,
-      quantidade: json['quantidade'] as int,
-      causa: json['causa'] as String,
+      quantidade: (json['quantidade'] as num).toInt(),
+      causa: json['causa'] as String? ?? 'Indefinida',
       observacao: json['observacao'] as String?,
-      fotoUrl: json['foto_url'] as String?,
-      percentualDia: (json['percentual_dia'] as num?)?.toDouble(),
       createdAt: json['created_at'] as String,
     );
   }
@@ -54,9 +47,7 @@ class Mortalidade {
       'data': data,
       'quantidade': quantidade,
       'causa': causa,
-      'observacao': observacao,
-      'foto_url': fotoUrl,
-      'percentual_dia': percentualDia,
+      if (observacao != null) 'observacao': observacao,
       'created_at': createdAt,
     };
   }

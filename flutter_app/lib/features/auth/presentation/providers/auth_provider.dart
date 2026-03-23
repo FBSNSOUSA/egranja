@@ -112,9 +112,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     try {
       final isAuth = await _repository.isAuthenticated();
+      if (!mounted) return;
 
       if (isAuth) {
         final user = await _repository.getCurrentUser();
+        if (!mounted) return;
         state = AuthState(
           status: AuthStatus.authenticated,
           user: user,
@@ -124,6 +126,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       }
     } catch (e) {
       debugPrint('[AuthNotifier] Erro ao verificar autenticacao: $e');
+      if (!mounted) return;
       state = const AuthState(status: AuthStatus.unauthenticated);
     }
   }
@@ -138,30 +141,118 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     try {
       final user = await _repository.login(username, password);
+      if (!mounted) return;
       state = AuthState(
         status: AuthStatus.authenticated,
         user: user,
       );
     } on AuthException catch (e) {
+      if (!mounted) return;
       state = AuthState(
         status: AuthStatus.error,
         errorMessage: e.message,
       );
     } on NetworkException catch (e) {
+      if (!mounted) return;
       state = AuthState(
         status: AuthStatus.error,
         errorMessage: e.message,
       );
     } on ServerException catch (e) {
+      if (!mounted) return;
       state = AuthState(
         status: AuthStatus.error,
         errorMessage: e.message,
       );
     } catch (e) {
+      if (!mounted) return;
       state = const AuthState(
         status: AuthStatus.error,
         errorMessage: 'Ocorreu um erro inesperado. Tente novamente.',
       );
+    }
+  }
+
+  /// Registra um novo usuario.
+  ///
+  /// Retorna a mensagem de sucesso do backend.
+  /// Em caso de erro, transiciona para [AuthStatus.error].
+  Future<String?> register({
+    required String nome,
+    required String email,
+    required String telefone,
+    required String senha,
+    required String tipo,
+  }) async {
+    state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
+
+    try {
+      final message = await _repository.register(
+        nome: nome,
+        email: email,
+        telefone: telefone,
+        senha: senha,
+        tipo: tipo,
+      );
+      if (!mounted) return null;
+      state = const AuthState(status: AuthStatus.unauthenticated);
+      return message;
+    } on ServerException catch (e) {
+      if (!mounted) return null;
+      state = AuthState(
+        status: AuthStatus.error,
+        errorMessage: e.message,
+      );
+      return null;
+    } on NetworkException catch (e) {
+      if (!mounted) return null;
+      state = AuthState(
+        status: AuthStatus.error,
+        errorMessage: e.message,
+      );
+      return null;
+    } catch (e) {
+      if (!mounted) return null;
+      state = const AuthState(
+        status: AuthStatus.error,
+        errorMessage: 'Ocorreu um erro inesperado. Tente novamente.',
+      );
+      return null;
+    }
+  }
+
+  /// Solicita reset de senha via email.
+  ///
+  /// Retorna a mensagem informativa do backend.
+  Future<String?> forgotPassword(String email) async {
+    state = state.copyWith(status: AuthStatus.loading, errorMessage: null);
+
+    try {
+      final message = await _repository.forgotPassword(email);
+      if (!mounted) return null;
+      state = const AuthState(status: AuthStatus.unauthenticated);
+      return message;
+    } on ServerException catch (e) {
+      if (!mounted) return null;
+      state = AuthState(
+        status: AuthStatus.error,
+        errorMessage: e.message,
+      );
+      return null;
+    } on NetworkException catch (e) {
+      if (!mounted) return null;
+      state = AuthState(
+        status: AuthStatus.error,
+        errorMessage: e.message,
+      );
+      return null;
+    } catch (e) {
+      if (!mounted) return null;
+      state = const AuthState(
+        status: AuthStatus.error,
+        errorMessage: 'Ocorreu um erro inesperado. Tente novamente.',
+      );
+      return null;
     }
   }
 
@@ -172,6 +263,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     } catch (e) {
       debugPrint('[AuthNotifier] Erro ao realizar logout: $e');
     }
+    if (!mounted) return;
     state = const AuthState(status: AuthStatus.unauthenticated);
   }
 

@@ -59,17 +59,20 @@ class ResumoFinanceiroNotifier extends StateNotifier<ResumoFinanceiroState> {
             ResumoFinanceiro.fromJson(json as Map<String, dynamic>),
       );
 
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         resumo: response.data,
       );
     } on NetworkException {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Sem conexao. Tente novamente.',
       );
     } catch (e) {
       debugPrint('[ResumoFinanceiroNotifier] Erro ao buscar resumo: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Erro ao carregar resumo financeiro.',
@@ -140,25 +143,30 @@ class CustosNotifier extends StateNotifier<CustosState> {
 
     try {
       final response = await _api.apiGet<List<Custo>>(
-        '/lotes/$_loteId/financeiro/custos',
+        '/lotes/$_loteId/custos',
         queryParams: {'page': 1, 'per_page': 20},
-        fromJson: (json) => (json as List<dynamic>)
-            .map((e) => Custo.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        fromJson: (json) => json == null
+            ? <Custo>[]
+            : (json as List<dynamic>)
+                .map((e) => Custo.fromJson(e as Map<String, dynamic>))
+                .toList(),
       );
 
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         custos: response.data,
         pagination: response.meta,
       );
     } on NetworkException {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Sem conexao. Tente novamente.',
       );
     } catch (e) {
       debugPrint('[CustosNotifier] Erro ao buscar custos: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Erro ao carregar custos.',
@@ -175,13 +183,16 @@ class CustosNotifier extends StateNotifier<CustosState> {
 
     try {
       final response = await _api.apiGet<List<Custo>>(
-        '/lotes/$_loteId/financeiro/custos',
+        '/lotes/$_loteId/custos',
         queryParams: {'page': nextPage, 'per_page': 20},
-        fromJson: (json) => (json as List<dynamic>)
-            .map((e) => Custo.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        fromJson: (json) => json == null
+            ? <Custo>[]
+            : (json as List<dynamic>)
+                .map((e) => Custo.fromJson(e as Map<String, dynamic>))
+                .toList(),
       );
 
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         custos: [...state.custos, ...response.data],
@@ -189,6 +200,7 @@ class CustosNotifier extends StateNotifier<CustosState> {
       );
     } catch (e) {
       debugPrint('[CustosNotifier] Erro ao carregar mais custos: $e');
+      if (!mounted) return;
       state = state.copyWith(isLoading: false);
     }
   }
@@ -201,11 +213,12 @@ class CustosNotifier extends StateNotifier<CustosState> {
 
     try {
       await _api.apiPost<Custo>(
-        '/lotes/$_loteId/financeiro/custos',
+        '/lotes/$_loteId/custos',
         data: data,
         fromJson: (json) => Custo.fromJson(json as Map<String, dynamic>),
       );
 
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         successMessage: 'Custo registrado com sucesso!',
@@ -213,6 +226,7 @@ class CustosNotifier extends StateNotifier<CustosState> {
       await fetch();
       return true;
     } on NetworkException {
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         successMessage: 'Salvo localmente. Sera sincronizado quando online.',
@@ -220,6 +234,7 @@ class CustosNotifier extends StateNotifier<CustosState> {
       return true;
     } catch (e) {
       debugPrint('[CustosNotifier] Erro ao criar custo: $e');
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         errorMessage: 'Erro ao salvar custo. Tente novamente.',
@@ -274,28 +289,38 @@ class RemuneracaoNotifier extends StateNotifier<RemuneracaoState> {
         super(const RemuneracaoState());
 
   /// Busca remuneracoes do lote.
+  ///
+  /// O backend nao possui endpoint GET para listar remuneracoes separadamente.
+  /// As remuneracoes sao retornadas dentro do relatorio financeiro.
   Future<void> fetch() async {
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     try {
-      final response = await _api.apiGet<List<Remuneracao>>(
-        '/lotes/$_loteId/financeiro/remuneracoes',
-        fromJson: (json) => (json as List<dynamic>)
-            .map((e) => Remuneracao.fromJson(e as Map<String, dynamic>))
-            .toList(),
+      final response = await _api.apiGet<Map<String, dynamic>>(
+        '/lotes/$_loteId/financeiro/relatorio',
+        fromJson: (json) => json as Map<String, dynamic>,
       );
+
+      if (!mounted) return;
+      final data = response.data;
+      final remuneracoesJson = data['remuneracoes'] as List<dynamic>? ?? [];
+      final remuneracoes = remuneracoesJson
+          .map((e) => Remuneracao.fromJson(e as Map<String, dynamic>))
+          .toList();
 
       state = state.copyWith(
         isLoading: false,
-        remuneracoes: response.data,
+        remuneracoes: remuneracoes,
       );
     } on NetworkException {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Sem conexao. Tente novamente.',
       );
     } catch (e) {
       debugPrint('[RemuneracaoNotifier] Erro ao buscar remuneracoes: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Erro ao carregar remuneracao.',

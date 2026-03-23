@@ -37,12 +37,14 @@ class DadosGraficoPeso {
 
   factory DadosGraficoPeso.fromJson(Map<String, dynamic> json) {
     return DadosGraficoPeso(
-      pesoReal: (json['peso_real'] as List<dynamic>)
-          .map((e) => PontoGrafico.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      pesoBenchmark: (json['peso_benchmark'] as List<dynamic>)
-          .map((e) => PontoGrafico.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      pesoReal: (json['peso_real'] as List<dynamic>?)
+              ?.map((e) => PontoGrafico.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      pesoBenchmark: (json['peso_benchmark'] as List<dynamic>?)
+              ?.map((e) => PontoGrafico.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
     );
   }
 
@@ -68,12 +70,14 @@ class DadosGraficoMortalidade {
 
   factory DadosGraficoMortalidade.fromJson(Map<String, dynamic> json) {
     return DadosGraficoMortalidade(
-      mortalidadeDiaria: (json['mortalidade_diaria'] as List<dynamic>)
-          .map((e) => PontoGrafico.fromJson(e as Map<String, dynamic>))
-          .toList(),
-      mortalidadeAcumulada: (json['mortalidade_acumulada'] as List<dynamic>)
-          .map((e) => PontoGrafico.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      mortalidadeDiaria: (json['mortalidade_diaria'] as List<dynamic>?)
+              ?.map((e) => PontoGrafico.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
+      mortalidadeAcumulada: (json['mortalidade_acumulada'] as List<dynamic>?)
+              ?.map((e) => PontoGrafico.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const [],
     );
   }
 

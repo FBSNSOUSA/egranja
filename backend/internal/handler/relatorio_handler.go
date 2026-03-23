@@ -139,3 +139,135 @@ func (h *RelatorioHandler) ExportCSV(c *gin.Context) {
 	c.Header("Content-Disposition", fmt.Sprintf("attachment; filename=lote_%s.csv", lote.ID.String()[:8]))
 	c.Data(http.StatusOK, "text/csv", csvBytes)
 }
+
+// Pesagens godoc
+// @Summary      Relatorio de pesagens
+// @Description  Retorna historico de pesagens do lote para grafico
+// @Tags         relatorios
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID do lote"
+// @Success      200 {object} dto.SuccessResponse
+// @Router       /lotes/{id}/relatorio/pesagens [get]
+func (h *RelatorioHandler) Pesagens(c *gin.Context) {
+	userID, ok := middleware.GetUserIDFromContext(c)
+	if !ok {
+		dto.RespondUnauthorized(c, "Usuario nao autenticado.")
+		return
+	}
+
+	lote, err := getLoteAutenticadoHelper(c, h.loteRepo, userID, h.logger)
+	if err != nil {
+		return
+	}
+
+	dados, err := h.relatorioService.RelatorioPesagens(lote)
+	if err != nil {
+		h.logger.Error("Erro ao gerar relatorio de pesagens", zap.Error(err))
+		dto.RespondInternalError(c, "Erro ao gerar relatorio de pesagens.")
+		return
+	}
+
+	if dados == nil {
+		dados = []service.PesagemPonto{}
+	}
+
+	dto.RespondSuccess(c, http.StatusOK, dados)
+}
+
+// Mortalidade godoc
+// @Summary      Relatorio de mortalidade
+// @Description  Retorna historico de mortalidade do lote para grafico
+// @Tags         relatorios
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID do lote"
+// @Success      200 {object} dto.SuccessResponse
+// @Router       /lotes/{id}/relatorio/mortalidade [get]
+func (h *RelatorioHandler) Mortalidade(c *gin.Context) {
+	userID, ok := middleware.GetUserIDFromContext(c)
+	if !ok {
+		dto.RespondUnauthorized(c, "Usuario nao autenticado.")
+		return
+	}
+
+	lote, err := getLoteAutenticadoHelper(c, h.loteRepo, userID, h.logger)
+	if err != nil {
+		return
+	}
+
+	dados, err := h.relatorioService.RelatorioMortalidade(lote)
+	if err != nil {
+		h.logger.Error("Erro ao gerar relatorio de mortalidade", zap.Error(err))
+		dto.RespondInternalError(c, "Erro ao gerar relatorio de mortalidade.")
+		return
+	}
+
+	if dados == nil {
+		dados = []service.MortalidadePonto{}
+	}
+
+	dto.RespondSuccess(c, http.StatusOK, dados)
+}
+
+// ConversaoAlimentar godoc
+// @Summary      Relatorio de conversao alimentar
+// @Description  Retorna dados de conversao alimentar (ICA, GPD)
+// @Tags         relatorios
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID do lote"
+// @Success      200 {object} dto.SuccessResponse
+// @Router       /lotes/{id}/relatorio/conversao [get]
+func (h *RelatorioHandler) ConversaoAlimentar(c *gin.Context) {
+	userID, ok := middleware.GetUserIDFromContext(c)
+	if !ok {
+		dto.RespondUnauthorized(c, "Usuario nao autenticado.")
+		return
+	}
+
+	lote, err := getLoteAutenticadoHelper(c, h.loteRepo, userID, h.logger)
+	if err != nil {
+		return
+	}
+
+	dados, err := h.relatorioService.RelatorioConversaoAlimentar(lote)
+	if err != nil {
+		h.logger.Error("Erro ao gerar relatorio de conversao", zap.Error(err))
+		dto.RespondInternalError(c, "Erro ao gerar relatorio de conversao alimentar.")
+		return
+	}
+
+	dto.RespondSuccess(c, http.StatusOK, dados)
+}
+
+// Consumo godoc
+// @Summary      Relatorio de consumo
+// @Description  Retorna historico de consumo de racao e agua
+// @Tags         relatorios
+// @Produce      json
+// @Security     BearerAuth
+// @Param        id path string true "ID do lote"
+// @Success      200 {object} dto.SuccessResponse
+// @Router       /lotes/{id}/relatorio/consumo [get]
+func (h *RelatorioHandler) Consumo(c *gin.Context) {
+	userID, ok := middleware.GetUserIDFromContext(c)
+	if !ok {
+		dto.RespondUnauthorized(c, "Usuario nao autenticado.")
+		return
+	}
+
+	lote, err := getLoteAutenticadoHelper(c, h.loteRepo, userID, h.logger)
+	if err != nil {
+		return
+	}
+
+	dados, err := h.relatorioService.RelatorioConsumo(lote)
+	if err != nil {
+		h.logger.Error("Erro ao gerar relatorio de consumo", zap.Error(err))
+		dto.RespondInternalError(c, "Erro ao gerar relatorio de consumo.")
+		return
+	}
+
+	dto.RespondSuccess(c, http.StatusOK, dados)
+}

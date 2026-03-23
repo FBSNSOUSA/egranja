@@ -58,12 +58,7 @@ class _ComparativoLotesScreenState
       }
     });
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Comparativo de Lotes'),
-      ),
-      body: _buildBody(state, theme),
-    );
+    return _buildBody(state, theme);
   }
 
   Widget _buildBody(RelatoriosState state, ThemeData theme) {
@@ -92,7 +87,7 @@ class _ComparativoLotesScreenState
         ),
         const SizedBox(height: 4),
         Text(
-          'Selecione pelo menos 2 lotes para comparar.',
+          'Selecione um lote para comparar com os demais do mesmo galpao.',
           style: theme.textTheme.bodySmall?.copyWith(
             color: AppColors.textSecondary,
           ),
@@ -109,7 +104,7 @@ class _ComparativoLotesScreenState
 
           return CheckboxListTile(
             title: Text(
-              '${lote.linhagem}$galpao$statusLabel',
+              '${lote.linhagem ?? 'Lote'}$galpao$statusLabel',
               style: theme.textTheme.bodyMedium,
             ),
             value: isSelected,
@@ -137,7 +132,7 @@ class _ComparativoLotesScreenState
                 orElse: () => state.lotes.first,
               );
               return Chip(
-                label: Text(lote.linhagem),
+                label: Text(lote.linhagem ?? 'Lote'),
                 onDeleted: () {
                   ref
                       .read(relatoriosProvider.notifier)
@@ -152,7 +147,7 @@ class _ComparativoLotesScreenState
 
         // Botao Comparar
         FilledButton.icon(
-          onPressed: state.selectedLoteIds.length >= 2 && !state.isLoading
+          onPressed: state.selectedLoteIds.isNotEmpty && !state.isLoading
               ? _onComparar
               : null,
           icon: state.isLoading
@@ -212,10 +207,22 @@ class _ComparativoTable extends StatelessWidget {
     // Definir indicadores e funcoes de extracao
     final indicators = <_IndicatorDef>[
       _IndicatorDef(
-        label: 'Peso Medio',
-        getValue: (c) => c.pesoMedioG,
-        format: (v) => NumberUtils.formatWeight(v),
+        label: 'Qtd. Aves',
+        getValue: (c) => c.quantidade.toDouble(),
+        format: (v) => NumberUtils.formatDecimal(v, 0),
         higherIsBetter: true,
+      ),
+      _IndicatorDef(
+        label: 'Dias de Vida',
+        getValue: (c) => c.diasDeVida.toDouble(),
+        format: (v) => NumberUtils.formatDecimal(v, 0),
+        higherIsBetter: true,
+      ),
+      _IndicatorDef(
+        label: 'Mortalidade',
+        getValue: (c) => c.mortalidade.toDouble(),
+        format: (v) => NumberUtils.formatDecimal(v, 0),
+        higherIsBetter: false,
       ),
       _IndicatorDef(
         label: 'Mortalidade %',
@@ -224,21 +231,27 @@ class _ComparativoTable extends StatelessWidget {
         higherIsBetter: false,
       ),
       _IndicatorDef(
-        label: 'Conv. Alimentar',
-        getValue: (c) => c.conversaoAlimentar,
-        format: (v) => NumberUtils.formatDecimal(v, 2),
+        label: 'Peso Medio',
+        getValue: (c) => c.pesoMedio ?? 0.0,
+        format: (v) => v > 0 ? NumberUtils.formatWeight(v) : '-',
+        higherIsBetter: true,
+      ),
+      _IndicatorDef(
+        label: 'ICA',
+        getValue: (c) => c.ica ?? 0.0,
+        format: (v) => v > 0 ? NumberUtils.formatDecimal(v, 3) : '-',
         higherIsBetter: false,
       ),
       _IndicatorDef(
         label: 'IEP',
-        getValue: (c) => c.iep,
-        format: (v) => NumberUtils.formatDecimal(v, 0),
+        getValue: (c) => c.iep ?? 0.0,
+        format: (v) => v > 0 ? NumberUtils.formatDecimal(v, 0) : '-',
         higherIsBetter: true,
       ),
       _IndicatorDef(
         label: 'GPD (g/dia)',
-        getValue: (c) => c.gpd,
-        format: (v) => NumberUtils.formatDecimal(v, 1),
+        getValue: (c) => c.gpd ?? 0.0,
+        format: (v) => v > 0 ? NumberUtils.formatDecimal(v, 1) : '-',
         higherIsBetter: true,
       ),
       _IndicatorDef(
@@ -261,7 +274,7 @@ class _ComparativoTable extends StatelessWidget {
             ...comparativos.map(
               (c) => DataColumn(
                 label: Text(
-                  c.loteNome,
+                  c.loteLabel,
                   style: theme.textTheme.labelMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                   ),
@@ -370,7 +383,7 @@ class _IepChart extends StatelessWidget {
       final color = _chartColors[i % _chartColors.length];
       spots.add(
         LineChartBarData(
-          spots: [FlSpot(i.toDouble(), comparativos[i].iep)],
+          spots: [FlSpot(i.toDouble(), comparativos[i].iep ?? 0.0)],
           isCurved: false,
           color: color,
           barWidth: 0,
@@ -391,14 +404,15 @@ class _IepChart extends StatelessWidget {
     final connectedSpots = comparativos
         .asMap()
         .entries
-        .map((e) => FlSpot(e.key.toDouble(), e.value.iep))
+        .map((e) => FlSpot(e.key.toDouble(), e.value.iep ?? 0.0))
         .toList();
 
     double maxY = 0;
     double minY = double.infinity;
     for (final c in comparativos) {
-      if (c.iep > maxY) maxY = c.iep;
-      if (c.iep < minY) minY = c.iep;
+      final iepVal = c.iep ?? 0.0;
+      if (iepVal > maxY) maxY = iepVal;
+      if (iepVal < minY) minY = iepVal;
     }
     maxY = (maxY * 1.15).ceilToDouble();
     minY = (minY * 0.85).floorToDouble();
@@ -449,7 +463,7 @@ class _IepChart extends StatelessWidget {
                           return Padding(
                             padding: const EdgeInsets.only(top: 6),
                             child: Text(
-                              comparativos[idx].loteNome,
+                              comparativos[idx].loteLabel,
                               style: const TextStyle(fontSize: 9),
                               overflow: TextOverflow.ellipsis,
                             ),
@@ -509,7 +523,7 @@ class _IepChart extends StatelessWidget {
                         return touchedSpots.map((spot) {
                           final idx = spot.x.toInt();
                           final nome = idx < comparativos.length
-                              ? comparativos[idx].loteNome
+                              ? comparativos[idx].loteLabel
                               : '';
                           return LineTooltipItem(
                             '$nome\nIEP: ${spot.y.toStringAsFixed(0)}',
@@ -547,7 +561,7 @@ class _IepChart extends StatelessWidget {
                     ),
                     const SizedBox(width: 4),
                     Text(
-                      entry.value.loteNome,
+                      entry.value.loteLabel,
                       style: theme.textTheme.labelSmall,
                     ),
                   ],

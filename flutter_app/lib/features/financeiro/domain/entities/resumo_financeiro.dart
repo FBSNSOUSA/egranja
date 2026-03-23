@@ -1,54 +1,87 @@
-/// Resumo financeiro consolidado de um lote.
-///
-/// Agrupa custos por categoria, receita estimada, margem e custo por kg vivo.
-class ResumoFinanceiro {
-  final double custoTotal;
-  final double custoRacao;
-  final double custoMedicamentos;
-  final double custoPintos;
-  final double custoMaoObra;
-  final double custoOutros;
-  final double receitaEstimada;
-  final double margemEstimada;
-  final double custoKgVivo;
+/// Custo agrupado por categoria.
+class CustoCategoria {
+  final String categoria;
+  final double total;
 
-  const ResumoFinanceiro({
-    required this.custoTotal,
-    required this.custoRacao,
-    required this.custoMedicamentos,
-    required this.custoPintos,
-    required this.custoMaoObra,
-    required this.custoOutros,
-    required this.receitaEstimada,
-    required this.margemEstimada,
-    required this.custoKgVivo,
+  const CustoCategoria({
+    required this.categoria,
+    required this.total,
   });
 
-  factory ResumoFinanceiro.fromJson(Map<String, dynamic> json) {
-    return ResumoFinanceiro(
-      custoTotal: (json['custo_total'] as num).toDouble(),
-      custoRacao: (json['custo_racao'] as num).toDouble(),
-      custoMedicamentos: (json['custo_medicamentos'] as num).toDouble(),
-      custoPintos: (json['custo_pintos'] as num).toDouble(),
-      custoMaoObra: (json['custo_mao_obra'] as num).toDouble(),
-      custoOutros: (json['custo_outros'] as num).toDouble(),
-      receitaEstimada: (json['receita_estimada'] as num).toDouble(),
-      margemEstimada: (json['margem_estimada'] as num).toDouble(),
-      custoKgVivo: (json['custo_kg_vivo'] as num).toDouble(),
+  factory CustoCategoria.fromJson(Map<String, dynamic> json) {
+    return CustoCategoria(
+      categoria: json['categoria'] as String? ?? '',
+      total: (json['total'] as num?)?.toDouble() ?? 0.0,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
+      'categoria': categoria,
+      'total': total,
+    };
+  }
+}
+
+/// Resumo financeiro consolidado de um lote.
+///
+/// Retorna custo total, receita total, resultado liquido,
+/// custo por kg e por ave, margens e custos agrupados por categoria.
+class ResumoFinanceiro {
+  final String? loteId;
+  final double custoTotal;
+  final double receitaTotal;
+  final double resultadoLiquido;
+  final double? custoPorKg;
+  final double? custoPorAve;
+  final double? margemPorKg;
+  final double? margemPorAve;
+  final List<CustoCategoria> custosPorCategoria;
+
+  const ResumoFinanceiro({
+    this.loteId,
+    required this.custoTotal,
+    required this.receitaTotal,
+    required this.resultadoLiquido,
+    this.custoPorKg,
+    this.custoPorAve,
+    this.margemPorKg,
+    this.margemPorAve,
+    this.custosPorCategoria = const [],
+  });
+
+  factory ResumoFinanceiro.fromJson(Map<String, dynamic> json) {
+    final custosCatJson = json['custos_por_categoria'] as List<dynamic>?;
+
+    return ResumoFinanceiro(
+      loteId: json['lote_id'] as String?,
+      custoTotal: (json['custo_total'] as num?)?.toDouble() ?? 0.0,
+      receitaTotal: (json['receita_total'] as num?)?.toDouble() ?? 0.0,
+      resultadoLiquido: (json['resultado_liquido'] as num?)?.toDouble() ?? 0.0,
+      custoPorKg: (json['custo_por_kg'] as num?)?.toDouble(),
+      custoPorAve: (json['custo_por_ave'] as num?)?.toDouble(),
+      margemPorKg: (json['margem_por_kg'] as num?)?.toDouble(),
+      margemPorAve: (json['margem_por_ave'] as num?)?.toDouble(),
+      custosPorCategoria: custosCatJson
+              ?.map((e) =>
+                  CustoCategoria.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          [],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      if (loteId != null) 'lote_id': loteId,
       'custo_total': custoTotal,
-      'custo_racao': custoRacao,
-      'custo_medicamentos': custoMedicamentos,
-      'custo_pintos': custoPintos,
-      'custo_mao_obra': custoMaoObra,
-      'custo_outros': custoOutros,
-      'receita_estimada': receitaEstimada,
-      'margem_estimada': margemEstimada,
-      'custo_kg_vivo': custoKgVivo,
+      'receita_total': receitaTotal,
+      'resultado_liquido': resultadoLiquido,
+      if (custoPorKg != null) 'custo_por_kg': custoPorKg,
+      if (custoPorAve != null) 'custo_por_ave': custoPorAve,
+      if (margemPorKg != null) 'margem_por_kg': margemPorKg,
+      if (margemPorAve != null) 'margem_por_ave': margemPorAve,
+      'custos_por_categoria':
+          custosPorCategoria.map((e) => e.toJson()).toList(),
     };
   }
 }

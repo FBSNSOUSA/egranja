@@ -67,13 +67,33 @@ class IndicatorColors {
     );
   }
 
+  // ── ICA (Indice de Conversao Alimentar) ──────────────────────────────
+
+  /// Retorna a cor do indicador de ICA.
+  ///
+  /// Classificacao para frango de corte (42 dias):
+  /// - < 1.70: Excelente (verde escuro)
+  /// - 1.70-1.85: Bom (verde)
+  /// - 1.85-2.00: Regular (amarelo)
+  /// - > 2.00: Ruim (vermelho)
+  static Color getICAColor(double ica) {
+    if (ica <= 0) return AppColors.gray500;
+    if (ica < 1.70) return AppColors.iepExcelente;
+    if (ica < 1.85) return AppColors.success;
+    if (ica < 2.00) return AppColors.warning;
+    return AppColors.danger;
+  }
+
   // ── Relacao agua/racao ───────────────────────────────────────────────
 
   /// Retorna a cor do indicador de relacao agua/racao.
   ///
   /// Normal: entre 1.6 e 2.0. Fora dessa faixa = perigo.
+  /// Relacao muito baixa pode indicar problema nos bebedouros.
+  /// Relacao muito alta pode indicar estresse termico ou vazamento.
   static Color getWaterFeedRatioColor(double ratio) {
-    if (ratio < 1.6 || ratio > 2.0) return AppColors.danger;
+    if (ratio < 1.4 || ratio > 2.5) return AppColors.danger;
+    if (ratio < 1.6 || ratio > 2.0) return AppColors.warning;
     return AppColors.success;
   }
 

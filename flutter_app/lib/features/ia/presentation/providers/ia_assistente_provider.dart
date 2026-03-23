@@ -55,28 +55,47 @@ class IAAssistenteNotifier extends StateNotifier<IAAssistenteState> {
         super(const IAAssistenteState());
 
   /// Carrega o historico de mensagens do chat com IA.
+  ///
+  /// Backend endpoint: GET /lotes/{id}/ia/historico
+  /// Backend DTO: []IAInteracaoResponse (paginado)
+  ///   { "id", "pergunta", "resposta", "tipo", "modelo", "tokens", "created_at" }
+  ///
+  /// Cada interacao gera duas IAMensagens (pergunta + resposta).
+  /// A resposta e paginada: data e uma lista, com meta de paginacao.
+  /// Se data for null, tratamos como lista vazia.
   Future<void> carregarHistorico() async {
     state = state.copyWith(isCarregandoHistorico: true, errorMessage: null);
 
     try {
       final response = await _api.apiGet<List<IAMensagem>>(
         '/lotes/$_loteId/ia/historico',
-        fromJson: (json) => (json as List<dynamic>)
-            .map((e) => IAMensagem.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        fromJson: (json) {
+          // Backend retorna lista paginada (pode ser null ou lista)
+          if (json == null) return <IAMensagem>[];
+          final list = json as List<dynamic>;
+          final mensagens = <IAMensagem>[];
+          for (final item in list) {
+            final map = item as Map<String, dynamic>;
+            mensagens.addAll(IAMensagem.fromInteracaoJson(map));
+          }
+          return mensagens;
+        },
       );
 
+      if (!mounted) return;
       state = state.copyWith(
         isCarregandoHistorico: false,
         mensagens: response.data,
       );
     } on NetworkException {
+      if (!mounted) return;
       state = state.copyWith(
         isCarregandoHistorico: false,
         errorMessage: 'Sem conexao. Tente novamente.',
       );
     } catch (e) {
       debugPrint('[IAAssistenteNotifier] Erro ao carregar historico: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isCarregandoHistorico: false,
         errorMessage: 'Erro ao carregar historico.',
@@ -112,6 +131,7 @@ class IAAssistenteNotifier extends StateNotifier<IAAssistenteState> {
         fromJson: (json) => json as Map<String, dynamic>,
       );
 
+      if (!mounted) return;
       final data = response.data;
       final iaMessage = IAMensagem(
         id: data['id']?.toString() ??
@@ -126,6 +146,7 @@ class IAAssistenteNotifier extends StateNotifier<IAAssistenteState> {
         isEnviando: false,
       );
     } on NetworkException {
+      if (!mounted) return;
       final errorMsg = IAMensagem(
         id: 'error_${DateTime.now().millisecondsSinceEpoch}',
         remetente: 'ia',
@@ -140,6 +161,7 @@ class IAAssistenteNotifier extends StateNotifier<IAAssistenteState> {
       );
     } catch (e) {
       debugPrint('[IAAssistenteNotifier] Erro ao enviar mensagem: $e');
+      if (!mounted) return;
 
       final errorMsg = IAMensagem(
         id: 'error_${DateTime.now().millisecondsSinceEpoch}',

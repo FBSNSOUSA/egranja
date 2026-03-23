@@ -84,11 +84,11 @@ class SyncState {
 /// - Trigger sync via [triggerSync]
 /// - Auto-sync with 2-second delay when transitioning from offline to online
 class SyncNotifier extends StateNotifier<SyncState> {
-  final SyncService _syncService;
+  final SyncService? _syncService;
   Timer? _autoSyncTimer;
 
   SyncNotifier(this._syncService) : super(const SyncState()) {
-    _refreshPendingCount();
+    if (_syncService != null) _refreshPendingCount();
   }
 
   /// Update the network connectivity status.
@@ -130,6 +130,10 @@ class SyncNotifier extends StateNotifier<SyncState> {
     state = state.copyWith(isSyncing: true, clearSyncError: true);
 
     try {
+      if (_syncService == null) {
+        state = state.copyWith(isSyncing: false);
+        return;
+      }
       final result = await _syncService.syncAll();
 
       state = state.copyWith(
@@ -155,12 +159,14 @@ class SyncNotifier extends StateNotifier<SyncState> {
   ///
   /// The operation is persisted to SQLite and the pending count is updated.
   Future<void> addPendingOp(PendingOperation op) async {
+    if (_syncService == null) return;
     await _syncService.addPendingOp(op);
     await _refreshPendingCount();
   }
 
   /// Clear all pending operations (used on logout).
   Future<void> clearAll() async {
+    if (_syncService == null) return;
     await _syncService.clearAll();
     state = state.copyWith(
       pendingCount: 0,
@@ -170,6 +176,7 @@ class SyncNotifier extends StateNotifier<SyncState> {
 
   /// Refresh the pending count from the database.
   Future<void> _refreshPendingCount() async {
+    if (_syncService == null) return;
     final count = await _syncService.getPendingCount();
     state = state.copyWith(pendingCount: count);
   }
@@ -185,13 +192,11 @@ class SyncNotifier extends StateNotifier<SyncState> {
 ///
 /// Depends on a [SyncService] instance, which should be provided
 /// via a separate provider (e.g. from the DI layer).
-final syncServiceProvider = Provider<SyncService>((ref) {
-  // This provider must be overridden with a real SyncService instance
-  // at app startup (e.g. in ProviderScope overrides).
-  throw UnimplementedError(
-    'syncServiceProvider must be overridden with a real SyncService instance. '
-    'Use ProviderScope overrides in main.dart.',
-  );
+final syncServiceProvider = Provider<SyncService?>((ref) {
+  // Retorna null quando o SyncService nao esta configurado (ex: web).
+  // Sera sobrescrito com uma instancia real no ProviderScope quando
+  // o banco de dados estiver inicializado (mobile).
+  return null;
 });
 
 final syncProvider = StateNotifierProvider<SyncNotifier, SyncState>((ref) {

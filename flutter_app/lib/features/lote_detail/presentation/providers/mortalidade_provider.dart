@@ -71,23 +71,27 @@ class MortalidadeNotifier extends StateNotifier<MortalidadeState> {
       final response = await _api.apiGet<List<Mortalidade>>(
         '/lotes/$_loteId/mortalidades',
         queryParams: {'page': 1, 'per_page': 20},
-        fromJson: (json) => (json as List<dynamic>)
-            .map((e) => Mortalidade.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        fromJson: (json) => (json as List<dynamic>?)
+                ?.map((e) => Mortalidade.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            [],
       );
 
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         mortalidades: response.data,
         pagination: response.meta,
       );
     } on NetworkException {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Sem conexao. Tente novamente.',
       );
     } catch (e) {
       debugPrint('[MortalidadeNotifier] Erro ao buscar mortalidades: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Erro ao carregar mortalidades.',
@@ -106,11 +110,13 @@ class MortalidadeNotifier extends StateNotifier<MortalidadeState> {
       final response = await _api.apiGet<List<Mortalidade>>(
         '/lotes/$_loteId/mortalidades',
         queryParams: {'page': nextPage, 'per_page': 20},
-        fromJson: (json) => (json as List<dynamic>)
-            .map((e) => Mortalidade.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        fromJson: (json) => (json as List<dynamic>?)
+                ?.map((e) => Mortalidade.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            [],
       );
 
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         mortalidades: [...state.mortalidades, ...response.data],
@@ -118,6 +124,7 @@ class MortalidadeNotifier extends StateNotifier<MortalidadeState> {
       );
     } catch (e) {
       debugPrint('[MortalidadeNotifier] Erro ao carregar mais: $e');
+      if (!mounted) return;
       state = state.copyWith(isLoading: false);
     }
   }
@@ -145,6 +152,7 @@ class MortalidadeNotifier extends StateNotifier<MortalidadeState> {
             Mortalidade.fromJson(json as Map<String, dynamic>),
       );
 
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         successMessage: 'Mortalidade registrada com sucesso!',
@@ -152,6 +160,7 @@ class MortalidadeNotifier extends StateNotifier<MortalidadeState> {
       await fetch();
       return true;
     } on NetworkException {
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         successMessage: 'Salvo localmente. Sera sincronizado quando online.',
@@ -159,6 +168,7 @@ class MortalidadeNotifier extends StateNotifier<MortalidadeState> {
       return true;
     } catch (e) {
       debugPrint('[MortalidadeNotifier] Erro ao criar mortalidade: $e');
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         errorMessage: 'Erro ao salvar mortalidade. Tente novamente.',

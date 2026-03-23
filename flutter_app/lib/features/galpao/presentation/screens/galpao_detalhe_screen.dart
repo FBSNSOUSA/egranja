@@ -52,12 +52,7 @@ class _GalpaoDetalheScreenState extends ConsumerState<GalpaoDetalheScreen> {
     final state = ref.watch(galpaoDetalheProvider(widget.galpaoId));
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(state.galpao?.nome ?? 'Galpao'),
-      ),
-      body: _buildBody(state, theme),
-    );
+    return _buildBody(state, theme);
   }
 
   Widget _buildBody(GalpaoDetalheState state, ThemeData theme) {

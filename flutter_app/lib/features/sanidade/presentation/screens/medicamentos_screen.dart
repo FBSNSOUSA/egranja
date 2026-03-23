@@ -3,21 +3,23 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:egranja_flutter/core/theme/app_colors.dart';
+import 'package:egranja_flutter/core/widgets/dropdown_field.dart';
 import 'package:egranja_flutter/core/widgets/empty_state.dart';
 import 'package:egranja_flutter/core/widgets/loading_skeleton.dart';
 import 'package:egranja_flutter/core/widgets/fab_menu.dart';
 import 'package:egranja_flutter/core/router/route_names.dart';
+import 'package:egranja_flutter/features/home/presentation/providers/home_provider.dart';
 import '../../domain/entities/medicamento.dart';
 import '../providers/medicamentos_provider.dart';
 
 /// Tela de listagem de medicamentos do lote.
 ///
-/// Exibe cards com nome, dosagem, via, periodo e status (Ativo/Concluido).
+/// Exibe cards com nome, dosagem, via, periodo e status (em carencia ou nao).
 /// FAB para adicionar novo medicamento. Suporta pull-to-refresh.
 class MedicamentosScreen extends ConsumerStatefulWidget {
   const MedicamentosScreen({super.key, this.loteId});
 
-  /// ID do lote. Quando nulo, exibe estado vazio orientando a selecionar um lote.
+  /// ID do lote. Quando nulo, exibe seletor de lote.
   final String? loteId;
 
   @override
@@ -26,14 +28,28 @@ class MedicamentosScreen extends ConsumerStatefulWidget {
 }
 
 class _MedicamentosScreenState extends ConsumerState<MedicamentosScreen> {
+  late String _selectedLoteId;
+
   @override
   void initState() {
     super.initState();
-    if (widget.loteId != null) {
-      Future.microtask(
-        () =>
-            ref.read(medicamentosProvider(widget.loteId!).notifier).fetch(),
-      );
+    _selectedLoteId = widget.loteId ?? '';
+    // Fetch lotes list for the dropdown
+    Future.microtask(() {
+      ref.read(homeProvider.notifier).fetchLotes();
+    });
+    // If we already have a loteId, fetch data
+    if (_selectedLoteId.isNotEmpty) {
+      Future.microtask(() {
+        ref.read(medicamentosProvider(_selectedLoteId).notifier).fetch();
+      });
+    }
+  }
+
+  void _onLoteChanged(String loteId) {
+    setState(() => _selectedLoteId = loteId);
+    if (loteId.isNotEmpty) {
+      ref.read(medicamentosProvider(loteId).notifier).fetch();
     }
   }
 
@@ -49,79 +65,135 @@ class _MedicamentosScreenState extends ConsumerState<MedicamentosScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final loteId = widget.loteId;
+    final homeState = ref.watch(homeProvider);
 
-    if (loteId == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Medicamentos')),
-        body: const EmptyState(
-          icon: Icons.medication_outlined,
-          titulo: 'Selecione um lote',
-          descricao:
-              'Acesse um lote para visualizar e registrar medicamentos.',
+    // Auto-select first lote if none selected
+    final lotes = homeState.lotesAtivos;
+    if (_selectedLoteId.isEmpty && lotes.isNotEmpty) {
+      Future.microtask(() {
+        _onLoteChanged(lotes.first.id);
+      });
+    }
+
+    return Stack(
+      children: [
+        Column(
+          children: [
+            // Seletor de lote
+            _buildLoteSelector(homeState, theme),
+
+            // Conteudo
+            Expanded(
+              child: _selectedLoteId.isEmpty
+                  ? const EmptyState(
+                      icon: Icons.medication_outlined,
+                      titulo: 'Selecione um lote',
+                      descricao:
+                          'Acesse um lote para visualizar e registrar medicamentos.',
+                    )
+                  : _buildContent(theme),
+            ),
+          ],
         ),
+        if (_selectedLoteId.isNotEmpty)
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: FABMenu(
+              actions: [
+                FABAction(
+                  label: 'Novo medicamento',
+                  icon: Icons.add,
+                  onPress: () => context.pushNamed(
+                    RouteNames.novoMedicamento,
+                    queryParameters: {'loteId': _selectedLoteId},
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ── Seletor de lote ───────────────────────────────────────────────────
+
+  Widget _buildLoteSelector(HomeState homeState, ThemeData theme) {
+    final lotes = homeState.lotesAtivos;
+    final options = lotes
+        .map((l) => DropdownOption(
+              value: l.id,
+              label: '${l.galpaoNome} - Dia ${l.diasDeVida ?? 0}',
+              subtitle: 'Alojado: ${l.dataAlojamento}',
+            ))
+        .toList();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(color: AppColors.divider),
+        ),
+      ),
+      child: DropdownField(
+        label: 'Lote',
+        value: _selectedLoteId.isNotEmpty ? _selectedLoteId : null,
+        options: options,
+        placeholder: 'Selecione um lote...',
+        onSelect: (option) => _onLoteChanged(option.value),
+      ),
+    );
+  }
+
+  // ── Conteudo ──────────────────────────────────────────────────────────
+
+  Widget _buildContent(ThemeData theme) {
+    final state = ref.watch(medicamentosProvider(_selectedLoteId));
+
+    if (state.isLoading && state.medicamentos.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: SkeletonList(itemCount: 3),
       );
     }
 
-    final state = ref.watch(medicamentosProvider(loteId));
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Medicamentos')),
-      floatingActionButton: FABMenu(
-        actions: [
-          FABAction(
-            label: 'Novo medicamento',
-            icon: Icons.add,
-            onPress: () => context.pushNamed(
-              RouteNames.novoMedicamento,
-              queryParameters: {'loteId': loteId},
-            ),
-          ),
-        ],
-      ),
-      body: state.isLoading && state.medicamentos.isEmpty
-          ? const Padding(
-              padding: EdgeInsets.all(16),
-              child: SkeletonList(itemCount: 3),
-            )
-          : RefreshIndicator(
-              onRefresh: () => ref
-                  .read(medicamentosProvider(loteId).notifier)
-                  .fetch(),
-              child: state.medicamentos.isEmpty
-                  ? ListView(
-                      children: [
-                        SizedBox(
-                          height: MediaQuery.sizeOf(context).height * 0.6,
-                          child: EmptyState(
-                            icon: Icons.medication_outlined,
-                            titulo: 'Nenhum medicamento registrado',
-                            descricao:
-                                'Registre os medicamentos aplicados no lote para controle de carencia.',
-                            actionLabel: 'Registrar medicamento',
-                            actionIcon: Icons.add,
-                            onAction: () => context.pushNamed(
-                              RouteNames.novoMedicamento,
-                              queryParameters: {'loteId': loteId},
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-                      itemCount: state.medicamentos.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final med = state.medicamentos[index];
-                        return _MedicamentoCard(
-                          medicamento: med,
-                          formatDate: _formatDate,
-                          theme: theme,
-                        );
-                      },
+    return RefreshIndicator(
+      onRefresh: () =>
+          ref.read(medicamentosProvider(_selectedLoteId).notifier).fetch(),
+      child: state.medicamentos.isEmpty
+          ? ListView(
+              children: [
+                SizedBox(
+                  height: MediaQuery.sizeOf(context).height * 0.5,
+                  child: EmptyState(
+                    icon: Icons.medication_outlined,
+                    titulo: 'Nenhum medicamento registrado',
+                    descricao:
+                        'Registre os medicamentos aplicados no lote para controle de carencia.',
+                    actionLabel: 'Registrar medicamento',
+                    actionIcon: Icons.add,
+                    onAction: () => context.pushNamed(
+                      RouteNames.novoMedicamento,
+                      queryParameters: {'loteId': _selectedLoteId},
                     ),
+                  ),
+                ),
+              ],
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+              itemCount: state.medicamentos.length,
+              separatorBuilder: (context, index) =>
+                  const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final med = state.medicamentos[index];
+                return _MedicamentoCard(
+                  medicamento: med,
+                  formatDate: _formatDate,
+                  theme: theme,
+                );
+              },
             ),
     );
   }
@@ -138,33 +210,12 @@ class _MedicamentoCard extends StatelessWidget {
   final String Function(String?) formatDate;
   final ThemeData theme;
 
-  bool get _isAtivo {
-    final status = medicamento.status?.toLowerCase();
-    return status == 'ativo' || status == 'em_tratamento';
-  }
-
-  bool get _emCarencia {
-    if (medicamento.periodoCarenciaDias == null ||
-        medicamento.periodoCarenciaDias! <= 0 ||
-        medicamento.dataFim == null) {
-      return false;
-    }
-    final dataFim = DateTime.tryParse(medicamento.dataFim!);
-    if (dataFim == null) return false;
-    final fimCarencia =
-        dataFim.add(Duration(days: medicamento.periodoCarenciaDias!));
-    return DateTime.now().isBefore(fimCarencia);
-  }
-
   @override
   Widget build(BuildContext context) {
-    final isAtivo = _isAtivo;
-    final emCarencia = _emCarencia;
-
     return Card(
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: emCarencia
+        side: medicamento.emCarencia
             ? const BorderSide(color: AppColors.danger, width: 2)
             : BorderSide.none,
       ),
@@ -178,19 +229,7 @@ class _MedicamentoCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 4,
               children: [
-                if (isAtivo)
-                  _StatusBadge(
-                    label: 'Ativo',
-                    color: AppColors.success,
-                    backgroundColor: AppColors.successLight,
-                  ),
-                if (!isAtivo)
-                  _StatusBadge(
-                    label: 'Concluido',
-                    color: AppColors.textSecondary,
-                    backgroundColor: AppColors.gray200,
-                  ),
-                if (emCarencia)
+                if (medicamento.emCarencia)
                   _StatusBadge(
                     label: 'EM CARENCIA',
                     color: AppColors.danger,
@@ -198,11 +237,11 @@ class _MedicamentoCard extends StatelessWidget {
                   ),
               ],
             ),
-            const SizedBox(height: 8),
+            if (medicamento.emCarencia) const SizedBox(height: 8),
 
             // Nome do medicamento
             Text(
-              medicamento.nome,
+              medicamento.medicamento,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -210,24 +249,22 @@ class _MedicamentoCard extends StatelessWidget {
             const SizedBox(height: 8),
 
             // Periodo
-            if (medicamento.dataInicio != null ||
-                medicamento.dataFim != null)
-              Row(
-                children: [
-                  Icon(
-                    Icons.date_range_outlined,
-                    size: 16,
-                    color: theme.colorScheme.secondary,
+            Row(
+              children: [
+                Icon(
+                  Icons.date_range_outlined,
+                  size: 16,
+                  color: theme.colorScheme.secondary,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  '${formatDate(medicamento.dataInicio)} a ${formatDate(medicamento.dataFim)}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: AppColors.textSecondary,
                   ),
-                  const SizedBox(width: 6),
-                  Text(
-                    '${formatDate(medicamento.dataInicio)} a ${formatDate(medicamento.dataFim)}',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
+            ),
             const SizedBox(height: 8),
 
             // Detalhes em grid
@@ -238,11 +275,10 @@ class _MedicamentoCard extends StatelessWidget {
                 if (medicamento.dosagem != null &&
                     medicamento.dosagem!.isNotEmpty)
                   _DetailItem(label: 'Dosagem', value: medicamento.dosagem!),
-                if (medicamento.viaAdministracao != null &&
-                    medicamento.viaAdministracao!.isNotEmpty)
+                if (medicamento.via != null && medicamento.via!.isNotEmpty)
                   _DetailItem(
                     label: 'Via',
-                    value: medicamento.viaAdministracao!,
+                    value: medicamento.via!,
                   ),
                 if (medicamento.periodoCarenciaDias != null)
                   _DetailItem(

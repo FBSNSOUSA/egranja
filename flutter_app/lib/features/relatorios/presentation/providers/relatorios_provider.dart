@@ -90,11 +90,14 @@ class RelatoriosNotifier extends StateNotifier<RelatoriosState> {
       final response = await _api.apiGet<List<Lote>>(
         '/lotes',
         queryParams: {'incluir_finalizados': true},
-        fromJson: (json) => (json as List<dynamic>)
-            .map((e) => Lote.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        fromJson: (json) => json == null
+            ? <Lote>[]
+            : (json as List<dynamic>)
+                .map((e) => Lote.fromJson(e as Map<String, dynamic>))
+                .toList(),
       );
 
+      if (!mounted) return;
       final lotes = response.data;
       state = state.copyWith(
         isLoading: false,
@@ -103,12 +106,14 @@ class RelatoriosNotifier extends StateNotifier<RelatoriosState> {
             lotes.isNotEmpty ? (state.selectedLoteId ?? lotes.first.id) : null,
       );
     } on NetworkException {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Sem conexao. Tente novamente.',
       );
     } catch (e) {
       debugPrint('[RelatoriosNotifier] Erro ao buscar lotes: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Erro ao carregar lotes.',
@@ -124,6 +129,7 @@ class RelatoriosNotifier extends StateNotifier<RelatoriosState> {
   /// Gera relatorio do tipo informado para o lote selecionado.
   ///
   /// Tipos aceitos: 'fechamento', 'csv', 'financeiro'.
+  /// Todos sao endpoints GET no backend.
   Future<void> gerarRelatorio(String tipo) async {
     final loteId = state.selectedLoteId;
     if (loteId == null) {
@@ -143,36 +149,43 @@ class RelatoriosNotifier extends StateNotifier<RelatoriosState> {
       final String path;
       switch (tipo) {
         case 'fechamento':
-          path = '/lotes/$loteId/relatorios/fechamento';
+          path = '/lotes/$loteId/relatorio/fechamento';
           break;
         case 'csv':
-          path = '/lotes/$loteId/relatorios/csv';
+          path = '/lotes/$loteId/exportar/csv';
           break;
         case 'financeiro':
-          path = '/lotes/$loteId/financeiro/relatorio-pdf';
+          path = '/lotes/$loteId/financeiro/relatorio';
           break;
         default:
-          path = '/lotes/$loteId/relatorios/$tipo';
+          path = '/lotes/$loteId/relatorio/$tipo';
       }
 
-      final response = await _api.apiPost<RelatorioResult>(
-        path,
-        fromJson: (json) =>
-            RelatorioResult.fromJson(json as Map<String, dynamic>),
-      );
+      if (tipo == 'csv') {
+        // CSV retorna texto puro, nao JSON. Usar dio diretamente.
+        await _api.dio.get<String>(path);
+      } else {
+        await _api.apiGet<Map<String, dynamic>>(
+          path,
+          fromJson: (json) => json as Map<String, dynamic>,
+        );
+      }
 
+      if (!mounted) return;
       state = state.copyWith(
         clearLoadingReport: true,
         successMessage:
-            'Relatorio "${response.data.nome}" gerado com sucesso!',
+            'Relatorio de $tipo gerado com sucesso!',
       );
     } on NetworkException {
+      if (!mounted) return;
       state = state.copyWith(
         clearLoadingReport: true,
         errorMessage: 'Sem conexao. Tente novamente.',
       );
     } catch (e) {
       debugPrint('[RelatoriosNotifier] Erro ao gerar relatorio: $e');
+      if (!mounted) return;
       state = state.copyWith(
         clearLoadingReport: true,
         errorMessage: 'Erro ao gerar relatorio. Tente novamente.',
@@ -192,10 +205,13 @@ class RelatoriosNotifier extends StateNotifier<RelatoriosState> {
   }
 
   /// Busca dados comparativos dos lotes selecionados.
+  ///
+  /// O backend retorna todos os lotes do mesmo galpao do lote informado.
+  /// Basta enviar o ID de um dos lotes selecionados como path param.
   Future<void> fetchComparativo(List<String> loteIds) async {
-    if (loteIds.length < 2) {
+    if (loteIds.isEmpty) {
       state = state.copyWith(
-        errorMessage: 'Selecione pelo menos 2 lotes para comparar.',
+        errorMessage: 'Selecione pelo menos 1 lote para comparar.',
       );
       return;
     }
@@ -203,26 +219,31 @@ class RelatoriosNotifier extends StateNotifier<RelatoriosState> {
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     try {
-      final idsParam = loteIds.join(',');
+      final baseLoteId = loteIds.first;
       final response = await _api.apiGet<List<LoteComparativo>>(
-        '/relatorios/comparativo',
-        queryParams: {'lote_ids': idsParam},
-        fromJson: (json) => (json as List<dynamic>)
-            .map((e) => LoteComparativo.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        '/lotes/$baseLoteId/relatorio/comparativo',
+        fromJson: (json) => json == null
+            ? <LoteComparativo>[]
+            : (json as List<dynamic>)
+                .map((e) =>
+                    LoteComparativo.fromJson(e as Map<String, dynamic>))
+                .toList(),
       );
 
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         comparativos: response.data,
       );
     } on NetworkException {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Sem conexao. Tente novamente.',
       );
     } catch (e) {
       debugPrint('[RelatoriosNotifier] Erro ao buscar comparativo: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Erro ao carregar comparativo.',

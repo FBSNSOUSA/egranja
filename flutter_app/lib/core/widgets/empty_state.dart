@@ -41,20 +41,31 @@ class EmptyState extends StatelessWidget {
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 64,
-              color: theme.colorScheme.onSurfaceVariant.withAlpha(120),
+            // Circular background behind icon for visual weight
+            Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                color: theme.colorScheme.surfaceContainerHighest
+                    .withValues(alpha: 0.5),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 48,
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.6),
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
             Text(
               titulo,
               style: theme.textTheme.titleMedium?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+                color: theme.colorScheme.onSurface,
+                fontWeight: FontWeight.w600,
               ),
               textAlign: TextAlign.center,
             ),
@@ -63,17 +74,29 @@ class EmptyState extends StatelessWidget {
               Text(
                 descricao!,
                 style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant.withAlpha(180),
+                  color: theme.colorScheme.onSurfaceVariant,
                 ),
                 textAlign: TextAlign.center,
               ),
             ],
             if (actionLabel != null && onAction != null) ...[
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: onAction,
-                icon: actionIcon != null ? Icon(actionIcon) : null,
-                label: Text(actionLabel!),
+              const SizedBox(height: 32),
+              SizedBox(
+                height: 52,
+                child: FilledButton.icon(
+                  onPressed: onAction,
+                  icon: actionIcon != null ? Icon(actionIcon) : null,
+                  label: Text(
+                    actionLabel!,
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 32,
+                      vertical: 14,
+                    ),
+                  ),
+                ),
               ),
             ],
           ],

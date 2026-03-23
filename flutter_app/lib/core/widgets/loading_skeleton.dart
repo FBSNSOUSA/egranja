@@ -74,7 +74,7 @@ class _SkeletonBlock extends StatelessWidget {
   const _SkeletonBlock({
     required this.width,
     required this.height,
-    this.borderRadius = 6,
+    this.borderRadius = 8,
   });
 
   final double width;
@@ -169,16 +169,18 @@ class SkeletonCard extends StatelessWidget {
               // Divider
               const _SkeletonBlock(width: double.infinity, height: 1),
               const SizedBox(height: 12),
-              // Indicators row
+              // Indicators row - 3 columns matching LoteCard
               const Row(
                 children: [
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _SkeletonBlock(width: 60, height: 12),
+                        _SkeletonBlock(width: 56, height: 12),
+                        SizedBox(height: 6),
+                        _SkeletonBlock(width: 72, height: 16),
                         SizedBox(height: 4),
-                        _SkeletonBlock(width: 80, height: 16),
+                        _SkeletonBlock(width: 48, height: 10),
                       ],
                     ),
                   ),
@@ -186,9 +188,21 @@ class SkeletonCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _SkeletonBlock(width: 70, height: 12),
+                        _SkeletonBlock(width: 48, height: 12),
+                        SizedBox(height: 6),
+                        _SkeletonBlock(width: 64, height: 16),
                         SizedBox(height: 4),
-                        _SkeletonBlock(width: 90, height: 16),
+                        _SkeletonBlock(width: 52, height: 10),
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _SkeletonBlock(width: 60, height: 12),
+                        SizedBox(height: 6),
+                        _SkeletonBlock(width: 48, height: 16),
                       ],
                     ),
                   ),

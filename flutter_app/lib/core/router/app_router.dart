@@ -6,6 +6,9 @@ import 'page_transitions.dart';
 
 import '../../features/auth/presentation/providers/auth_provider.dart';
 import '../../features/auth/presentation/screens/login_screen.dart';
+import '../../features/auth/presentation/screens/register_screen.dart';
+import '../../features/auth/presentation/screens/forgot_password_screen.dart';
+import '../../features/config/presentation/screens/editar_perfil_screen.dart';
 import '../../features/chat/presentation/screens/chat_list_screen.dart';
 import '../../features/chat/presentation/screens/chat_screen.dart';
 import '../../features/home/presentation/screens/home_screen.dart';
@@ -31,30 +34,78 @@ import '../../features/financeiro/presentation/screens/remuneracao_screen.dart';
 import '../../features/lote_detail/presentation/screens/forms/finalizar_lote_screen.dart';
 import '../../features/relatorios/presentation/screens/relatorios_screen.dart';
 import '../../features/relatorios/presentation/screens/comparativo_lotes_screen.dart';
+import '../../features/relatorios/presentation/screens/relatorio_pesagens_screen.dart';
+import '../../features/relatorios/presentation/screens/relatorio_mortalidade_screen.dart';
+import '../../features/relatorios/presentation/screens/relatorio_conversao_screen.dart';
+import '../../features/relatorios/presentation/screens/relatorio_consumo_screen.dart';
 import '../../features/ia/presentation/screens/ia_assistente_screen.dart';
 import '../../features/ia/presentation/screens/ia_analise_screen.dart';
 import '../../features/clima/presentation/screens/clima_screen.dart';
 import '../../features/iot/presentation/screens/iot_dashboard_screen.dart';
 import '../../features/iot/presentation/screens/iot_historico_screen.dart';
+import '../../features/iot/presentation/screens/iot_config_screen.dart';
 import '../../features/galpao/presentation/screens/mapa_galpoes_screen.dart';
 import '../../features/galpao/presentation/screens/galpao_detalhe_screen.dart';
+import '../../features/granja/presentation/screens/granja_list_screen.dart';
+import '../../features/granja/presentation/screens/granja_detail_screen.dart';
+import '../../features/granja/presentation/screens/granja_form_screen.dart';
 import '../../features/config/presentation/screens/configuracoes_screen.dart';
+import '../../features/notifications/presentation/screens/notificacoes_screen.dart';
+import '../../features/produtores/presentation/screens/produtores_screen.dart';
 import '../widgets/app_shell.dart';
 import 'route_names.dart';
 
+/// Notifier que converte mudancas do Riverpod [authNotifierProvider]
+/// em notificacoes compativeis com GoRouter [refreshListenable].
+///
+/// Isso evita que o GoRouter seja recriado a cada mudanca de estado de auth,
+/// mantendo a instancia estavel e preservando o estado dos widgets (foco,
+/// texto digitado, etc).
+class _GoRouterRefreshNotifier extends ChangeNotifier {
+  _GoRouterRefreshNotifier(Ref ref) {
+    ref.listen<AuthState>(authNotifierProvider, (_, _) {
+      notifyListeners();
+    });
+  }
+}
+
+/// Widget seletor que determina a home baseado no tipo do usuario.
+///
+/// Usa [ConsumerWidget] para ler o estado de auth sem depender
+/// do GoRouter provider, evitando recriacao desnecessaria.
+class _HomeSelector extends ConsumerWidget {
+  const _HomeSelector();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authNotifierProvider).user;
+    if (user != null && user.tipo == 'tecnico') {
+      return const HomeTecnicoScreen();
+    }
+    return const HomeScreen();
+  }
+}
+
 /// Provider do GoRouter com redirect baseado em autenticacao.
 ///
-/// Observa o [authNotifierProvider] para reagir a mudancas de estado
-/// e redirecionar automaticamente entre login e rotas protegidas.
+/// Usa [refreshListenable] em vez de [ref.watch] para que o GoRouter
+/// seja criado uma unica vez. Mudancas de auth disparam apenas o
+/// callback de redirect, sem recriar a instancia do router.
 final goRouterProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authNotifierProvider);
+  final refreshNotifier = _GoRouterRefreshNotifier(ref);
 
   return GoRouter(
     initialLocation: '/login',
     debugLogDiagnostics: true,
+    refreshListenable: refreshNotifier,
     redirect: (BuildContext context, GoRouterState state) {
-      final isLoginRoute = state.matchedLocation == '/login';
+      final authState = ref.read(authNotifierProvider);
+      final location = state.matchedLocation;
       final isAuthenticated = authState.status == AuthStatus.authenticated;
+
+      // Rotas publicas (acessiveis sem autenticacao)
+      const publicRoutes = ['/login', '/register', '/forgot-password'];
+      final isPublicRoute = publicRoutes.contains(location);
 
       // Ainda verificando autenticacao → nao redirecionar
       if (authState.status == AuthStatus.initial ||
@@ -63,35 +114,47 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       }
 
       // Nao autenticado tentando acessar rota protegida → login
-      if (!isAuthenticated && !isLoginRoute) return '/login';
+      if (!isAuthenticated && !isPublicRoute) return '/login';
 
-      // Autenticado tentando acessar login → home
-      if (isAuthenticated && isLoginRoute) return '/';
+      // Autenticado tentando acessar rota publica → home
+      if (isAuthenticated && isPublicRoute) return '/';
 
       return null; // sem redirect
     },
     routes: [
-      // ── Login (fora do shell) ────────────────────────────────────────
+      // ── Auth (fora do shell) ─────────────────────────────────────────
       GoRoute(
         path: '/login',
         name: RouteNames.login,
         builder: (context, state) => const LoginScreen(),
       ),
+      GoRoute(
+        path: '/register',
+        name: RouteNames.register,
+        builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/forgot-password',
+        name: RouteNames.forgotPassword,
+        builder: (context, state) => const ForgotPasswordScreen(),
+      ),
 
       // ── App Shell (Scaffold + Drawer) ────────────────────────────────
       ShellRoute(
-        builder: (context, state, child) => AppShell(child: child),
+        builder: (context, state, child) => AppShell(
+          routeName: state.topRoute?.name ?? '',
+          child: child,
+        ),
         routes: [
           // Home - Produtor ou Tecnico baseado no tipo de usuario
           GoRoute(
             path: '/',
             name: RouteNames.home,
             pageBuilder: (context, state) {
-              final user = authState.user;
-              final child = (user != null && user.tipo == 'tecnico')
-                  ? const HomeTecnicoScreen()
-                  : const HomeScreen();
-              return buildFadeSlideTransition(state: state, child: child);
+              return buildFadeSlideTransition(
+                state: state,
+                child: const _HomeSelector(),
+              );
             },
           ),
 
@@ -257,7 +320,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             pageBuilder: (context, state) => buildFadeSlideTransition(
               state: state,
               child: VisitantesScreen(
-                loteId: state.uri.queryParameters['loteId'],
+                granjaId: state.uri.queryParameters['granjaId'],
               ),
             ),
           ),
@@ -267,7 +330,7 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             pageBuilder: (context, state) => buildFadeSlideTransition(
               state: state,
               child: NovoVisitanteScreen(
-                loteId: state.uri.queryParameters['loteId'] ?? '',
+                granjaId: state.uri.queryParameters['granjaId'] ?? '',
               ),
             ),
           ),
@@ -331,6 +394,46 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               child: const ComparativoLotesScreen(),
             ),
           ),
+          GoRoute(
+            path: '/relatorios/pesagens',
+            name: RouteNames.relatorioPesagens,
+            pageBuilder: (context, state) => buildFadeSlideTransition(
+              state: state,
+              child: RelatorioPesagensScreen(
+                loteId: state.uri.queryParameters['loteId'] ?? '',
+              ),
+            ),
+          ),
+          GoRoute(
+            path: '/relatorios/mortalidade',
+            name: RouteNames.relatorioMortalidade,
+            pageBuilder: (context, state) => buildFadeSlideTransition(
+              state: state,
+              child: RelatorioMortalidadeScreen(
+                loteId: state.uri.queryParameters['loteId'] ?? '',
+              ),
+            ),
+          ),
+          GoRoute(
+            path: '/relatorios/conversao',
+            name: RouteNames.relatorioConversao,
+            pageBuilder: (context, state) => buildFadeSlideTransition(
+              state: state,
+              child: RelatorioConversaoScreen(
+                loteId: state.uri.queryParameters['loteId'] ?? '',
+              ),
+            ),
+          ),
+          GoRoute(
+            path: '/relatorios/consumo',
+            name: RouteNames.relatorioConsumo,
+            pageBuilder: (context, state) => buildFadeSlideTransition(
+              state: state,
+              child: RelatorioConsumoScreen(
+                loteId: state.uri.queryParameters['loteId'] ?? '',
+              ),
+            ),
+          ),
 
           // ── IA ───────────────────────────────────────────────────────
           GoRoute(
@@ -375,6 +478,14 @@ final goRouterProvider = Provider<GoRouter>((ref) {
               ),
             ),
           ),
+          GoRoute(
+            path: '/iot/config',
+            name: RouteNames.iotConfig,
+            pageBuilder: (context, state) => buildFadeSlideTransition(
+              state: state,
+              child: const IoTConfigScreen(),
+            ),
+          ),
 
           // ── Clima ────────────────────────────────────────────────────
           GoRoute(
@@ -408,6 +519,54 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             ),
           ),
 
+          // ── Granja ───────────────────────────────────────────────────
+          GoRoute(
+            path: '/granjas',
+            name: RouteNames.granjaList,
+            pageBuilder: (context, state) => buildFadeSlideTransition(
+              state: state,
+              child: const GranjaListScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/granjas/nova',
+            name: RouteNames.granjaForm,
+            pageBuilder: (context, state) => buildFadeSlideTransition(
+              state: state,
+              child: const GranjaFormScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/granjas/:granjaId',
+            name: RouteNames.granjaDetail,
+            pageBuilder: (context, state) => buildFadeSlideTransition(
+              state: state,
+              child: GranjaDetailScreen(
+                granjaId: state.pathParameters['granjaId']!,
+              ),
+            ),
+          ),
+          GoRoute(
+            path: '/granjas/:granjaId/editar',
+            name: RouteNames.granjaFormEdit,
+            pageBuilder: (context, state) => buildFadeSlideTransition(
+              state: state,
+              child: GranjaFormScreen(
+                granjaId: state.pathParameters['granjaId'],
+              ),
+            ),
+          ),
+
+          // ── Produtores (visao tecnico) ────────────────────────────────
+          GoRoute(
+            path: '/produtores',
+            name: RouteNames.produtores,
+            pageBuilder: (context, state) => buildFadeSlideTransition(
+              state: state,
+              child: const ProdutoresScreen(),
+            ),
+          ),
+
           // ── Configuracoes ────────────────────────────────────────────
           GoRoute(
             path: '/configuracoes',
@@ -415,6 +574,23 @@ final goRouterProvider = Provider<GoRouter>((ref) {
             pageBuilder: (context, state) => buildFadeSlideTransition(
               state: state,
               child: const ConfiguracoesScreen(),
+            ),
+          ),
+          GoRoute(
+            path: '/configuracoes/perfil',
+            name: RouteNames.editarPerfil,
+            pageBuilder: (context, state) => buildFadeSlideTransition(
+              state: state,
+              child: const EditarPerfilScreen(),
+            ),
+          ),
+          // ── Notificacoes ──────────────────────────────────────────
+          GoRoute(
+            path: '/notificacoes',
+            name: RouteNames.notificacoes,
+            pageBuilder: (context, state) => buildFadeSlideTransition(
+              state: state,
+              child: const NotificacoesScreen(),
             ),
           ),
         ],

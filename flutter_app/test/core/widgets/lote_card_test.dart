@@ -17,13 +17,8 @@ LoteCardData createTestData({
   String linhagem = 'Cobb 500',
   int quantidadeOriginal = 30000,
   int mortalidadeAcumulada = 150,
-  double? ultimoPesoMedio,
-  double? pesoBenchmark,
-  int? mortesRecentes,
-  DateTime? dataMortesRecentes,
-  double? mortalidadeRecentePct,
-  bool temAlerta = false,
-  int quantidadeAlertas = 0,
+  int? diasDeVida,
+  int? avesVivas,
 }) {
   return LoteCardData(
     id: id,
@@ -33,13 +28,8 @@ LoteCardData createTestData({
     linhagem: linhagem,
     quantidadeOriginal: quantidadeOriginal,
     mortalidadeAcumulada: mortalidadeAcumulada,
-    ultimoPesoMedio: ultimoPesoMedio,
-    pesoBenchmark: pesoBenchmark,
-    mortesRecentes: mortesRecentes,
-    dataMortesRecentes: dataMortesRecentes,
-    mortalidadeRecentePct: mortalidadeRecentePct,
-    temAlerta: temAlerta,
-    quantidadeAlertas: quantidadeAlertas,
+    diasDeVida: diasDeVida,
+    avesVivas: avesVivas,
   );
 }
 
@@ -60,7 +50,7 @@ void main() {
       expect(find.text('Cobb 500'), findsOneWidget);
     });
 
-    testWidgets('renderiza dias de vida', (tester) async {
+    testWidgets('renderiza dias de vida calculados', (tester) async {
       final data = createTestData(
         dataAlojamento: DateTime.now().subtract(const Duration(days: 25)),
       );
@@ -70,7 +60,18 @@ void main() {
       expect(find.text('dias'), findsOneWidget);
     });
 
-    testWidgets('renderiza aves vivas', (tester) async {
+    testWidgets('renderiza dias de vida do backend quando disponivel', (tester) async {
+      final data = createTestData(
+        dataAlojamento: DateTime.now().subtract(const Duration(days: 25)),
+        diasDeVida: 24, // backend may differ from calculated
+      );
+      await tester.pumpWidget(buildTestWidget(LoteCard(data: data)));
+
+      expect(find.text('24'), findsOneWidget);
+      expect(find.text('dias'), findsOneWidget);
+    });
+
+    testWidgets('renderiza aves vivas calculadas', (tester) async {
       final data = createTestData(
         quantidadeOriginal: 30000,
         mortalidadeAcumulada: 500,
@@ -82,20 +83,16 @@ void main() {
       expect(find.text('Aves vivas'), findsOneWidget);
     });
 
-    testWidgets('renderiza peso medio quando fornecido', (tester) async {
-      final data = createTestData(ultimoPesoMedio: 1680);
+    testWidgets('renderiza aves vivas do backend quando disponivel', (tester) async {
+      final data = createTestData(
+        quantidadeOriginal: 30000,
+        mortalidadeAcumulada: 500,
+        avesVivas: 29400, // backend value takes precedence
+      );
       await tester.pumpWidget(buildTestWidget(LoteCard(data: data)));
 
-      expect(find.text('1680 g'), findsOneWidget);
-      expect(find.text('Peso medio'), findsOneWidget);
-    });
-
-    testWidgets('renderiza "--" quando peso medio nao disponivel',
-        (tester) async {
-      final data = createTestData(ultimoPesoMedio: null);
-      await tester.pumpWidget(buildTestWidget(LoteCard(data: data)));
-
-      expect(find.text('--'), findsOneWidget);
+      expect(find.text('29400'), findsOneWidget);
+      expect(find.text('Aves vivas'), findsOneWidget);
     });
 
     testWidgets('tap dispara callback onTap', (tester) async {
@@ -142,57 +139,48 @@ void main() {
       expect(find.text('Alojamento: 15/03/2025'), findsOneWidget);
     });
 
-    testWidgets('exibe mortalidade recente quando ha mortes', (tester) async {
+    testWidgets('renderiza mortalidade total', (tester) async {
       final data = createTestData(
-        mortesRecentes: 5,
-        mortalidadeRecentePct: 0.25,
+        mortalidadeAcumulada: 150,
       );
       await tester.pumpWidget(buildTestWidget(LoteCard(data: data)));
 
-      expect(find.text('5 mortes recentes'), findsOneWidget);
-      expect(find.text('(0.25%)'), findsOneWidget);
-    });
-
-    testWidgets('nao exibe mortalidade recente quando nao ha mortes',
-        (tester) async {
-      final data = createTestData(mortesRecentes: null);
-      await tester.pumpWidget(buildTestWidget(LoteCard(data: data)));
-
-      expect(find.textContaining('mortes recentes'), findsNothing);
+      expect(find.text('150'), findsOneWidget);
+      expect(find.text('Mortalidade'), findsOneWidget);
     });
   });
 
   group('LoteCardData', () {
-    test('calcula diasDeVida corretamente', () {
+    test('diasDeVidaEfetivo calcula a partir de dataAlojamento quando diasDeVida nulo', () {
       final data = createTestData(
         dataAlojamento: DateTime.now().subtract(const Duration(days: 30)),
       );
-      expect(data.diasDeVida, 30);
+      expect(data.diasDeVidaEfetivo, 30);
     });
 
-    test('calcula avesVivas corretamente', () {
+    test('diasDeVidaEfetivo usa valor do backend quando disponivel', () {
+      final data = createTestData(
+        dataAlojamento: DateTime.now().subtract(const Duration(days: 30)),
+        diasDeVida: 28,
+      );
+      expect(data.diasDeVidaEfetivo, 28);
+    });
+
+    test('avesVivasEfetivo calcula quando avesVivas nulo', () {
       final data = createTestData(
         quantidadeOriginal: 25000,
         mortalidadeAcumulada: 200,
       );
-      expect(data.avesVivas, 24800);
+      expect(data.avesVivasEfetivo, 24800);
     });
 
-    test('calcula desvioPeso quando ha benchmark', () {
+    test('avesVivasEfetivo usa valor do backend quando disponivel', () {
       final data = createTestData(
-        ultimoPesoMedio: 1700,
-        pesoBenchmark: 1600,
+        quantidadeOriginal: 25000,
+        mortalidadeAcumulada: 200,
+        avesVivas: 24750,
       );
-      // desvio = ((1700 - 1600) / 1600) * 100 = 6.25%
-      expect(data.desvioPeso, closeTo(6.25, 0.01));
-    });
-
-    test('retorna null para desvioPeso sem benchmark', () {
-      final data = createTestData(
-        ultimoPesoMedio: 1700,
-        pesoBenchmark: null,
-      );
-      expect(data.desvioPeso, isNull);
+      expect(data.avesVivasEfetivo, 24750);
     });
   });
 }

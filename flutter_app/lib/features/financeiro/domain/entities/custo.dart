@@ -1,28 +1,24 @@
 /// Registro de custo de um lote.
 ///
-/// Cada custo possui um [tipo] que indica a categoria
-/// (racao, medicamento, pinto, mao_obra, outros),
-/// alem de valor, data, nota fiscal e fornecedor opcionais.
+/// Cada custo possui uma [categoria] que indica o tipo de custo
+/// (mao_de_obra, energia, aquecimento, cama, manutencao, depreciacao, agua, outros),
+/// alem de valor, descricao e data opcionais.
 class Custo {
   final String id;
   final String loteId;
-  final String tipo;
-  final String descricao;
+  final String categoria;
+  final String? descricao;
   final double valor;
-  final String data;
-  final String? notaFiscal;
-  final String? fornecedor;
+  final String? data;
   final String createdAt;
 
   const Custo({
     required this.id,
     required this.loteId,
-    required this.tipo,
-    required this.descricao,
+    required this.categoria,
+    this.descricao,
     required this.valor,
-    required this.data,
-    this.notaFiscal,
-    this.fornecedor,
+    this.data,
     required this.createdAt,
   });
 
@@ -30,13 +26,11 @@ class Custo {
     return Custo(
       id: json['id'] as String,
       loteId: json['lote_id'] as String,
-      tipo: json['tipo'] as String,
-      descricao: json['descricao'] as String,
-      valor: (json['valor'] as num).toDouble(),
-      data: json['data'] as String,
-      notaFiscal: json['nota_fiscal'] as String?,
-      fornecedor: json['fornecedor'] as String?,
-      createdAt: json['created_at'] as String,
+      categoria: json['categoria'] as String? ?? '',
+      descricao: json['descricao'] as String?,
+      valor: (json['valor'] as num?)?.toDouble() ?? 0.0,
+      data: json['data'] as String?,
+      createdAt: json['created_at'] as String? ?? '',
     );
   }
 
@@ -44,25 +38,42 @@ class Custo {
     return {
       'id': id,
       'lote_id': loteId,
-      'tipo': tipo,
-      'descricao': descricao,
+      'categoria': categoria,
+      if (descricao != null) 'descricao': descricao,
       'valor': valor,
-      'data': data,
-      'nota_fiscal': notaFiscal,
-      'fornecedor': fornecedor,
+      if (data != null) 'data': data,
       'created_at': createdAt,
     };
   }
 
-  /// Label legivel para o tipo de custo.
-  static String tipoLabel(String tipo) {
+  /// Label legivel para a categoria de custo.
+  ///
+  /// Categorias padrao da avicultura de corte:
+  /// - pintinhos: custo dos pintos de um dia (DOC)
+  /// - racao: maior custo (~70% do total)
+  /// - energia: eletricidade e gas
+  /// - aquecimento: gas GLP, lenha para aquecedores
+  /// - mao_de_obra: funcionarios do galpao
+  /// - sanidade: vacinas, medicamentos, desinfetantes
+  /// - cama: maravalha, casca de arroz, etc.
+  /// - manutencao: reparos e pecas de equipamentos
+  /// - depreciacao: depreciacao de galpao e equipamentos
+  /// - agua: consumo de agua
+  /// - outros: custos nao classificados
+  static String categoriaLabel(String categoria) {
     const labels = {
+      'pintinhos': 'Pintinhos (DOC)',
       'racao': 'Racao',
-      'medicamento': 'Medicamento',
-      'pinto': 'Pinto',
-      'mao_obra': 'Mao de obra',
+      'mao_de_obra': 'Mao de obra',
+      'energia': 'Energia',
+      'aquecimento': 'Aquecimento (gas/lenha)',
+      'sanidade': 'Sanidade (vacinas/medicamentos)',
+      'cama': 'Cama (maravalha)',
+      'manutencao': 'Manutencao',
+      'depreciacao': 'Depreciacao',
+      'agua': 'Agua',
       'outros': 'Outros',
     };
-    return labels[tipo] ?? tipo;
+    return labels[categoria] ?? categoria;
   }
 }

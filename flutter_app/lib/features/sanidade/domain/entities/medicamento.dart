@@ -1,34 +1,37 @@
 /// Registro de medicamento aplicado em um lote.
+///
+/// Matches backend DTO MedicamentoResponse:
+/// - medicamento (not nome)
+/// - via (not via_administracao)
+/// - data_inicio, data_fim
+/// - periodo_carencia_dias
+/// - em_carencia
 class Medicamento {
   final String id;
   final String loteId;
-  final String nome;
-  final String? principioAtivo;
-  final String? dosagem;
-  final String? viaAdministracao;
-  final int? duracaoTratamentoDias;
-  final int? periodoCarenciaDias;
-  final String? dataInicio;
+  final String dataInicio;
   final String? dataFim;
+  final String medicamento;
+  final String? dosagem;
+  final String? via;
+  final int? periodoCarenciaDias;
   final String? responsavel;
   final String? observacao;
-  final String? status;
+  final bool emCarencia;
   final String createdAt;
 
   const Medicamento({
     required this.id,
     required this.loteId,
-    required this.nome,
-    this.principioAtivo,
-    this.dosagem,
-    this.viaAdministracao,
-    this.duracaoTratamentoDias,
-    this.periodoCarenciaDias,
-    this.dataInicio,
+    required this.dataInicio,
     this.dataFim,
+    required this.medicamento,
+    this.dosagem,
+    this.via,
+    this.periodoCarenciaDias,
     this.responsavel,
     this.observacao,
-    this.status,
+    this.emCarencia = false,
     required this.createdAt,
   });
 
@@ -36,17 +39,15 @@ class Medicamento {
     return Medicamento(
       id: json['id'] as String,
       loteId: json['lote_id'] as String,
-      nome: json['nome'] as String,
-      principioAtivo: json['principio_ativo'] as String?,
-      dosagem: json['dosagem'] as String?,
-      viaAdministracao: json['via_administracao'] as String?,
-      duracaoTratamentoDias: json['duracao_tratamento_dias'] as int?,
-      periodoCarenciaDias: json['periodo_carencia_dias'] as int?,
-      dataInicio: json['data_inicio'] as String?,
+      dataInicio: json['data_inicio'] as String,
       dataFim: json['data_fim'] as String?,
+      medicamento: json['medicamento'] as String,
+      dosagem: json['dosagem'] as String?,
+      via: json['via'] as String?,
+      periodoCarenciaDias: (json['periodo_carencia_dias'] as num?)?.toInt(),
       responsavel: json['responsavel'] as String?,
       observacao: json['observacao'] as String?,
-      status: json['status'] as String?,
+      emCarencia: json['em_carencia'] as bool? ?? false,
       createdAt: json['created_at'] as String,
     );
   }
@@ -55,17 +56,16 @@ class Medicamento {
     return {
       'id': id,
       'lote_id': loteId,
-      'nome': nome,
-      'principio_ativo': principioAtivo,
-      'dosagem': dosagem,
-      'via_administracao': viaAdministracao,
-      'duracao_tratamento_dias': duracaoTratamentoDias,
-      'periodo_carencia_dias': periodoCarenciaDias,
       'data_inicio': dataInicio,
-      'data_fim': dataFim,
-      'responsavel': responsavel,
-      'observacao': observacao,
-      'status': status,
+      if (dataFim != null) 'data_fim': dataFim,
+      'medicamento': medicamento,
+      if (dosagem != null) 'dosagem': dosagem,
+      if (via != null) 'via': via,
+      if (periodoCarenciaDias != null)
+        'periodo_carencia_dias': periodoCarenciaDias,
+      if (responsavel != null) 'responsavel': responsavel,
+      if (observacao != null) 'observacao': observacao,
+      'em_carencia': emCarencia,
       'created_at': createdAt,
     };
   }

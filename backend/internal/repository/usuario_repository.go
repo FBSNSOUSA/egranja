@@ -66,6 +66,19 @@ func (r *UsuarioRepository) Update(usuario *model.Usuario) error {
 	return r.db.Save(usuario).Error
 }
 
+// FindByEmail busca um usuario pelo email.
+func (r *UsuarioRepository) FindByEmail(email string) (*model.Usuario, error) {
+	var usuario model.Usuario
+	result := r.db.Where("email = ? AND ativo = true", email).First(&usuario)
+	if result.Error != nil {
+		if errors.Is(result.Error, gorm.ErrRecordNotFound) {
+			return nil, ErrUsuarioNotFound
+		}
+		return nil, result.Error
+	}
+	return &usuario, nil
+}
+
 // FindProdutoresByTecnicoID retorna todos os produtores vinculados a um tecnico.
 func (r *UsuarioRepository) FindProdutoresByTecnicoID(tecnicoID uuid.UUID) ([]model.Usuario, error) {
 	var usuarios []model.Usuario

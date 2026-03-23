@@ -48,10 +48,11 @@ abstract class LoteDetailRepository {
     int page = 1,
   });
 
-  /// Cria uma nova pesagem com a lista de [itens].
+  /// Cria uma nova pesagem com a data e a lista de [items].
   Future<Pesagem> criarPesagem(
     String loteId,
-    List<Map<String, dynamic>> itens,
+    String data,
+    List<Map<String, dynamic>> items,
   );
 
   // ==========================================

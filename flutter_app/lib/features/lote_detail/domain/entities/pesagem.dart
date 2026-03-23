@@ -2,6 +2,9 @@
 ///
 /// Cada pesagem contem um ou mais [PesagemItem], representando
 /// amostras individuais de peso coletadas no campo.
+///
+/// Campos mapeados a partir do endpoint GET /lotes/{id}/pesagens
+/// e do DTO PesagemResponse do backend Go.
 class Pesagem {
   final String id;
   final String loteId;
@@ -14,20 +17,8 @@ class Pesagem {
   /// Peso medio em gramas.
   final double pesoMedio;
 
-  /// Peso benchmark da linhagem para a idade, em gramas.
-  final double? pesoBenchmark;
-
-  /// Desvio percentual em relacao ao benchmark.
-  final double? desvioPct;
-
-  /// Coeficiente de variacao (uniformidade).
-  final double? uniformidadeCV;
-
-  /// Idade do lote no dia da pesagem.
-  final int? idade;
-
-  /// Itens individuais da pesagem.
-  final List<PesagemItem> itens;
+  /// Itens individuais da pesagem (campo `items` do backend).
+  final List<PesagemItem> items;
 
   final String createdAt;
 
@@ -38,11 +29,7 @@ class Pesagem {
     required this.quantidadeTotal,
     required this.pesoTotal,
     required this.pesoMedio,
-    this.pesoBenchmark,
-    this.desvioPct,
-    this.uniformidadeCV,
-    this.idade,
-    required this.itens,
+    required this.items,
     required this.createdAt,
   });
 
@@ -51,14 +38,10 @@ class Pesagem {
       id: json['id'] as String,
       loteId: json['lote_id'] as String,
       data: json['data'] as String,
-      quantidadeTotal: json['quantidade_total'] as int,
+      quantidadeTotal: (json['quantidade_total'] as num).toInt(),
       pesoTotal: (json['peso_total'] as num).toDouble(),
       pesoMedio: (json['peso_medio'] as num).toDouble(),
-      pesoBenchmark: (json['peso_benchmark'] as num?)?.toDouble(),
-      desvioPct: (json['desvio_pct'] as num?)?.toDouble(),
-      uniformidadeCV: (json['uniformidade_cv'] as num?)?.toDouble(),
-      idade: json['idade'] as int?,
-      itens: (json['itens'] as List<dynamic>?)
+      items: (json['items'] as List<dynamic>?)
               ?.map(
                 (e) => PesagemItem.fromJson(e as Map<String, dynamic>),
               )
@@ -76,11 +59,7 @@ class Pesagem {
       'quantidade_total': quantidadeTotal,
       'peso_total': pesoTotal,
       'peso_medio': pesoMedio,
-      'peso_benchmark': pesoBenchmark,
-      'desvio_pct': desvioPct,
-      'uniformidade_cv': uniformidadeCV,
-      'idade': idade,
-      'itens': itens.map((e) => e.toJson()).toList(),
+      'items': items.map((e) => e.toJson()).toList(),
       'created_at': createdAt,
     };
   }
@@ -92,7 +71,6 @@ class Pesagem {
 /// registrado em gramas.
 class PesagemItem {
   final String id;
-  final String pesagemId;
 
   /// Quantidade de aves nesta amostra.
   final int quantidade;
@@ -105,7 +83,6 @@ class PesagemItem {
 
   const PesagemItem({
     required this.id,
-    required this.pesagemId,
     required this.quantidade,
     required this.peso,
     required this.pesoMedio,
@@ -114,8 +91,7 @@ class PesagemItem {
   factory PesagemItem.fromJson(Map<String, dynamic> json) {
     return PesagemItem(
       id: json['id'] as String,
-      pesagemId: json['pesagem_id'] as String,
-      quantidade: json['quantidade'] as int,
+      quantidade: (json['quantidade'] as num).toInt(),
       peso: (json['peso'] as num).toDouble(),
       pesoMedio: (json['peso_medio'] as num).toDouble(),
     );
@@ -124,7 +100,6 @@ class PesagemItem {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'pesagem_id': pesagemId,
       'quantidade': quantidade,
       'peso': peso,
       'peso_medio': pesoMedio,

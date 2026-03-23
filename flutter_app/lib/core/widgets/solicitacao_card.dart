@@ -117,14 +117,14 @@ class SolicitacaoCard extends StatelessWidget {
           children: [
             // Barra lateral colorida
             Container(
-              width: 5,
+              width: 4,
               color: _statusColor,
             ),
 
             // Conteudo
             Expanded(
               child: Padding(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -140,18 +140,18 @@ class SolicitacaoCard extends StatelessWidget {
                         const Spacer(),
                         Container(
                           padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
+                            horizontal: 10,
+                            vertical: 4,
                           ),
                           decoration: BoxDecoration(
                             color: _statusColor.withAlpha(30),
-                            borderRadius: BorderRadius.circular(10),
+                            borderRadius: BorderRadius.circular(12),
                           ),
                           child: Text(
                             _statusLabel,
                             style: TextStyle(
                               color: _statusColor,
-                              fontSize: 12,
+                              fontSize: 13,
                               fontWeight: FontWeight.w600,
                             ),
                           ),
@@ -213,13 +213,13 @@ class SolicitacaoCard extends StatelessWidget {
                     // Resposta (quando respondida)
                     if (status == SolicitacaoStatus.respondida &&
                         resposta != null) ...[
-                      const Divider(height: 16),
+                      const Divider(height: 20),
                       Container(
                         width: double.infinity,
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           color: AppColors.successLight,
-                          borderRadius: BorderRadius.circular(6),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,

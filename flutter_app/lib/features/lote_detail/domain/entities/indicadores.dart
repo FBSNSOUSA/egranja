@@ -2,181 +2,216 @@
 ///
 /// Agrega metricas de desempenho zootecnico, mortalidade,
 /// consumo de racao, agua e projecoes calculadas pelo backend.
+///
+/// Campos mapeados do DTO LoteIndicadoresResponse do backend Go.
+/// Campos opcionais podem nao ser retornados dependendo do estado do lote.
 class Indicadores {
+  /// ID do lote.
+  final String? loteId;
+
   /// Idade do lote em dias.
   final int diasDeVida;
 
   /// Quantidade de aves vivas no momento.
   final int avesVivas;
 
-  /// Quantidade original de aves alojadas.
-  final int quantidadeOriginal;
+  /// Quantidade original de aves alojadas (campo `aves_alojadas`).
+  final int avesAlojadas;
 
-  /// Total de mortes acumuladas no lote.
-  final int mortalidadeAcumulada;
+  /// Total de mortes acumuladas no lote (campo `mortalidade_total`).
+  final int mortalidadeTotal;
 
-  /// Percentual de mortalidade acumulada.
-  final double mortalidadeAcumuladaPct;
-
-  /// Mortalidade do dia corrente.
-  final int mortalidadeDia;
-
-  /// Percentual de mortalidade do dia.
-  final double mortalidadeDiaPct;
-
-  /// Ultimo peso medio registrado em gramas.
-  final double ultimoPesoMedio;
-
-  /// Peso benchmark da linhagem para a idade, em gramas.
-  final double pesoBenchmark;
-
-  /// Desvio percentual do peso real em relacao ao benchmark.
-  final double pesoDesvioPct;
-
-  /// Ganho de peso diario em g/dia.
-  final double gpd;
-
-  /// Indice de conversao alimentar.
-  final double ica;
-
-  /// Indice de eficiencia alimentar.
-  final double iea;
-
-  /// Indice de eficiencia produtiva.
-  final double iep;
-
-  /// Classificacao do IEP: 'Ruim', 'Regular', 'Bom', 'Excelente'.
-  final String iepClassificacao;
+  /// Percentual de mortalidade acumulada (campo `mortalidade_pct`).
+  final double mortalidadePct;
 
   /// Viabilidade do lote (percentual).
   final double viabilidade;
 
-  /// Total de racao recebida em kg.
-  final double racaoRecebida;
+  // ── Peso ─────────────────────────────────────────────────────────
 
-  /// Total de racao consumida em kg.
-  final double racaoConsumida;
+  /// Ultimo peso medio registrado em gramas (campo `ultimo_peso_medio`).
+  final double? ultimoPesoMedio;
 
-  /// Saldo de racao em kg.
-  final double saldoRacao;
+  /// Peso padrao da linhagem para a idade, em gramas (campo `peso_padrao_g`).
+  final double? pesoPadraoG;
 
-  /// Dias restantes de racao com base no consumo medio.
-  final int diasRestantesRacao;
+  /// Desvio percentual do peso real em relacao ao padrao (campo `desvio_peso_pct`).
+  final double? desvioPesoPct;
 
-  /// Consumo medio diario de racao em kg.
-  final double consumoMedioDiarioRacao;
+  // ── Indices zootecnicos ──────────────────────────────────────────
 
-  /// Consumo de agua do dia em litros.
-  final double consumoAguaDia;
+  /// Ganho de peso diario em g/dia.
+  final double? gpd;
 
-  /// Consumo de agua por ave em mL.
-  final double consumoAguaPorAve;
+  /// Indice de conversao alimentar.
+  final double? ica;
+
+  /// Indice de eficiencia alimentar.
+  final double? iea;
+
+  /// Indice de eficiencia produtiva.
+  final double? iep;
+
+  /// Classificacao do IEP: 'Ruim', 'Regular', 'Bom', 'Excelente'.
+  /// Campo `classificacao_iep` no backend.
+  final String? classificacaoIep;
+
+  // ── Racao ─────────────────────────────────────────────────────────
+
+  /// Total de racao consumida em kg (campo `consumo_total_racao_kg`).
+  final double? consumoTotalRacaoKg;
+
+  /// Total de racao recebida em kg (campo `recebido_total_racao_kg`).
+  final double? recebidoTotalRacaoKg;
+
+  /// Saldo de racao em kg (campo `saldo_racao_kg`).
+  final double? saldoRacaoKg;
+
+  /// Dias de estoque de racao (campo `dias_estoque_racao`).
+  final double? diasEstoqueRacao;
+
+  /// Consumo de racao por ave em kg (campo `consumo_racao_por_ave`).
+  final double? consumoRacaoPorAve;
+
+  // ── Agua ─────────────────────────────────────────────────────────
+
+  /// Consumo de agua do dia em litros (campo `consumo_agua_dia_l`).
+  final double? consumoAguaDiaL;
 
   /// Relacao agua/racao.
-  final double relacaoAguaRacao;
+  final double? relacaoAguaRacao;
 
-  /// Texto descritivo da projecao de desempenho.
-  final String projecaoTexto;
+  // ── Projecao ─────────────────────────────────────────────────────
 
-  /// Peso projetado no abate em gramas.
-  final double pesoProjetadoAbate;
-
-  /// Dias restantes para atingir o peso alvo.
-  final int diasParaPesoAlvo;
+  /// Projecao de peso (campo `projecao_peso`).
+  final ProjecaoPeso? projecaoPeso;
 
   const Indicadores({
+    this.loteId,
     required this.diasDeVida,
     required this.avesVivas,
-    required this.quantidadeOriginal,
-    required this.mortalidadeAcumulada,
-    required this.mortalidadeAcumuladaPct,
-    required this.mortalidadeDia,
-    required this.mortalidadeDiaPct,
-    required this.ultimoPesoMedio,
-    required this.pesoBenchmark,
-    required this.pesoDesvioPct,
-    required this.gpd,
-    required this.ica,
-    required this.iea,
-    required this.iep,
-    required this.iepClassificacao,
+    required this.avesAlojadas,
+    required this.mortalidadeTotal,
+    required this.mortalidadePct,
     required this.viabilidade,
-    required this.racaoRecebida,
-    required this.racaoConsumida,
-    required this.saldoRacao,
-    required this.diasRestantesRacao,
-    required this.consumoMedioDiarioRacao,
-    required this.consumoAguaDia,
-    required this.consumoAguaPorAve,
-    required this.relacaoAguaRacao,
-    required this.projecaoTexto,
-    required this.pesoProjetadoAbate,
-    required this.diasParaPesoAlvo,
+    this.ultimoPesoMedio,
+    this.pesoPadraoG,
+    this.desvioPesoPct,
+    this.gpd,
+    this.ica,
+    this.iea,
+    this.iep,
+    this.classificacaoIep,
+    this.consumoTotalRacaoKg,
+    this.recebidoTotalRacaoKg,
+    this.saldoRacaoKg,
+    this.diasEstoqueRacao,
+    this.consumoRacaoPorAve,
+    this.consumoAguaDiaL,
+    this.relacaoAguaRacao,
+    this.projecaoPeso,
   });
 
   factory Indicadores.fromJson(Map<String, dynamic> json) {
     return Indicadores(
-      diasDeVida: json['dias_de_vida'] as int,
-      avesVivas: json['aves_vivas'] as int,
-      quantidadeOriginal: json['quantidade_original'] as int,
-      mortalidadeAcumulada: json['mortalidade_acumulada'] as int,
-      mortalidadeAcumuladaPct:
-          (json['mortalidade_acumulada_pct'] as num).toDouble(),
-      mortalidadeDia: json['mortalidade_dia'] as int,
-      mortalidadeDiaPct: (json['mortalidade_dia_pct'] as num).toDouble(),
-      ultimoPesoMedio: (json['ultimo_peso_medio'] as num).toDouble(),
-      pesoBenchmark: (json['peso_benchmark'] as num).toDouble(),
-      pesoDesvioPct: (json['peso_desvio_pct'] as num).toDouble(),
-      gpd: (json['gpd'] as num).toDouble(),
-      ica: (json['ica'] as num).toDouble(),
-      iea: (json['iea'] as num).toDouble(),
-      iep: (json['iep'] as num).toDouble(),
-      iepClassificacao: json['iep_classificacao'] as String,
-      viabilidade: (json['viabilidade'] as num).toDouble(),
-      racaoRecebida: (json['racao_recebida'] as num).toDouble(),
-      racaoConsumida: (json['racao_consumida'] as num).toDouble(),
-      saldoRacao: (json['saldo_racao'] as num).toDouble(),
-      diasRestantesRacao: json['dias_restantes_racao'] as int,
-      consumoMedioDiarioRacao:
-          (json['consumo_medio_diario_racao'] as num).toDouble(),
-      consumoAguaDia: (json['consumo_agua_dia'] as num).toDouble(),
-      consumoAguaPorAve: (json['consumo_agua_por_ave'] as num).toDouble(),
-      relacaoAguaRacao: (json['relacao_agua_racao'] as num).toDouble(),
-      projecaoTexto: json['projecao_texto'] as String,
-      pesoProjetadoAbate: (json['peso_projetado_abate'] as num).toDouble(),
-      diasParaPesoAlvo: json['dias_para_peso_alvo'] as int,
+      loteId: json['lote_id'] as String?,
+      diasDeVida: (json['dias_de_vida'] as num?)?.toInt() ?? 0,
+      avesVivas: (json['aves_vivas'] as num?)?.toInt() ?? 0,
+      avesAlojadas: (json['aves_alojadas'] as num?)?.toInt() ?? 0,
+      mortalidadeTotal: (json['mortalidade_total'] as num?)?.toInt() ?? 0,
+      mortalidadePct: (json['mortalidade_pct'] as num?)?.toDouble() ?? 0.0,
+      viabilidade: (json['viabilidade'] as num?)?.toDouble() ?? 0.0,
+      ultimoPesoMedio: (json['ultimo_peso_medio'] as num?)?.toDouble(),
+      pesoPadraoG: (json['peso_padrao_g'] as num?)?.toDouble(),
+      desvioPesoPct: (json['desvio_peso_pct'] as num?)?.toDouble(),
+      gpd: (json['gpd'] as num?)?.toDouble(),
+      ica: (json['ica'] as num?)?.toDouble(),
+      iea: (json['iea'] as num?)?.toDouble(),
+      iep: (json['iep'] as num?)?.toDouble(),
+      classificacaoIep: json['classificacao_iep'] as String?,
+      consumoTotalRacaoKg:
+          (json['consumo_total_racao_kg'] as num?)?.toDouble(),
+      recebidoTotalRacaoKg:
+          (json['recebido_total_racao_kg'] as num?)?.toDouble(),
+      saldoRacaoKg: (json['saldo_racao_kg'] as num?)?.toDouble(),
+      diasEstoqueRacao:
+          (json['dias_estoque_racao'] as num?)?.toDouble(),
+      consumoRacaoPorAve:
+          (json['consumo_racao_por_ave'] as num?)?.toDouble(),
+      consumoAguaDiaL:
+          (json['consumo_agua_dia_l'] as num?)?.toDouble(),
+      relacaoAguaRacao:
+          (json['relacao_agua_racao'] as num?)?.toDouble(),
+      projecaoPeso: json['projecao_peso'] != null
+          ? ProjecaoPeso.fromJson(
+              json['projecao_peso'] as Map<String, dynamic>)
+          : null,
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
+      if (loteId != null) 'lote_id': loteId,
       'dias_de_vida': diasDeVida,
       'aves_vivas': avesVivas,
-      'quantidade_original': quantidadeOriginal,
-      'mortalidade_acumulada': mortalidadeAcumulada,
-      'mortalidade_acumulada_pct': mortalidadeAcumuladaPct,
-      'mortalidade_dia': mortalidadeDia,
-      'mortalidade_dia_pct': mortalidadeDiaPct,
-      'ultimo_peso_medio': ultimoPesoMedio,
-      'peso_benchmark': pesoBenchmark,
-      'peso_desvio_pct': pesoDesvioPct,
-      'gpd': gpd,
-      'ica': ica,
-      'iea': iea,
-      'iep': iep,
-      'iep_classificacao': iepClassificacao,
+      'aves_alojadas': avesAlojadas,
+      'mortalidade_total': mortalidadeTotal,
+      'mortalidade_pct': mortalidadePct,
       'viabilidade': viabilidade,
-      'racao_recebida': racaoRecebida,
-      'racao_consumida': racaoConsumida,
-      'saldo_racao': saldoRacao,
-      'dias_restantes_racao': diasRestantesRacao,
-      'consumo_medio_diario_racao': consumoMedioDiarioRacao,
-      'consumo_agua_dia': consumoAguaDia,
-      'consumo_agua_por_ave': consumoAguaPorAve,
-      'relacao_agua_racao': relacaoAguaRacao,
-      'projecao_texto': projecaoTexto,
-      'peso_projetado_abate': pesoProjetadoAbate,
-      'dias_para_peso_alvo': diasParaPesoAlvo,
+      if (ultimoPesoMedio != null) 'ultimo_peso_medio': ultimoPesoMedio,
+      if (pesoPadraoG != null) 'peso_padrao_g': pesoPadraoG,
+      if (desvioPesoPct != null) 'desvio_peso_pct': desvioPesoPct,
+      if (gpd != null) 'gpd': gpd,
+      if (ica != null) 'ica': ica,
+      if (iea != null) 'iea': iea,
+      if (iep != null) 'iep': iep,
+      if (classificacaoIep != null) 'classificacao_iep': classificacaoIep,
+      if (consumoTotalRacaoKg != null)
+        'consumo_total_racao_kg': consumoTotalRacaoKg,
+      if (recebidoTotalRacaoKg != null)
+        'recebido_total_racao_kg': recebidoTotalRacaoKg,
+      if (saldoRacaoKg != null) 'saldo_racao_kg': saldoRacaoKg,
+      if (diasEstoqueRacao != null) 'dias_estoque_racao': diasEstoqueRacao,
+      if (consumoRacaoPorAve != null)
+        'consumo_racao_por_ave': consumoRacaoPorAve,
+      if (consumoAguaDiaL != null) 'consumo_agua_dia_l': consumoAguaDiaL,
+      if (relacaoAguaRacao != null) 'relacao_agua_racao': relacaoAguaRacao,
+      if (projecaoPeso != null) 'projecao_peso': projecaoPeso!.toJson(),
+    };
+  }
+}
+
+/// Projecao de peso do lote.
+///
+/// Campos mapeados do DTO ProjecaoPesoDTO do backend Go.
+class ProjecaoPeso {
+  final double pesoEstimadoG;
+  final String dataEstimada;
+  final double gpdG;
+  final String mensagem;
+
+  const ProjecaoPeso({
+    required this.pesoEstimadoG,
+    required this.dataEstimada,
+    required this.gpdG,
+    required this.mensagem,
+  });
+
+  factory ProjecaoPeso.fromJson(Map<String, dynamic> json) {
+    return ProjecaoPeso(
+      pesoEstimadoG: (json['peso_estimado_g'] as num?)?.toDouble() ?? 0.0,
+      dataEstimada: json['data_estimada'] as String? ?? '',
+      gpdG: (json['gpd_g'] as num?)?.toDouble() ?? 0.0,
+      mensagem: json['mensagem'] as String? ?? '',
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'peso_estimado_g': pesoEstimadoG,
+      'data_estimada': dataEstimada,
+      'gpd_g': gpdG,
+      'mensagem': mensagem,
     };
   }
 }

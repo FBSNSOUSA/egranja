@@ -1,27 +1,36 @@
-/// Registro de visitante em um lote.
+/// Registro de visitante em uma granja (livro de registro digital).
+///
+/// Matches backend DTO VisitanteResponse:
+/// - granja_id (not lote_id)
+/// - data_entrada (not data_visita)
+/// - documento, origem, ultimo_contato_aves, placa_veiculo
+/// - data_saida
+/// Endpoint: GET /granjas/:id/visitantes (not /lotes/:id/visitantes)
 class Visitante {
   final String id;
-  final String loteId;
+  final String granjaId;
   final String nome;
-  final String? empresa;
+  final String? documento;
+  final String? origem;
   final String? motivo;
-  final String dataVisita;
-  final String? horaEntrada;
-  final String? horaSaida;
-  final bool usouEpi;
+  final String? ultimoContatoAves;
+  final String? placaVeiculo;
+  final String dataEntrada;
+  final String? dataSaida;
   final String? observacao;
   final String createdAt;
 
   const Visitante({
     required this.id,
-    required this.loteId,
+    required this.granjaId,
     required this.nome,
-    this.empresa,
+    this.documento,
+    this.origem,
     this.motivo,
-    required this.dataVisita,
-    this.horaEntrada,
-    this.horaSaida,
-    this.usouEpi = false,
+    this.ultimoContatoAves,
+    this.placaVeiculo,
+    required this.dataEntrada,
+    this.dataSaida,
     this.observacao,
     required this.createdAt,
   });
@@ -29,14 +38,15 @@ class Visitante {
   factory Visitante.fromJson(Map<String, dynamic> json) {
     return Visitante(
       id: json['id'] as String,
-      loteId: json['lote_id'] as String,
+      granjaId: json['granja_id'] as String,
       nome: json['nome'] as String,
-      empresa: json['empresa'] as String?,
+      documento: json['documento'] as String?,
+      origem: json['origem'] as String?,
       motivo: json['motivo'] as String?,
-      dataVisita: json['data_visita'] as String,
-      horaEntrada: json['hora_entrada'] as String?,
-      horaSaida: json['hora_saida'] as String?,
-      usouEpi: json['usou_epi'] as bool? ?? false,
+      ultimoContatoAves: json['ultimo_contato_aves'] as String?,
+      placaVeiculo: json['placa_veiculo'] as String?,
+      dataEntrada: json['data_entrada'] as String,
+      dataSaida: json['data_saida'] as String?,
       observacao: json['observacao'] as String?,
       createdAt: json['created_at'] as String,
     );
@@ -45,15 +55,16 @@ class Visitante {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'lote_id': loteId,
+      'granja_id': granjaId,
       'nome': nome,
-      'empresa': empresa,
-      'motivo': motivo,
-      'data_visita': dataVisita,
-      'hora_entrada': horaEntrada,
-      'hora_saida': horaSaida,
-      'usou_epi': usouEpi,
-      'observacao': observacao,
+      if (documento != null) 'documento': documento,
+      if (origem != null) 'origem': origem,
+      if (motivo != null) 'motivo': motivo,
+      if (ultimoContatoAves != null) 'ultimo_contato_aves': ultimoContatoAves,
+      if (placaVeiculo != null) 'placa_veiculo': placaVeiculo,
+      'data_entrada': dataEntrada,
+      if (dataSaida != null) 'data_saida': dataSaida,
+      if (observacao != null) 'observacao': observacao,
       'created_at': createdAt,
     };
   }

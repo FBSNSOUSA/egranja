@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import 'package:egranja_flutter/core/theme/app_colors.dart';
+import 'package:egranja_flutter/core/widgets/dropdown_field.dart';
 import 'package:egranja_flutter/core/widgets/empty_state.dart';
 import 'package:egranja_flutter/core/widgets/loading_skeleton.dart';
 import 'package:egranja_flutter/core/widgets/fab_menu.dart';
 import 'package:egranja_flutter/core/router/route_names.dart';
+import 'package:egranja_flutter/features/home/presentation/providers/home_provider.dart';
 import '../../domain/entities/vacinacao.dart';
 import '../providers/vacinacoes_provider.dart';
 
@@ -17,7 +19,7 @@ import '../providers/vacinacoes_provider.dart';
 class VacinacoesScreen extends ConsumerStatefulWidget {
   const VacinacoesScreen({super.key, this.loteId});
 
-  /// ID do lote. Quando nulo, exibe estado vazio orientando a selecionar um lote.
+  /// ID do lote. Quando nulo, exibe seletor de lote.
   final String? loteId;
 
   @override
@@ -25,13 +27,28 @@ class VacinacoesScreen extends ConsumerStatefulWidget {
 }
 
 class _VacinacoesScreenState extends ConsumerState<VacinacoesScreen> {
+  late String _selectedLoteId;
+
   @override
   void initState() {
     super.initState();
-    if (widget.loteId != null) {
-      Future.microtask(
-        () => ref.read(vacinacoesProvider(widget.loteId!).notifier).fetch(),
-      );
+    _selectedLoteId = widget.loteId ?? '';
+    // Fetch lotes list for the dropdown
+    Future.microtask(() {
+      ref.read(homeProvider.notifier).fetchLotes();
+    });
+    // If we already have a loteId, fetch data
+    if (_selectedLoteId.isNotEmpty) {
+      Future.microtask(() {
+        ref.read(vacinacoesProvider(_selectedLoteId).notifier).fetch();
+      });
+    }
+  }
+
+  void _onLoteChanged(String loteId) {
+    setState(() => _selectedLoteId = loteId);
+    if (loteId.isNotEmpty) {
+      ref.read(vacinacoesProvider(loteId).notifier).fetch();
     }
   }
 
@@ -46,78 +63,135 @@ class _VacinacoesScreenState extends ConsumerState<VacinacoesScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final loteId = widget.loteId;
+    final homeState = ref.watch(homeProvider);
 
-    if (loteId == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Vacinacoes')),
-        body: const EmptyState(
-          icon: Icons.vaccines_outlined,
-          titulo: 'Selecione um lote',
-          descricao:
-              'Acesse um lote para visualizar e registrar vacinacoes.',
+    // Auto-select first lote if none selected
+    final lotes = homeState.lotesAtivos;
+    if (_selectedLoteId.isEmpty && lotes.isNotEmpty) {
+      Future.microtask(() {
+        _onLoteChanged(lotes.first.id);
+      });
+    }
+
+    return Stack(
+      children: [
+        Column(
+          children: [
+            // Seletor de lote
+            _buildLoteSelector(homeState, theme),
+
+            // Conteudo
+            Expanded(
+              child: _selectedLoteId.isEmpty
+                  ? const EmptyState(
+                      icon: Icons.vaccines_outlined,
+                      titulo: 'Selecione um lote',
+                      descricao:
+                          'Acesse um lote para visualizar e registrar vacinacoes.',
+                    )
+                  : _buildContent(theme),
+            ),
+          ],
         ),
+        if (_selectedLoteId.isNotEmpty)
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: FABMenu(
+              actions: [
+                FABAction(
+                  label: 'Nova vacinacao',
+                  icon: Icons.add,
+                  onPress: () => context.pushNamed(
+                    RouteNames.novaVacinacao,
+                    queryParameters: {'loteId': _selectedLoteId},
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  // ── Seletor de lote ───────────────────────────────────────────────────
+
+  Widget _buildLoteSelector(HomeState homeState, ThemeData theme) {
+    final lotes = homeState.lotesAtivos;
+    final options = lotes
+        .map((l) => DropdownOption(
+              value: l.id,
+              label: '${l.galpaoNome} - Dia ${l.diasDeVida ?? 0}',
+              subtitle: 'Alojado: ${l.dataAlojamento}',
+            ))
+        .toList();
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(color: AppColors.divider),
+        ),
+      ),
+      child: DropdownField(
+        label: 'Lote',
+        value: _selectedLoteId.isNotEmpty ? _selectedLoteId : null,
+        options: options,
+        placeholder: 'Selecione um lote...',
+        onSelect: (option) => _onLoteChanged(option.value),
+      ),
+    );
+  }
+
+  // ── Conteudo ──────────────────────────────────────────────────────────
+
+  Widget _buildContent(ThemeData theme) {
+    final state = ref.watch(vacinacoesProvider(_selectedLoteId));
+
+    if (state.isLoading && state.vacinacoes.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: SkeletonList(itemCount: 3),
       );
     }
 
-    final state = ref.watch(vacinacoesProvider(loteId));
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Vacinacoes')),
-      floatingActionButton: FABMenu(
-        actions: [
-          FABAction(
-            label: 'Nova vacinacao',
-            icon: Icons.add,
-            onPress: () => context.pushNamed(
-              RouteNames.novaVacinacao,
-              queryParameters: {'loteId': loteId},
-            ),
-          ),
-        ],
-      ),
-      body: state.isLoading && state.vacinacoes.isEmpty
-          ? const Padding(
-              padding: EdgeInsets.all(16),
-              child: SkeletonList(itemCount: 3),
-            )
-          : RefreshIndicator(
-              onRefresh: () =>
-                  ref.read(vacinacoesProvider(loteId).notifier).fetch(),
-              child: state.vacinacoes.isEmpty
-                  ? ListView(
-                      children: [
-                        SizedBox(
-                          height: MediaQuery.sizeOf(context).height * 0.6,
-                          child: EmptyState(
-                            icon: Icons.vaccines_outlined,
-                            titulo: 'Nenhuma vacinacao registrada',
-                            descricao:
-                                'Registre as vacinacoes do lote para manter o historico sanitario.',
-                            actionLabel: 'Registrar vacinacao',
-                            actionIcon: Icons.add,
-                            onAction: () => context.pushNamed(
-                              RouteNames.novaVacinacao,
-                              queryParameters: {'loteId': loteId},
-                            ),
-                          ),
-                        ),
-                      ],
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
-                      itemCount: state.vacinacoes.length,
-                      separatorBuilder: (context, index) =>
-                          const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final vacinacao = state.vacinacoes[index];
-                        return _VacinacaoCard(
-                          vacinacao: vacinacao,
-                          formatDate: _formatDate,
-                          theme: theme,
-                        );
-                      },
+    return RefreshIndicator(
+      onRefresh: () =>
+          ref.read(vacinacoesProvider(_selectedLoteId).notifier).fetch(),
+      child: state.vacinacoes.isEmpty
+          ? ListView(
+              children: [
+                SizedBox(
+                  height: MediaQuery.sizeOf(context).height * 0.5,
+                  child: EmptyState(
+                    icon: Icons.vaccines_outlined,
+                    titulo: 'Nenhuma vacinacao registrada',
+                    descricao:
+                        'Registre as vacinacoes do lote para manter o historico sanitario.',
+                    actionLabel: 'Registrar vacinacao',
+                    actionIcon: Icons.add,
+                    onAction: () => context.pushNamed(
+                      RouteNames.novaVacinacao,
+                      queryParameters: {'loteId': _selectedLoteId},
                     ),
+                  ),
+                ),
+              ],
+            )
+          : ListView.separated(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
+              itemCount: state.vacinacoes.length,
+              separatorBuilder: (context, index) =>
+                  const SizedBox(height: 12),
+              itemBuilder: (context, index) {
+                final vacinacao = state.vacinacoes[index];
+                return _VacinacaoCard(
+                  vacinacao: vacinacao,
+                  formatDate: _formatDate,
+                  theme: theme,
+                );
+              },
             ),
     );
   }
@@ -152,7 +226,7 @@ class _VacinacaoCard extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  formatDate(vacinacao.dataAplicacao),
+                  formatDate(vacinacao.data),
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: AppColors.textSecondary,
                   ),
@@ -163,7 +237,7 @@ class _VacinacaoCard extends StatelessWidget {
 
             // Nome da vacina
             Text(
-              vacinacao.nome,
+              vacinacao.vacina,
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.bold,
               ),
@@ -171,27 +245,17 @@ class _VacinacaoCard extends StatelessWidget {
             const SizedBox(height: 8),
 
             // Detalhes
-            if (vacinacao.lote != null && vacinacao.lote!.isNotEmpty)
+            if (vacinacao.loteProduto != null &&
+                vacinacao.loteProduto!.isNotEmpty)
               _DetailRow(
                 label: 'Lote produto',
-                value: vacinacao.lote!,
+                value: vacinacao.loteProduto!,
               ),
-            if (vacinacao.fabricante != null &&
-                vacinacao.fabricante!.isNotEmpty)
-              _DetailRow(
-                label: 'Fabricante',
-                value: vacinacao.fabricante!,
-              ),
-            if (vacinacao.viaAplicacao != null &&
-                vacinacao.viaAplicacao!.isNotEmpty)
+            if (vacinacao.viaAdministracao != null &&
+                vacinacao.viaAdministracao!.isNotEmpty)
               _DetailRow(
                 label: 'Via',
-                value: vacinacao.viaAplicacao!,
-              ),
-            if (vacinacao.doseMl != null)
-              _DetailRow(
-                label: 'Dose',
-                value: '${vacinacao.doseMl} mL',
+                value: vacinacao.viaAdministracao!,
               ),
             if (vacinacao.responsavel != null &&
                 vacinacao.responsavel!.isNotEmpty)

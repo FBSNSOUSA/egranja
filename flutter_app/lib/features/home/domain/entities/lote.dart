@@ -1,29 +1,25 @@
 /// Entidade de dominio que representa um lote de aves.
 ///
 /// Contem dados basicos do lote e indicadores calculados pela API.
+/// Campos opcionais correspondem a valores que o backend pode ou nao retornar.
 class Lote {
   final String id;
+  final String? usuarioId;
   final String galpaoId;
   final String galpaoNome;
   final String dataAlojamento;
-  final String dataPrevistaAbate;
+  final String? dataPrevistaAbate;
   final int quantidade;
   final String tipo; // 'Femea', 'Macho', 'Misto'
   final String? linhagem;
   final double pesoInicialG;
   final String status; // 'ativo', 'finalizado'
 
-  // Indicadores calculados pela API
-  final int? mortalidadeAcumulada;
-  final double? ultimoPesoMedio;
-  final double? pesoBenchmark;
-  final int? mortesRecentes;
-  final String? dataMortesRecentes;
-  final double? mortalidadeRecentePct;
-  final bool? temAlerta;
-  final int? quantidadeAlertas;
+  // Indicadores retornados inline pelo backend
+  final int? mortalidadeTotal;
   final int? diasDeVida;
   final int? avesVivas;
+  final double? ultimoPesoMedio;
 
   // Timestamps
   final String createdAt;
@@ -31,25 +27,20 @@ class Lote {
 
   const Lote({
     required this.id,
+    this.usuarioId,
     required this.galpaoId,
     required this.galpaoNome,
     required this.dataAlojamento,
-    required this.dataPrevistaAbate,
+    this.dataPrevistaAbate,
     required this.quantidade,
     required this.tipo,
     this.linhagem,
     required this.pesoInicialG,
     required this.status,
-    this.mortalidadeAcumulada,
-    this.ultimoPesoMedio,
-    this.pesoBenchmark,
-    this.mortesRecentes,
-    this.dataMortesRecentes,
-    this.mortalidadeRecentePct,
-    this.temAlerta,
-    this.quantidadeAlertas,
+    this.mortalidadeTotal,
     this.diasDeVida,
     this.avesVivas,
+    this.ultimoPesoMedio,
     required this.createdAt,
     required this.updatedAt,
   });

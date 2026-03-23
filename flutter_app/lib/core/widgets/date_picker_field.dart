@@ -58,15 +58,44 @@ class DatePickerField extends StatelessWidget {
     if (disabled) return;
 
     final now = DateTime.now();
+    final firstDate = minimumDate ?? DateTime(2000);
+    final lastDate = maximumDate ?? DateTime(2100);
+
+    // Garantir que initialDate esta dentro do range valido
+    DateTime initialDate = value ?? now;
+    if (initialDate.isBefore(firstDate)) {
+      initialDate = firstDate;
+    }
+    if (initialDate.isAfter(lastDate)) {
+      initialDate = lastDate;
+    }
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: value ?? now,
-      firstDate: minimumDate ?? DateTime(2000),
-      lastDate: maximumDate ?? DateTime(2100),
-      locale: const Locale('pt', 'BR'),
+      initialDate: initialDate,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      // Nao usar locale explicitamente — o MaterialApp.router herda
+      // o locale do sistema automaticamente. Usar locale: sem delegates
+      // configurados causa tela cinza/crash.
       helpText: 'Selecione a data',
       cancelText: 'Cancelar',
       confirmText: 'Confirmar',
+      builder: (BuildContext context, Widget? child) {
+        // Aplicar tema do app ao date picker, garantindo que o dialog
+        // aparece sobre a tela atual com as cores corretas.
+        return Theme(
+          data: Theme.of(context).copyWith(
+            datePickerTheme: DatePickerThemeData(
+              backgroundColor: Theme.of(context).colorScheme.surface,
+              surfaceTintColor: Colors.transparent,
+              headerBackgroundColor: Theme.of(context).colorScheme.primary,
+              headerForegroundColor: Theme.of(context).colorScheme.onPrimary,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
 
     if (picked != null) {
@@ -77,25 +106,34 @@ class DatePickerField extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final displayLabel = required ? '$label *' : label;
+    final theme = Theme.of(context);
 
     return Semantics(
       label: '$label, campo de data${value != null ? ', ${_formatDate(value!)}' : ''}',
-      child: GestureDetector(
+      child: InkWell(
         onTap: disabled ? null : () => _openDatePicker(context),
-        child: AbsorbPointer(
-          child: TextFormField(
-            controller: TextEditingController(
-              text: value != null ? _formatDate(value!) : '',
+        borderRadius: BorderRadius.circular(12),
+        child: InputDecorator(
+          decoration: InputDecoration(
+            labelText: displayLabel,
+            hintText: 'DD/MM/AAAA',
+            errorText: error,
+            helperText: helperText,
+            suffixIcon: Icon(
+              Icons.calendar_today_outlined,
+              color: disabled
+                  ? theme.disabledColor
+                  : theme.colorScheme.onSurfaceVariant,
             ),
-            readOnly: true,
             enabled: !disabled,
-            decoration: InputDecoration(
-              labelText: displayLabel,
-              hintText: 'DD/MM/AAAA',
-              errorText: error,
-              helperText: helperText,
-              suffixIcon: const Icon(Icons.calendar_today_outlined),
-            ),
+          ),
+          child: Text(
+            value != null ? _formatDate(value!) : '',
+            style: value != null
+                ? theme.textTheme.bodyMedium
+                : theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.hintColor,
+                  ),
           ),
         ),
       ),

@@ -34,16 +34,34 @@ class AppErrorWidget extends StatelessWidget {
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+        padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 48),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              icon,
-              size: 64,
-              color: AppColors.danger.withAlpha(180),
+            // Friendly circular background - less alarming than raw red icon
+            Container(
+              width: 96,
+              height: 96,
+              decoration: BoxDecoration(
+                color: AppColors.warningLight,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                size: 48,
+                color: AppColors.warning,
+              ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 24),
+            Text(
+              'Algo deu errado',
+              style: theme.textTheme.titleMedium?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.colorScheme.onSurface,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
             Text(
               message,
               style: theme.textTheme.bodyMedium?.copyWith(
@@ -52,15 +70,11 @@ class AppErrorWidget extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             if (onRetry != null) ...[
-              const SizedBox(height: 24),
-              OutlinedButton.icon(
+              const SizedBox(height: 32),
+              FilledButton.icon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh),
                 label: Text(retryLabel),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: AppColors.danger,
-                  side: const BorderSide(color: AppColors.danger),
-                ),
               ),
             ],
           ],

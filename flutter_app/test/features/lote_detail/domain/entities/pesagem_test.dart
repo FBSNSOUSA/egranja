@@ -7,7 +7,6 @@ void main() {
     test('fromJson cria instancia corretamente', () {
       final json = {
         'id': 'item-1',
-        'pesagem_id': 'pes-1',
         'quantidade': 10,
         'peso': 25000.0,
         'peso_medio': 2500.0,
@@ -16,7 +15,6 @@ void main() {
       final item = PesagemItem.fromJson(json);
 
       expect(item.id, 'item-1');
-      expect(item.pesagemId, 'pes-1');
       expect(item.quantidade, 10);
       expect(item.peso, 25000.0);
       expect(item.pesoMedio, 2500.0);
@@ -25,7 +23,6 @@ void main() {
     test('toJson retorna mapa correto', () {
       const item = PesagemItem(
         id: 'item-1',
-        pesagemId: 'pes-1',
         quantidade: 10,
         peso: 25000.0,
         pesoMedio: 2500.0,
@@ -34,7 +31,6 @@ void main() {
       final json = item.toJson();
 
       expect(json['id'], 'item-1');
-      expect(json['pesagem_id'], 'pes-1');
       expect(json['quantidade'], 10);
       expect(json['peso'], 25000.0);
       expect(json['peso_medio'], 2500.0);
@@ -43,7 +39,6 @@ void main() {
     test('fromJson/toJson round-trip preserva dados', () {
       final original = {
         'id': 'item-2',
-        'pesagem_id': 'pes-2',
         'quantidade': 5,
         'peso': 12500.0,
         'peso_medio': 2500.0,
@@ -65,14 +60,9 @@ void main() {
         'quantidade_total': 20,
         'peso_total': 50000.0,
         'peso_medio': 2500.0,
-        'peso_benchmark': 2600.0,
-        'desvio_pct': -3.85,
-        'uniformidade_cv': 8.5,
-        'idade': 28,
-        'itens': [
+        'items': [
           {
             'id': 'item-1',
-            'pesagem_id': 'pes-1',
             'quantidade': 10,
             'peso': 25000.0,
             'peso_medio': 2500.0,
@@ -89,16 +79,12 @@ void main() {
       expect(pesagem.quantidadeTotal, 20);
       expect(pesagem.pesoTotal, 50000.0);
       expect(pesagem.pesoMedio, 2500.0);
-      expect(pesagem.pesoBenchmark, 2600.0);
-      expect(pesagem.desvioPct, -3.85);
-      expect(pesagem.uniformidadeCV, 8.5);
-      expect(pesagem.idade, 28);
-      expect(pesagem.itens.length, 1);
-      expect(pesagem.itens[0].id, 'item-1');
+      expect(pesagem.items.length, 1);
+      expect(pesagem.items[0].id, 'item-1');
       expect(pesagem.createdAt, '2025-06-15T10:00:00Z');
     });
 
-    test('fromJson campos opcionais nulos', () {
+    test('fromJson items nulo gera lista vazia', () {
       final json = {
         'id': 'pes-2',
         'lote_id': 'lote-1',
@@ -106,21 +92,13 @@ void main() {
         'quantidade_total': 10,
         'peso_total': 25000.0,
         'peso_medio': 2500.0,
-        'peso_benchmark': null,
-        'desvio_pct': null,
-        'uniformidade_cv': null,
-        'idade': null,
-        'itens': null,
+        'items': null,
         'created_at': '2025-06-15T10:00:00Z',
       };
 
       final pesagem = Pesagem.fromJson(json);
 
-      expect(pesagem.pesoBenchmark, isNull);
-      expect(pesagem.desvioPct, isNull);
-      expect(pesagem.uniformidadeCV, isNull);
-      expect(pesagem.idade, isNull);
-      expect(pesagem.itens, isEmpty);
+      expect(pesagem.items, isEmpty);
     });
 
     test('toJson retorna mapa completo', () {
@@ -131,11 +109,7 @@ void main() {
         quantidadeTotal: 20,
         pesoTotal: 50000.0,
         pesoMedio: 2500.0,
-        pesoBenchmark: 2600.0,
-        desvioPct: -3.85,
-        uniformidadeCV: 8.5,
-        idade: 28,
-        itens: [],
+        items: [],
         createdAt: '2025-06-15T10:00:00Z',
       );
 
@@ -144,8 +118,31 @@ void main() {
       expect(json['id'], 'pes-1');
       expect(json['lote_id'], 'lote-1');
       expect(json['quantidade_total'], 20);
-      expect(json['peso_benchmark'], 2600.0);
-      expect(json['itens'], isEmpty);
+      expect(json['peso_total'], 50000.0);
+      expect(json['peso_medio'], 2500.0);
+      expect(json['items'], isEmpty);
+    });
+
+    test('fromJson/toJson round-trip preserva dados', () {
+      final original = {
+        'id': 'pes-3',
+        'lote_id': 'lote-2',
+        'data': '2025-07-01',
+        'quantidade_total': 15,
+        'peso_total': 37500.0,
+        'peso_medio': 2500.0,
+        'items': <dynamic>[],
+        'created_at': '2025-07-01T10:00:00Z',
+      };
+
+      final pesagem = Pesagem.fromJson(original);
+      final result = pesagem.toJson();
+
+      expect(result['id'], original['id']);
+      expect(result['lote_id'], original['lote_id']);
+      expect(result['quantidade_total'], original['quantidade_total']);
+      expect(result['peso_total'], original['peso_total']);
+      expect(result['peso_medio'], original['peso_medio']);
     });
   });
 }

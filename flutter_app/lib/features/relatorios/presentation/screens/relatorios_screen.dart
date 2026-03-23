@@ -63,12 +63,7 @@ class _RelatoriosScreenState extends ConsumerState<RelatoriosScreen> {
       }
     });
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Relatorios'),
-      ),
-      body: _buildBody(state, theme),
-    );
+    return _buildBody(state, theme);
   }
 
   Widget _buildBody(RelatoriosState state, ThemeData theme) {
@@ -117,7 +112,7 @@ class _RelatoriosScreenState extends ConsumerState<RelatoriosScreen> {
                   lote.galpaoNome != null ? ' - ${lote.galpaoNome}' : '';
               return DropdownMenuEntry<String>(
                 value: lote.id,
-                label: '${lote.linhagem}$galpao$statusLabel',
+                label: '${lote.linhagem ?? 'Lote'}$galpao$statusLabel',
               );
             }).toList(),
           ),
@@ -138,6 +133,66 @@ class _RelatoriosScreenState extends ConsumerState<RelatoriosScreen> {
             description: 'Gera PDF completo com todos os indicadores do lote.',
             isLoading: state.loadingReport == 'fechamento',
             onTap: () => _onGerarRelatorio('fechamento'),
+          ),
+          const SizedBox(height: 12),
+
+          _ReportCard(
+            icon: Icons.monitor_weight_outlined,
+            title: 'Relatorio de Pesagens',
+            description:
+                'Historico de peso do lote com grafico de evolucao.',
+            isLoading: false,
+            onTap: state.selectedLoteId != null
+                ? () => context.pushNamed(
+                      RouteNames.relatorioPesagens,
+                      queryParameters: {'loteId': state.selectedLoteId!},
+                    )
+                : () {},
+          ),
+          const SizedBox(height: 12),
+
+          _ReportCard(
+            icon: Icons.trending_down,
+            title: 'Relatorio de Mortalidade',
+            description:
+                'Taxas de mortalidade por periodo com grafico acumulado.',
+            isLoading: false,
+            onTap: state.selectedLoteId != null
+                ? () => context.pushNamed(
+                      RouteNames.relatorioMortalidade,
+                      queryParameters: {'loteId': state.selectedLoteId!},
+                    )
+                : () {},
+          ),
+          const SizedBox(height: 12),
+
+          _ReportCard(
+            icon: Icons.swap_vert,
+            title: 'Conversao Alimentar',
+            description:
+                'ICA (conversao alimentar) e ganho de peso diario (GPD).',
+            isLoading: false,
+            onTap: state.selectedLoteId != null
+                ? () => context.pushNamed(
+                      RouteNames.relatorioConversao,
+                      queryParameters: {'loteId': state.selectedLoteId!},
+                    )
+                : () {},
+          ),
+          const SizedBox(height: 12),
+
+          _ReportCard(
+            icon: Icons.water_drop_outlined,
+            title: 'Relatorio de Consumo',
+            description:
+                'Consumo diario de racao e agua com graficos.',
+            isLoading: false,
+            onTap: state.selectedLoteId != null
+                ? () => context.pushNamed(
+                      RouteNames.relatorioConsumo,
+                      queryParameters: {'loteId': state.selectedLoteId!},
+                    )
+                : () {},
           ),
           const SizedBox(height: 12),
 

@@ -7,6 +7,8 @@ import 'package:egranja_flutter/core/widgets/empty_state.dart';
 import 'package:egranja_flutter/core/widgets/error_widget.dart';
 import 'package:egranja_flutter/features/clima/domain/entities/previsao.dart';
 import 'package:egranja_flutter/features/clima/presentation/providers/clima_provider.dart';
+import 'package:egranja_flutter/features/home/presentation/providers/home_provider.dart';
+import 'package:egranja_flutter/features/home/domain/entities/galpao.dart';
 
 /// Tela de Previsao do Tempo.
 ///
@@ -24,47 +26,139 @@ class ClimaScreen extends ConsumerStatefulWidget {
 }
 
 class _ClimaScreenState extends ConsumerState<ClimaScreen> {
+  String? _selectedGalpaoId;
+
   @override
   void initState() {
     super.initState();
-    if (widget.galpaoId.isNotEmpty) {
+    _selectedGalpaoId =
+        widget.galpaoId.isNotEmpty ? widget.galpaoId : null;
+
+    if (_selectedGalpaoId != null && _selectedGalpaoId!.isNotEmpty) {
       Future.microtask(() {
-        ref.read(climaProvider(widget.galpaoId).notifier).fetch();
+        ref.read(climaProvider(_selectedGalpaoId!).notifier).fetch();
       });
     }
   }
 
+  void _onGalpaoChanged(String? galpaoId) {
+    if (galpaoId == null || galpaoId == _selectedGalpaoId) return;
+    setState(() {
+      _selectedGalpaoId = galpaoId;
+    });
+    ref.read(climaProvider(galpaoId).notifier).fetch();
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (widget.galpaoId.isEmpty) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Previsao do Tempo')),
-        body: const EmptyState(
-          icon: Icons.cloud_off,
-          titulo: 'Nenhum galpao selecionado',
-          descricao:
-              'Selecione um galpao para ver a previsao do tempo da regiao.',
+    final galpaosAsync = ref.watch(galpaosProvider);
+    final theme = Theme.of(context);
+
+    return Column(
+      children: [
+        // Seletor de galpao
+        _buildGalpaoSelector(galpaosAsync, theme),
+
+        // Conteudo principal
+        Expanded(
+          child: _buildBody(theme),
         ),
-      );
-    }
+      ],
+    );
+  }
 
-    final climaState = ref.watch(climaProvider(widget.galpaoId));
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Previsao do Tempo'),
+  /// Dropdown para selecao de galpao.
+  Widget _buildGalpaoSelector(
+    AsyncValue<List<Galpao>> galpaosAsync,
+    ThemeData theme,
+  ) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: const Border(
+          bottom: BorderSide(color: AppColors.divider),
+        ),
       ),
-      body: RefreshIndicator(
-        onRefresh: () =>
-            ref.read(climaProvider(widget.galpaoId).notifier).fetch(),
-        child: _buildBody(climaState),
+      child: galpaosAsync.when(
+        data: (galpoes) {
+          // Se veio com galpaoId mas nao esta na lista, limpar
+          if (_selectedGalpaoId != null &&
+              _selectedGalpaoId!.isNotEmpty &&
+              galpoes.isNotEmpty &&
+              !galpoes.any((g) => g.id == _selectedGalpaoId)) {
+            Future.microtask(() {
+              setState(() {
+                _selectedGalpaoId = galpoes.first.id;
+              });
+              ref
+                  .read(climaProvider(galpoes.first.id).notifier)
+                  .fetch();
+            });
+          }
+
+          // Se nenhum foi selecionado e ha galpoes, selecionar o primeiro
+          if ((_selectedGalpaoId == null || _selectedGalpaoId!.isEmpty) &&
+              galpoes.isNotEmpty) {
+            Future.microtask(() {
+              setState(() {
+                _selectedGalpaoId = galpoes.first.id;
+              });
+              ref
+                  .read(climaProvider(galpoes.first.id).notifier)
+                  .fetch();
+            });
+          }
+
+          final currentValue =
+              galpoes.any((g) => g.id == _selectedGalpaoId)
+                  ? _selectedGalpaoId
+                  : null;
+          return DropdownMenu<String>(
+            initialSelection: currentValue,
+            expandedInsets: EdgeInsets.zero,
+            label: const Text('Galpao'),
+            inputDecorationTheme: const InputDecorationTheme(
+              border: OutlineInputBorder(),
+              contentPadding:
+                  EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              isDense: true,
+            ),
+            dropdownMenuEntries: galpoes
+                .map((g) => DropdownMenuEntry<String>(
+                      value: g.id,
+                      label: g.nome,
+                    ))
+                .toList(),
+            onSelected: _onGalpaoChanged,
+          );
+        },
+        loading: () => const LinearProgressIndicator(),
+        error: (e, _) => Text(
+          'Erro ao carregar galpoes',
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: AppColors.danger,
+          ),
+        ),
       ),
     );
   }
 
   // ── Body ────────────────────────────────────────────────────────────────
 
-  Widget _buildBody(ClimaState climaState) {
+  Widget _buildBody(ThemeData theme) {
+    if (_selectedGalpaoId == null || _selectedGalpaoId!.isEmpty) {
+      return const EmptyState(
+        icon: Icons.cloud_off,
+        titulo: 'Selecione um galpao',
+        descricao:
+            'Escolha um galpao para ver a previsao do tempo da regiao.',
+      );
+    }
+
+    final climaState = ref.watch(climaProvider(_selectedGalpaoId!));
+
     if (climaState.isLoading && climaState.previsao == null) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -73,7 +167,7 @@ class _ClimaScreenState extends ConsumerState<ClimaScreen> {
       return AppErrorWidget(
         message: climaState.errorMessage!,
         onRetry: () {
-          ref.read(climaProvider(widget.galpaoId).notifier).fetch();
+          ref.read(climaProvider(_selectedGalpaoId!).notifier).fetch();
         },
       );
     }
@@ -94,29 +188,32 @@ class _ClimaScreenState extends ConsumerState<ClimaScreen> {
     }
 
     final previsao = climaState.previsao!;
-    final theme = Theme.of(context);
 
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 24),
-      children: [
-        // Condicoes atuais
-        _buildCurrentConditions(previsao.atual, theme),
+    return RefreshIndicator(
+      onRefresh: () =>
+          ref.read(climaProvider(_selectedGalpaoId!).notifier).fetch(),
+      child: ListView(
+        padding: const EdgeInsets.only(bottom: 24),
+        children: [
+          // Condicoes atuais
+          _buildCurrentConditions(previsao.atual, theme),
 
-        // Alertas climaticos
-        if (climaState.alertas.isNotEmpty)
-          _buildAlertasSection(climaState.alertas, theme),
+          // Alertas climaticos
+          if (climaState.alertas.isNotEmpty)
+            _buildAlertasSection(climaState.alertas, theme),
 
-        // Previsao 7 dias
-        if (previsao.previsao7dias.isNotEmpty)
-          _buildPrevisao7Dias(previsao.previsao7dias, theme),
+          // Previsao 7 dias
+          if (previsao.previsao7dias.isNotEmpty)
+            _buildPrevisao7Dias(previsao.previsao7dias, theme),
 
-        // Grafico de temperatura horaria
-        if (previsao.previsaoHoraria.isNotEmpty)
-          _buildHourlyChart(previsao.previsaoHoraria, theme),
+          // Grafico de temperatura horaria
+          if (previsao.previsaoHoraria.isNotEmpty)
+            _buildHourlyChart(previsao.previsaoHoraria, theme),
 
-        // Footer de dados
-        _buildDataSourceFooter(theme),
-      ],
+          // Footer de dados
+          _buildDataSourceFooter(theme),
+        ],
+      ),
     );
   }
 
@@ -125,15 +222,15 @@ class _ClimaScreenState extends ConsumerState<ClimaScreen> {
   Widget _buildCurrentConditions(CondicaoAtual atual, ThemeData theme) {
     return Container(
       margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
         color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(13),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
+            color: Colors.black.withAlpha(15),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -459,11 +556,21 @@ class _ClimaScreenState extends ConsumerState<ClimaScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Temperatura por hora',
-            style: theme.textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+          Row(
+            children: [
+              Icon(
+                Icons.thermostat,
+                size: 20,
+                color: AppColors.danger.withAlpha(180),
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'Temperatura por hora',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
           SizedBox(

@@ -22,16 +22,14 @@ class NovoMedicamentoScreen extends ConsumerStatefulWidget {
 class _NovoMedicamentoScreenState
     extends ConsumerState<NovoMedicamentoScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nomeController = TextEditingController();
-  final _principioAtivoController = TextEditingController();
+  final _medicamentoController = TextEditingController();
   final _dosagemController = TextEditingController();
-  final _duracaoController = TextEditingController();
   final _carenciaController = TextEditingController();
   final _responsavelController = TextEditingController();
   final _observacaoController = TextEditingController();
   DateTime _dataInicio = DateTime.now();
   DateTime _dataFim = DateTime.now();
-  String? _viaAdministracao;
+  String? _via;
 
   static const _viasAdministracao = [
     DropdownOption(value: 'Oral', label: 'Oral (agua de bebida)'),
@@ -57,9 +55,6 @@ class _NovoMedicamentoScreenState
     String formatDate(DateTime d) =>
         '${d.year}-${d.month.toString().padLeft(2, '0')}-${d.day.toString().padLeft(2, '0')}';
 
-    final duracao = _duracaoController.text.isNotEmpty
-        ? int.tryParse(_duracaoController.text)
-        : null;
     final carencia = _carenciaController.text.isNotEmpty
         ? int.tryParse(_carenciaController.text)
         : null;
@@ -67,14 +62,12 @@ class _NovoMedicamentoScreenState
     final success = await ref
         .read(medicamentosProvider(widget.loteId).notifier)
         .criar(
-          nome: _nomeController.text.trim(),
-          principioAtivo: _principioAtivoController.text.trim(),
-          dosagem: _dosagemController.text.trim(),
-          viaAdministracao: _viaAdministracao,
-          duracaoTratamentoDias: duracao,
-          periodoCarenciaDias: carencia,
+          medicamento: _medicamentoController.text.trim(),
           dataInicio: formatDate(_dataInicio),
           dataFim: formatDate(_dataFim),
+          dosagem: _dosagemController.text.trim(),
+          via: _via,
+          periodoCarenciaDias: carencia,
           responsavel: _responsavelController.text.trim(),
           observacao: _observacaoController.text.trim(),
         );
@@ -104,10 +97,8 @@ class _NovoMedicamentoScreenState
 
   @override
   void dispose() {
-    _nomeController.dispose();
-    _principioAtivoController.dispose();
+    _medicamentoController.dispose();
     _dosagemController.dispose();
-    _duracaoController.dispose();
     _carenciaController.dispose();
     _responsavelController.dispose();
     _observacaoController.dispose();
@@ -118,139 +109,110 @@ class _NovoMedicamentoScreenState
   Widget build(BuildContext context) {
     final state = ref.watch(medicamentosProvider(widget.loteId));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Novo Medicamento'),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            DatePickerField(
-              label: 'Data inicio',
-              value: _dataInicio,
-              required: true,
-              maximumDate: DateTime.now(),
-              onChange: (date) => setState(() => _dataInicio = date),
-            ),
-            const SizedBox(height: 16),
+    return Form(
+      key: _formKey,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          DatePickerField(
+            label: 'Data inicio',
+            value: _dataInicio,
+            required: true,
+            maximumDate: DateTime.now(),
+            onChange: (date) => setState(() => _dataInicio = date),
+          ),
+          const SizedBox(height: 16),
 
-            DatePickerField(
-              label: 'Data fim',
-              value: _dataFim,
-              required: true,
-              minimumDate: _dataInicio,
-              onChange: (date) => setState(() => _dataFim = date),
-            ),
-            const SizedBox(height: 16),
+          DatePickerField(
+            label: 'Data fim',
+            value: _dataFim,
+            required: true,
+            minimumDate: _dataInicio,
+            onChange: (date) => setState(() => _dataFim = date),
+          ),
+          const SizedBox(height: 16),
 
-            FormFieldWidget(
-              label: 'Medicamento',
-              placeholder: 'Nome do medicamento',
-              controller: _nomeController,
-              required: true,
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) {
-                  return 'Informe o nome do medicamento.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
+          FormFieldWidget(
+            label: 'Medicamento',
+            placeholder: 'Nome do medicamento',
+            controller: _medicamentoController,
+            required: true,
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) {
+                return 'Informe o nome do medicamento.';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
 
-            FormFieldWidget(
-              label: 'Principio ativo',
-              placeholder: 'Principio ativo (opcional)',
-              controller: _principioAtivoController,
-            ),
-            const SizedBox(height: 16),
+          FormFieldWidget(
+            label: 'Dosagem',
+            placeholder: 'Ex: 1ml/L de agua',
+            controller: _dosagemController,
+          ),
+          const SizedBox(height: 16),
 
-            FormFieldWidget(
-              label: 'Dosagem',
-              placeholder: 'Ex: 1ml/L de agua',
-              controller: _dosagemController,
-            ),
-            const SizedBox(height: 16),
+          DropdownField(
+            label: 'Via de administracao',
+            value: _via,
+            options: _viasAdministracao,
+            placeholder: 'Selecione a via...',
+            onSelect: (option) =>
+                setState(() => _via = option.value),
+          ),
+          const SizedBox(height: 16),
 
-            DropdownField(
-              label: 'Via de administracao',
-              value: _viaAdministracao,
-              options: _viasAdministracao,
-              placeholder: 'Selecione a via...',
-              onSelect: (option) =>
-                  setState(() => _viaAdministracao = option.value),
-            ),
-            const SizedBox(height: 16),
+          FormFieldWidget(
+            label: 'Periodo de carencia',
+            placeholder: 'Dias de carencia',
+            controller: _carenciaController,
+            keyboardType: TextInputType.number,
+            suffix: 'dias',
+            validator: (v) {
+              if (v != null &&
+                  v.isNotEmpty &&
+                  int.tryParse(v) == null) {
+                return 'Informe um numero valido.';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
 
-            FormFieldWidget(
-              label: 'Duracao do tratamento',
-              placeholder: 'Dias de tratamento',
-              controller: _duracaoController,
-              keyboardType: TextInputType.number,
-              suffix: 'dias',
-              validator: (v) {
-                if (v != null &&
-                    v.isNotEmpty &&
-                    int.tryParse(v) == null) {
-                  return 'Informe um numero valido.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
+          FormFieldWidget(
+            label: 'Responsavel',
+            placeholder: 'Nome do responsavel',
+            controller: _responsavelController,
+          ),
+          const SizedBox(height: 16),
 
-            FormFieldWidget(
-              label: 'Periodo de carencia',
-              placeholder: 'Dias de carencia',
-              controller: _carenciaController,
-              keyboardType: TextInputType.number,
-              suffix: 'dias',
-              validator: (v) {
-                if (v != null &&
-                    v.isNotEmpty &&
-                    int.tryParse(v) == null) {
-                  return 'Informe um numero valido.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
+          FormFieldWidget(
+            label: 'Observacao',
+            placeholder: 'Observacoes adicionais (opcional)',
+            controller: _observacaoController,
+            multiline: true,
+            numberOfLines: 3,
+          ),
+          const SizedBox(height: 24),
 
-            FormFieldWidget(
-              label: 'Responsavel',
-              placeholder: 'Nome do responsavel',
-              controller: _responsavelController,
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: state.isSaving ? null : _submit,
+              child: state.isSaving
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.white,
+                      ),
+                    )
+                  : const Text('Salvar medicamento'),
             ),
-            const SizedBox(height: 16),
-
-            FormFieldWidget(
-              label: 'Observacao',
-              placeholder: 'Observacoes adicionais (opcional)',
-              controller: _observacaoController,
-              multiline: true,
-              numberOfLines: 3,
-            ),
-            const SizedBox(height: 24),
-
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: state.isSaving ? null : _submit,
-                child: state.isSaving
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.white,
-                        ),
-                      )
-                    : const Text('Salvar medicamento'),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

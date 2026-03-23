@@ -44,22 +44,40 @@ class _NovoConsumoScreenState extends ConsumerState<NovoConsumoScreen> {
 
       final message =
           ref.read(racaoProvider(widget.loteId)).successMessage;
-      if (message != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: AppColors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(message ?? 'Consumo registrado com sucesso!'),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+        ),
+      );
       context.pop();
     } else if (mounted) {
       final error = ref.read(racaoProvider(widget.loteId)).errorMessage;
-      if (error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error),
-            backgroundColor: AppColors.danger,
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: AppColors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(error ?? 'Erro ao salvar consumo.'),
+              ),
+            ],
           ),
-        );
-      }
+          backgroundColor: AppColors.danger,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -73,62 +91,62 @@ class _NovoConsumoScreenState extends ConsumerState<NovoConsumoScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(racaoProvider(widget.loteId));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Novo Consumo de Racao'),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            DatePickerField(
-              label: 'Data',
-              value: _data,
-              required: true,
-              maximumDate: DateTime.now(),
-              onChange: (date) => setState(() => _data = date),
-            ),
-            const SizedBox(height: 16),
+    return Form(
+      key: _formKey,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          DatePickerField(
+            label: 'Data',
+            value: _data,
+            required: true,
+            maximumDate: DateTime.now(),
+            onChange: (date) => setState(() => _data = date),
+          ),
+          const SizedBox(height: 16),
 
-            FormFieldWidget(
-              label: 'Quantidade',
-              placeholder: 'Quantidade consumida em kg',
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              suffix: 'kg',
-              controller: _quantidadeController,
-              required: true,
-              validator: (v) {
-                if (v == null || v.isEmpty) {
-                  return 'Informe a quantidade';
-                }
-                if (double.tryParse(v) == null || double.parse(v) <= 0) {
-                  return 'Quantidade invalida';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 24),
+          FormFieldWidget(
+            label: 'Quantidade',
+            placeholder: 'Quantidade consumida em kg',
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+            suffix: 'kg',
+            controller: _quantidadeController,
+            required: true,
+            validator: (v) {
+              if (v == null || v.isEmpty) {
+                return 'Informe a quantidade';
+              }
+              if (double.tryParse(v) == null || double.parse(v) <= 0) {
+                return 'Quantidade invalida';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 24),
 
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: state.isSaving ? null : _submit,
-                child: state.isSaving
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.white,
-                        ),
-                      )
-                    : const Text('Salvar'),
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: FilledButton.icon(
+              onPressed: state.isSaving ? null : _submit,
+              icon: state.isSaving
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.white,
+                      ),
+                    )
+                  : const Icon(Icons.save),
+              label: Text(
+                state.isSaving ? 'Salvando...' : 'Salvar Consumo',
+                style: const TextStyle(fontSize: 16),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

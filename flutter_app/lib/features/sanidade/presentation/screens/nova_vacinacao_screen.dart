@@ -21,44 +21,70 @@ class NovaVacinacaoScreen extends ConsumerStatefulWidget {
 
 class _NovaVacinacaoScreenState extends ConsumerState<NovaVacinacaoScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nomeController = TextEditingController();
-  final _fabricanteController = TextEditingController();
-  final _loteController = TextEditingController();
-  final _doseMlController = TextEditingController();
+  final _vacinaOutraController = TextEditingController();
+  final _loteProdutoController = TextEditingController();
   final _responsavelController = TextEditingController();
   final _observacaoController = TextEditingController();
-  DateTime _dataAplicacao = DateTime.now();
-  String? _viaAplicacao;
+  DateTime _data = DateTime.now();
+  String? _vacinaSelecionada;
+  String? _viaAdministracao;
 
-  static const _viasAplicacao = [
-    DropdownOption(value: 'Ocular', label: 'Ocular (gota no olho)'),
+  /// Vacinas mais comuns na avicultura de corte brasileira.
+  static const _vacinasComuns = [
+    DropdownOption(value: 'Marek', label: 'Marek (HVT)'),
+    DropdownOption(value: 'Gumboro', label: 'Gumboro (IBD)'),
+    DropdownOption(value: 'Newcastle', label: 'Newcastle (ND)'),
+    DropdownOption(value: 'Bronquite Infecciosa', label: 'Bronquite Infecciosa (IB)'),
+    DropdownOption(value: 'Bouba Aviaria', label: 'Bouba Aviaria'),
+    DropdownOption(value: 'Influenza Aviaria', label: 'Influenza Aviaria'),
+    DropdownOption(value: 'Coccidiose', label: 'Coccidiose'),
+    DropdownOption(value: 'Reovirus', label: 'Reovirus'),
+    DropdownOption(value: 'Outra', label: 'Outra (especificar)'),
+  ];
+
+  /// Vias de administracao padrao para vacinas avicolas.
+  static const _viasAdministracao = [
+    DropdownOption(value: 'Agua de bebida', label: 'Agua de bebida'),
+    DropdownOption(value: 'Spray ocular', label: 'Spray ocular (gota no olho)'),
     DropdownOption(value: 'Subcutanea', label: 'Subcutanea'),
-    DropdownOption(value: 'Agua', label: 'Via agua de bebida'),
-    DropdownOption(value: 'Spray', label: 'Spray (nebulizacao)'),
     DropdownOption(value: 'Intramuscular', label: 'Intramuscular'),
+    DropdownOption(value: 'Spray', label: 'Spray (nebulizacao)'),
     DropdownOption(value: 'Membrana alar', label: 'Membrana alar'),
+    DropdownOption(value: 'In ovo', label: 'In ovo (incubatorio)'),
     DropdownOption(value: 'Outra', label: 'Outra'),
   ];
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_vacinaSelecionada == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecione o tipo de vacina.')),
+      );
+      return;
+    }
+
+    // Se "Outra", usar o texto digitado; caso contrario, o valor do dropdown
+    final nomeVacina = _vacinaSelecionada == 'Outra'
+        ? _vacinaOutraController.text.trim()
+        : _vacinaSelecionada!;
+
+    if (nomeVacina.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Informe o nome da vacina.')),
+      );
+      return;
+    }
 
     final dataFormatted =
-        '${_dataAplicacao.year}-${_dataAplicacao.month.toString().padLeft(2, '0')}-${_dataAplicacao.day.toString().padLeft(2, '0')}';
-
-    final doseMl = _doseMlController.text.isNotEmpty
-        ? double.tryParse(_doseMlController.text)
-        : null;
+        '${_data.year}-${_data.month.toString().padLeft(2, '0')}-${_data.day.toString().padLeft(2, '0')}';
 
     final success = await ref
         .read(vacinacoesProvider(widget.loteId).notifier)
         .criar(
-          nome: _nomeController.text.trim(),
-          dataAplicacao: dataFormatted,
-          fabricante: _fabricanteController.text.trim(),
-          lote: _loteController.text.trim(),
-          doseMl: doseMl,
-          viaAplicacao: _viaAplicacao,
+          vacina: nomeVacina,
+          data: dataFormatted,
+          loteProduto: _loteProdutoController.text.trim(),
+          viaAdministracao: _viaAdministracao,
           responsavel: _responsavelController.text.trim(),
           observacao: _observacaoController.text.trim(),
         );
@@ -88,10 +114,8 @@ class _NovaVacinacaoScreenState extends ConsumerState<NovaVacinacaoScreen> {
 
   @override
   void dispose() {
-    _nomeController.dispose();
-    _fabricanteController.dispose();
-    _loteController.dispose();
-    _doseMlController.dispose();
+    _vacinaOutraController.dispose();
+    _loteProdutoController.dispose();
     _responsavelController.dispose();
     _observacaoController.dispose();
     super.dispose();
@@ -101,112 +125,97 @@ class _NovaVacinacaoScreenState extends ConsumerState<NovaVacinacaoScreen> {
   Widget build(BuildContext context) {
     final state = ref.watch(vacinacoesProvider(widget.loteId));
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Nova Vacinacao'),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            DatePickerField(
-              label: 'Data de aplicacao',
-              value: _dataAplicacao,
-              required: true,
-              maximumDate: DateTime.now(),
-              onChange: (date) => setState(() => _dataAplicacao = date),
-            ),
-            const SizedBox(height: 16),
+    return Form(
+      key: _formKey,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          DatePickerField(
+            label: 'Data de aplicacao',
+            value: _data,
+            required: true,
+            maximumDate: DateTime.now(),
+            onChange: (date) => setState(() => _data = date),
+          ),
+          const SizedBox(height: 16),
 
+          DropdownField(
+            label: 'Tipo de vacina',
+            value: _vacinaSelecionada,
+            options: _vacinasComuns,
+            required: true,
+            placeholder: 'Selecione a vacina...',
+            onSelect: (option) =>
+                setState(() => _vacinaSelecionada = option.value),
+          ),
+          if (_vacinaSelecionada == 'Outra') ...[
+            const SizedBox(height: 16),
             FormFieldWidget(
-              label: 'Tipo de vacina',
-              placeholder: 'Ex: Newcastle, Gumboro, Bronquite...',
-              controller: _nomeController,
+              label: 'Nome da vacina',
+              placeholder: 'Especifique o nome da vacina',
+              controller: _vacinaOutraController,
               required: true,
               validator: (v) {
-                if (v == null || v.trim().isEmpty) {
-                  return 'Informe o tipo de vacina.';
+                if (_vacinaSelecionada == 'Outra' &&
+                    (v == null || v.trim().isEmpty)) {
+                  return 'Informe o nome da vacina.';
                 }
                 return null;
               },
-            ),
-            const SizedBox(height: 16),
-
-            FormFieldWidget(
-              label: 'Fabricante',
-              placeholder: 'Fabricante da vacina (opcional)',
-              controller: _fabricanteController,
-            ),
-            const SizedBox(height: 16),
-
-            FormFieldWidget(
-              label: 'Lote do produto',
-              placeholder: 'Numero do lote da vacina (opcional)',
-              controller: _loteController,
-            ),
-            const SizedBox(height: 16),
-
-            FormFieldWidget(
-              label: 'Dose (mL)',
-              placeholder: 'Ex: 0.5',
-              controller: _doseMlController,
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              suffix: 'mL',
-              validator: (v) {
-                if (v != null && v.isNotEmpty && double.tryParse(v) == null) {
-                  return 'Informe um valor numerico valido.';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            DropdownField(
-              label: 'Via de aplicacao',
-              value: _viaAplicacao,
-              options: _viasAplicacao,
-              placeholder: 'Selecione a via...',
-              onSelect: (option) =>
-                  setState(() => _viaAplicacao = option.value),
-            ),
-            const SizedBox(height: 16),
-
-            FormFieldWidget(
-              label: 'Responsavel',
-              placeholder: 'Nome do responsavel pela vacinacao',
-              controller: _responsavelController,
-            ),
-            const SizedBox(height: 16),
-
-            FormFieldWidget(
-              label: 'Observacao',
-              placeholder: 'Observacoes adicionais (opcional)',
-              controller: _observacaoController,
-              multiline: true,
-              numberOfLines: 3,
-            ),
-            const SizedBox(height: 24),
-
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: state.isSaving ? null : _submit,
-                child: state.isSaving
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.white,
-                        ),
-                      )
-                    : const Text('Salvar vacinacao'),
-              ),
             ),
           ],
-        ),
+          const SizedBox(height: 16),
+
+          FormFieldWidget(
+            label: 'Lote do produto',
+            placeholder: 'Numero do lote da vacina (opcional)',
+            controller: _loteProdutoController,
+          ),
+          const SizedBox(height: 16),
+
+          DropdownField(
+            label: 'Via de administracao',
+            value: _viaAdministracao,
+            options: _viasAdministracao,
+            placeholder: 'Selecione a via...',
+            onSelect: (option) =>
+                setState(() => _viaAdministracao = option.value),
+          ),
+          const SizedBox(height: 16),
+
+          FormFieldWidget(
+            label: 'Responsavel',
+            placeholder: 'Nome do responsavel pela vacinacao',
+            controller: _responsavelController,
+          ),
+          const SizedBox(height: 16),
+
+          FormFieldWidget(
+            label: 'Observacao',
+            placeholder: 'Observacoes adicionais (opcional)',
+            controller: _observacaoController,
+            multiline: true,
+            numberOfLines: 3,
+          ),
+          const SizedBox(height: 24),
+
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: state.isSaving ? null : _submit,
+              child: state.isSaving
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.white,
+                      ),
+                    )
+                  : const Text('Salvar vacinacao'),
+            ),
+          ),
+        ],
       ),
     );
   }

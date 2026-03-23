@@ -35,14 +35,36 @@ class GraficoMortalidade extends StatelessWidget {
           : 'Grafico de mortalidade, sem dados',
       child: Card(
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 12),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Titulo
-              Text(
-                'Mortalidade',
-                style: theme.textTheme.titleSmall,
+              // Titulo with icon
+              Row(
+                children: [
+                  Icon(
+                    Icons.bar_chart,
+                    size: 20,
+                    color: AppColors.danger.withAlpha(180),
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Mortalidade',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 2),
+              Padding(
+                padding: const EdgeInsets.only(left: 28),
+                child: Text(
+                  'Aves mortas x Idade (dias)',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
               ),
               const SizedBox(height: 16),
 
@@ -71,15 +93,25 @@ class GraficoMortalidade extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(
-              Icons.bar_chart_outlined,
-              size: 40,
-              color: theme.colorScheme.onSurfaceVariant.withAlpha(100),
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: AppColors.gray100,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.bar_chart_outlined,
+                size: 28,
+                color: theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
+              ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
             Text(
               'Sem dados de mortalidade',
-              style: theme.textTheme.bodySmall,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
             ),
           ],
         ),
@@ -228,13 +260,13 @@ class GraficoMortalidade extends StatelessWidget {
       children: [
         _LegendItem(
           color: AppColors.danger.withAlpha(180),
-          label: 'Diaria',
+          label: 'Mort. diaria',
           isBar: true,
         ),
         const SizedBox(width: 20),
         _LegendItem(
           color: AppColors.primaryDark,
-          label: 'Acumulada',
+          label: 'Mort. acumulada',
           isBar: false,
         ),
       ],

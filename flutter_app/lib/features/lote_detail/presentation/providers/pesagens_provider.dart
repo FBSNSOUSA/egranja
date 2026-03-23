@@ -71,23 +71,27 @@ class PesagensNotifier extends StateNotifier<PesagensState> {
       final response = await _api.apiGet<List<Pesagem>>(
         '/lotes/$_loteId/pesagens',
         queryParams: {'page': 1, 'per_page': 20},
-        fromJson: (json) => (json as List<dynamic>)
-            .map((e) => Pesagem.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        fromJson: (json) => (json as List<dynamic>?)
+                ?.map((e) => Pesagem.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            [],
       );
 
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         pesagens: response.data,
         pagination: response.meta,
       );
     } on NetworkException {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Sem conexao. Tente novamente.',
       );
     } catch (e) {
       debugPrint('[PesagensNotifier] Erro ao buscar pesagens: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Erro ao carregar pesagens.',
@@ -106,11 +110,13 @@ class PesagensNotifier extends StateNotifier<PesagensState> {
       final response = await _api.apiGet<List<Pesagem>>(
         '/lotes/$_loteId/pesagens',
         queryParams: {'page': nextPage, 'per_page': 20},
-        fromJson: (json) => (json as List<dynamic>)
-            .map((e) => Pesagem.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        fromJson: (json) => (json as List<dynamic>?)
+                ?.map((e) => Pesagem.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            [],
       );
 
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         pesagens: [...state.pesagens, ...response.data],
@@ -118,23 +124,26 @@ class PesagensNotifier extends StateNotifier<PesagensState> {
       );
     } catch (e) {
       debugPrint('[PesagensNotifier] Erro ao carregar mais pesagens: $e');
+      if (!mounted) return;
       state = state.copyWith(isLoading: false);
     }
   }
 
   /// Cria uma nova pesagem.
   Future<bool> criar({
-    required List<Map<String, dynamic>> itens,
+    required String data,
+    required List<Map<String, dynamic>> items,
   }) async {
     state = state.copyWith(isSaving: true, errorMessage: null);
 
     try {
       await _api.apiPost<Pesagem>(
         '/lotes/$_loteId/pesagens',
-        data: {'itens': itens},
+        data: {'data': data, 'items': items},
         fromJson: (json) => Pesagem.fromJson(json as Map<String, dynamic>),
       );
 
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         successMessage: 'Pesagem registrada com sucesso!',
@@ -143,6 +152,7 @@ class PesagensNotifier extends StateNotifier<PesagensState> {
       await fetch();
       return true;
     } on NetworkException {
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         successMessage: 'Salvo localmente. Sera sincronizado quando online.',
@@ -150,6 +160,7 @@ class PesagensNotifier extends StateNotifier<PesagensState> {
       return true;
     } catch (e) {
       debugPrint('[PesagensNotifier] Erro ao criar pesagem: $e');
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         errorMessage: 'Erro ao salvar pesagem. Tente novamente.',

@@ -4,11 +4,13 @@ import 'package:go_router/go_router.dart';
 
 import 'package:egranja_flutter/core/theme/app_colors.dart';
 import 'package:egranja_flutter/core/utils/number_utils.dart';
+import 'package:egranja_flutter/core/widgets/dropdown_field.dart';
 import 'package:egranja_flutter/core/widgets/empty_state.dart';
 import 'package:egranja_flutter/core/widgets/error_widget.dart';
 import 'package:egranja_flutter/core/widgets/loading_skeleton.dart';
 import 'package:egranja_flutter/core/router/route_names.dart';
 import 'package:egranja_flutter/features/financeiro/domain/entities/custo.dart';
+import 'package:egranja_flutter/features/home/presentation/providers/home_provider.dart';
 import '../providers/financeiro_provider.dart';
 
 /// Tela de listagem de custos do lote.
@@ -26,13 +28,20 @@ class CustosScreen extends ConsumerStatefulWidget {
 
 class _CustosScreenState extends ConsumerState<CustosScreen> {
   final ScrollController _scrollController = ScrollController();
+  late String _selectedLoteId;
 
   @override
   void initState() {
     super.initState();
+    _selectedLoteId = widget.loteId;
     Future.microtask(() {
-      ref.read(custosProvider(widget.loteId).notifier).fetch();
+      ref.read(homeProvider.notifier).fetchLotes();
     });
+    if (_selectedLoteId.isNotEmpty) {
+      Future.microtask(() {
+        ref.read(custosProvider(_selectedLoteId).notifier).fetch();
+      });
+    }
     _scrollController.addListener(_onScroll);
   }
 
@@ -44,32 +53,96 @@ class _CustosScreenState extends ConsumerState<CustosScreen> {
   }
 
   void _onScroll() {
+    if (_selectedLoteId.isEmpty) return;
     if (_scrollController.position.pixels >=
         _scrollController.position.maxScrollExtent - 200) {
-      ref.read(custosProvider(widget.loteId).notifier).loadMore();
+      ref.read(custosProvider(_selectedLoteId).notifier).loadMore();
     }
   }
 
   Future<void> _onRefresh() async {
-    await ref.read(custosProvider(widget.loteId).notifier).fetch();
+    await ref.read(custosProvider(_selectedLoteId).notifier).fetch();
+  }
+
+  void _onLoteChanged(String loteId) {
+    setState(() {
+      _selectedLoteId = loteId;
+    });
+    if (loteId.isNotEmpty) {
+      ref.read(custosProvider(loteId).notifier).fetch();
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final state = ref.watch(custosProvider(widget.loteId));
+    final homeState = ref.watch(homeProvider);
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Custos'),
-      ),
-      body: _buildBody(state, theme),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => context.pushNamed(
-          RouteNames.novoCusto,
-          queryParameters: {'loteId': widget.loteId},
+    // Auto-select first lote if none selected and lotes are loaded
+    final lotes = homeState.lotesAtivos;
+    if (_selectedLoteId.isEmpty && lotes.isNotEmpty) {
+      Future.microtask(() => _onLoteChanged(lotes.first.id));
+    }
+
+    final state = _selectedLoteId.isNotEmpty
+        ? ref.watch(custosProvider(_selectedLoteId))
+        : null;
+
+    return Stack(
+      children: [
+        Column(
+          children: [
+            _buildLoteSelector(homeState, theme),
+            Expanded(
+              child: _selectedLoteId.isEmpty
+                  ? const EmptyState(
+                      icon: Icons.money_off,
+                      titulo: 'Selecione um lote',
+                      descricao:
+                          'Escolha um lote para visualizar os custos.',
+                    )
+                  : _buildBody(state!, theme),
+            ),
+          ],
         ),
-        child: const Icon(Icons.add),
+        if (_selectedLoteId.isNotEmpty)
+          Positioned(
+            right: 16,
+            bottom: 16,
+            child: FloatingActionButton(
+              onPressed: () => context.pushNamed(
+                RouteNames.novoCusto,
+                queryParameters: {'loteId': _selectedLoteId},
+              ),
+              child: const Icon(Icons.add),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildLoteSelector(HomeState homeState, ThemeData theme) {
+    final lotes = homeState.lotesAtivos;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        border: Border(
+          bottom: BorderSide(color: AppColors.divider),
+        ),
+      ),
+      child: DropdownField(
+        label: 'Lote',
+        value: _selectedLoteId.isNotEmpty ? _selectedLoteId : null,
+        options: lotes
+            .map((l) => DropdownOption(
+                  value: l.id,
+                  label: '${l.galpaoNome} - Dia ${l.diasDeVida ?? 0}',
+                ))
+            .toList(),
+        placeholder: 'Selecione um lote...',
+        onSelect: (option) => _onLoteChanged(option.value),
       ),
     );
   }
@@ -96,7 +169,7 @@ class _CustosScreenState extends ConsumerState<CustosScreen> {
         actionIcon: Icons.add,
         onAction: () => context.pushNamed(
           RouteNames.novoCusto,
-          queryParameters: {'loteId': widget.loteId},
+          queryParameters: {'loteId': _selectedLoteId},
         ),
       );
     }
@@ -135,18 +208,22 @@ class _CustoCard extends StatelessWidget {
 
   final Custo custo;
 
-  Color _tipoBadgeColor(String tipo) {
+  Color _categoriaBadgeColor(String categoria) {
     const colors = {
-      'racao': AppColors.warning,
-      'medicamento': AppColors.danger,
-      'pinto': AppColors.secondary,
-      'mao_obra': AppColors.gray700,
+      'mao_de_obra': AppColors.gray700,
+      'energia': AppColors.warning,
+      'aquecimento': AppColors.danger,
+      'cama': AppColors.secondary,
+      'manutencao': AppColors.primaryLight,
+      'depreciacao': AppColors.gray500,
+      'agua': AppColors.secondaryLight,
       'outros': AppColors.gray500,
     };
-    return colors[tipo] ?? AppColors.gray500;
+    return colors[categoria] ?? AppColors.gray500;
   }
 
-  String _formatData(String dataStr) {
+  String _formatData(String? dataStr) {
+    if (dataStr == null || dataStr.isEmpty) return '';
     try {
       final date = DateTime.parse(dataStr);
       final dia = date.day.toString().padLeft(2, '0');
@@ -161,14 +238,14 @@ class _CustoCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final badgeColor = _tipoBadgeColor(custo.tipo);
+    final badgeColor = _categoriaBadgeColor(custo.categoria);
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(12),
         child: Row(
           children: [
-            // Badge de tipo
+            // Badge de categoria
             Container(
               padding: const EdgeInsets.symmetric(
                 horizontal: 8,
@@ -179,7 +256,7 @@ class _CustoCard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
               ),
               child: Text(
-                Custo.tipoLabel(custo.tipo),
+                Custo.categoriaLabel(custo.categoria),
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: badgeColor,
                   fontWeight: FontWeight.w600,
@@ -193,18 +270,20 @@ class _CustoCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    custo.descricao,
+                    custo.descricao ?? custo.categoria,
                     style: theme.textTheme.bodyMedium,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    _formatData(custo.data),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
+                  if (custo.data != null) ...[
+                    const SizedBox(height: 2),
+                    Text(
+                      _formatData(custo.data),
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),

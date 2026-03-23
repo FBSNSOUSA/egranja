@@ -69,25 +69,30 @@ class AguaNotifier extends StateNotifier<AguaState> {
 
     try {
       final response = await _api.apiGet<List<ConsumoAgua>>(
-        '/lotes/$_loteId/agua',
+        '/lotes/$_loteId/water_consumptions',
         queryParams: {'page': 1, 'per_page': 50},
-        fromJson: (json) => (json as List<dynamic>)
-            .map((e) => ConsumoAgua.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        fromJson: (json) => (json as List<dynamic>?)
+                ?.map(
+                    (e) => ConsumoAgua.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            [],
       );
 
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         consumos: response.data,
         pagination: response.meta,
       );
     } on NetworkException {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Sem conexao. Tente novamente.',
       );
     } catch (e) {
       debugPrint('[AguaNotifier] Erro ao buscar consumos de agua: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Erro ao carregar consumos de agua.',
@@ -104,13 +109,16 @@ class AguaNotifier extends StateNotifier<AguaState> {
 
     try {
       final response = await _api.apiGet<List<ConsumoAgua>>(
-        '/lotes/$_loteId/agua',
+        '/lotes/$_loteId/water_consumptions',
         queryParams: {'page': nextPage, 'per_page': 50},
-        fromJson: (json) => (json as List<dynamic>)
-            .map((e) => ConsumoAgua.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        fromJson: (json) => (json as List<dynamic>?)
+                ?.map(
+                    (e) => ConsumoAgua.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            [],
       );
 
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         consumos: [...state.consumos, ...response.data],
@@ -118,6 +126,7 @@ class AguaNotifier extends StateNotifier<AguaState> {
       );
     } catch (e) {
       debugPrint('[AguaNotifier] Erro ao carregar mais: $e');
+      if (!mounted) return;
       state = state.copyWith(isLoading: false);
     }
   }
@@ -131,7 +140,7 @@ class AguaNotifier extends StateNotifier<AguaState> {
 
     try {
       await _api.apiPost<ConsumoAgua>(
-        '/lotes/$_loteId/agua',
+        '/lotes/$_loteId/water_consumptions',
         data: {
           'data': data,
           'quantidade_litros': quantidadeLitros,
@@ -140,6 +149,7 @@ class AguaNotifier extends StateNotifier<AguaState> {
             ConsumoAgua.fromJson(json as Map<String, dynamic>),
       );
 
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         successMessage: 'Consumo de agua registrado com sucesso!',
@@ -147,6 +157,7 @@ class AguaNotifier extends StateNotifier<AguaState> {
       await fetch();
       return true;
     } on NetworkException {
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         successMessage: 'Salvo localmente. Sera sincronizado quando online.',
@@ -154,6 +165,7 @@ class AguaNotifier extends StateNotifier<AguaState> {
       return true;
     } catch (e) {
       debugPrint('[AguaNotifier] Erro ao criar consumo de agua: $e');
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         errorMessage: 'Erro ao salvar consumo de agua. Tente novamente.',

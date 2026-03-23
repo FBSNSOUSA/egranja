@@ -316,3 +316,221 @@ func (s *RelatorioService) GerarComparativo(lote *model.Lote) ([]ComparativoLote
 
 	return comparativos, nil
 }
+
+// ═══════════════════════════════════════════════════════════════════════
+// RELATORIO DE PESAGENS
+// ═══════════════════════════════════════════════════════════════════════
+
+// PesagemPonto representa um ponto de dados de pesagem para grafico.
+type PesagemPonto struct {
+	Data      string  `json:"data"`
+	DiasVida  int     `json:"dias_vida"`
+	PesoMedio float64 `json:"peso_medio"`
+	Qtd       int     `json:"quantidade"`
+	PesoTotal float64 `json:"peso_total"`
+}
+
+// RelatorioPesagens retorna o historico de pesagens de um lote.
+func (s *RelatorioService) RelatorioPesagens(lote *model.Lote) ([]PesagemPonto, error) {
+	pesagens, _, err := s.pesagemRepo.FindByLote(lote.ID, 1, 10000)
+	if err != nil {
+		return nil, err
+	}
+
+	var pontos []PesagemPonto
+	for _, p := range pesagens {
+		diasVida := int(p.Data.Sub(lote.DataAlojamento).Hours() / 24)
+		if diasVida < 0 {
+			diasVida = 0
+		}
+		pontos = append(pontos, PesagemPonto{
+			Data:      p.Data.Format("2006-01-02"),
+			DiasVida:  diasVida,
+			PesoMedio: p.PesoMedio,
+			Qtd:       p.QuantidadeTotal,
+			PesoTotal: p.PesoTotal,
+		})
+	}
+
+	return pontos, nil
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// RELATORIO DE MORTALIDADE
+// ═══════════════════════════════════════════════════════════════════════
+
+// MortalidadePonto representa um ponto de dados de mortalidade para grafico.
+type MortalidadePonto struct {
+	Data       string  `json:"data"`
+	DiasVida   int     `json:"dias_vida"`
+	Quantidade int     `json:"quantidade"`
+	Acumulado  int     `json:"acumulado"`
+	Causa      string  `json:"causa"`
+	Pct        float64 `json:"percentual"`
+}
+
+// RelatorioMortalidade retorna o historico de mortalidade de um lote.
+func (s *RelatorioService) RelatorioMortalidade(lote *model.Lote) ([]MortalidadePonto, error) {
+	mortalidades, _, err := s.mortalidadeRepo.FindByLote(lote.ID, nil, nil, 1, 10000)
+	if err != nil {
+		return nil, err
+	}
+
+	var pontos []MortalidadePonto
+	acumulado := 0
+	for _, m := range mortalidades {
+		acumulado += m.Quantidade
+		diasVida := int(m.Data.Sub(lote.DataAlojamento).Hours() / 24)
+		if diasVida < 0 {
+			diasVida = 0
+		}
+		pct := 0.0
+		if lote.Quantidade > 0 {
+			pct = float64(acumulado) / float64(lote.Quantidade) * 100
+		}
+		pontos = append(pontos, MortalidadePonto{
+			Data:       m.Data.Format("2006-01-02"),
+			DiasVida:   diasVida,
+			Quantidade: m.Quantidade,
+			Acumulado:  acumulado,
+			Causa:      m.Causa,
+			Pct:        pct,
+		})
+	}
+
+	return pontos, nil
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// RELATORIO DE CONVERSAO ALIMENTAR
+// ═══════════════════════════════════════════════════════════════════════
+
+// ConversaoAlimentarData contem os dados de conversao alimentar.
+type ConversaoAlimentarData struct {
+	ConsumoTotalKg float64  `json:"consumo_total_kg"`
+	PesoMedio      *float64 `json:"peso_medio"`
+	PesoInicialG   float64  `json:"peso_inicial_g"`
+	GanhoPesoG     *float64 `json:"ganho_peso_g"`
+	ICA            *float64 `json:"ica"`
+	GPD            *float64 `json:"gpd"`
+	DiasDeVida     int      `json:"dias_de_vida"`
+	AvesVivas      int      `json:"aves_vivas"`
+}
+
+// RelatorioConversaoAlimentar retorna os dados de conversao alimentar.
+func (s *RelatorioService) RelatorioConversaoAlimentar(lote *model.Lote) (*ConversaoAlimentarData, error) {
+	indicadores, err := s.indicadores.Calcular(lote)
+	if err != nil {
+		return nil, err
+	}
+
+	data := &ConversaoAlimentarData{
+		PesoInicialG: lote.PesoInicialG,
+		DiasDeVida:   lote.DiasDeVida(),
+		AvesVivas:    indicadores.AvesVivas,
+		PesoMedio:    indicadores.UltimoPesoMedio,
+		ICA:          indicadores.ICA,
+		GPD:          indicadores.GPD,
+	}
+
+	if indicadores.ConsumoTotalRacaoKg != nil {
+		data.ConsumoTotalKg = *indicadores.ConsumoTotalRacaoKg
+	}
+
+	if indicadores.UltimoPesoMedio != nil {
+		ganho := *indicadores.UltimoPesoMedio - lote.PesoInicialG
+		data.GanhoPesoG = &ganho
+	}
+
+	return data, nil
+}
+
+// ═══════════════════════════════════════════════════════════════════════
+// RELATORIO DE CONSUMO (RACAO + AGUA)
+// ═══════════════════════════════════════════════════════════════════════
+
+// ConsumoPonto representa um ponto de dados de consumo diario.
+type ConsumoPonto struct {
+	Data     string  `json:"data"`
+	DiasVida int     `json:"dias_vida"`
+	RacaoKg  float64 `json:"racao_kg"`
+	AguaL    float64 `json:"agua_l"`
+}
+
+// ConsumoResumo contem o resumo de consumo.
+type ConsumoResumo struct {
+	TotalRacaoKg float64        `json:"total_racao_kg"`
+	TotalAguaL   float64        `json:"total_agua_l"`
+	Pontos       []ConsumoPonto `json:"pontos"`
+}
+
+// RelatorioConsumo retorna o historico de consumo de racao e agua.
+func (s *RelatorioService) RelatorioConsumo(lote *model.Lote) (*ConsumoResumo, error) {
+	// Buscar consumos de racao
+	consumosRacao, _, err := s.feedRepo.FindConsumptionsByLote(lote.ID, 1, 10000)
+	if err != nil {
+		return nil, err
+	}
+
+	// Buscar consumos de agua
+	consumosAgua, _, err := s.waterRepo.FindByLote(lote.ID, 1, 10000)
+	if err != nil {
+		return nil, err
+	}
+
+	// Indexar por data
+	racaoPorData := make(map[string]float64)
+	aguaPorData := make(map[string]float64)
+	datasSet := make(map[string]bool)
+
+	var totalRacao, totalAgua float64
+
+	for _, c := range consumosRacao {
+		d := c.Data.Format("2006-01-02")
+		racaoPorData[d] += c.QuantidadeKg
+		totalRacao += c.QuantidadeKg
+		datasSet[d] = true
+	}
+
+	for _, w := range consumosAgua {
+		d := w.Data.Format("2006-01-02")
+		aguaPorData[d] += w.QuantidadeLitros
+		totalAgua += w.QuantidadeLitros
+		datasSet[d] = true
+	}
+
+	// Ordenar datas
+	var datas []string
+	for d := range datasSet {
+		datas = append(datas, d)
+	}
+	// Sort datas
+	for i := 0; i < len(datas); i++ {
+		for j := i + 1; j < len(datas); j++ {
+			if datas[i] > datas[j] {
+				datas[i], datas[j] = datas[j], datas[i]
+			}
+		}
+	}
+
+	var pontos []ConsumoPonto
+	for _, d := range datas {
+		dt, _ := time.Parse("2006-01-02", d)
+		diasVida := int(dt.Sub(lote.DataAlojamento).Hours() / 24)
+		if diasVida < 0 {
+			diasVida = 0
+		}
+		pontos = append(pontos, ConsumoPonto{
+			Data:     d,
+			DiasVida: diasVida,
+			RacaoKg:  racaoPorData[d],
+			AguaL:    aguaPorData[d],
+		})
+	}
+
+	return &ConsumoResumo{
+		TotalRacaoKg: totalRacao,
+		TotalAguaL:   totalAgua,
+		Pontos:       pontos,
+	}, nil
+}

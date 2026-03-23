@@ -139,6 +139,8 @@ func (h *ChecklistHandler) Create(c *gin.Context) {
 		items = append(items, model.ChecklistItem{
 			Descricao:  item.Descricao,
 			Completado: item.Completado,
+			Observacao: item.Observacao,
+			FotoURL:    item.FotoURL,
 		})
 	}
 
@@ -272,6 +274,8 @@ func (h *ChecklistHandler) UpdateByData(c *gin.Context) {
 		items = append(items, model.ChecklistItem{
 			Descricao:  item.Descricao,
 			Completado: item.Completado,
+			Observacao: item.Observacao,
+			FotoURL:    item.FotoURL,
 		})
 		if !item.Completado {
 			allComplete = false

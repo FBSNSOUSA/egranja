@@ -68,27 +68,63 @@ class IoTHistoricoNotifier extends StateNotifier<IoTHistoricoState> {
         super(const IoTHistoricoState());
 
   /// Busca os dados historicos do sensor selecionado.
+  ///
+  /// O backend espera query params `from`, `to` e `intervalo` (hora/dia),
+  /// nao `sensor` e `periodo`. Convertemos o periodo do UI (24h/7d/30d)
+  /// para as datas from/to e intervalo adequados.
   Future<void> fetch() async {
     if (_galpaoId.isEmpty) return;
 
     state = state.copyWith(isLoading: true, errorMessage: null);
 
     try {
+      // Converter periodo do UI para from/to/intervalo do backend
+      final now = DateTime.now();
+      late DateTime from;
+      late String intervalo;
+
+      switch (state.periodoSelecionado) {
+        case '7d':
+          from = now.subtract(const Duration(days: 7));
+          intervalo = 'dia';
+          break;
+        case '30d':
+          from = now.subtract(const Duration(days: 30));
+          intervalo = 'dia';
+          break;
+        case '24h':
+        default:
+          from = now.subtract(const Duration(hours: 24));
+          intervalo = 'hora';
+          break;
+      }
+
+      final fromStr =
+          '${from.year}-${from.month.toString().padLeft(2, '0')}-${from.day.toString().padLeft(2, '0')}T${from.hour.toString().padLeft(2, '0')}:${from.minute.toString().padLeft(2, '0')}:${from.second.toString().padLeft(2, '0')}';
+      final toStr =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}T${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
+
       final response = await _api.apiGet<HistoricoResponse>(
         '/galpoes/$_galpaoId/iot/historico',
         queryParams: {
-          'sensor': state.sensorSelecionado,
-          'periodo': state.periodoSelecionado,
+          'from': fromStr,
+          'to': toStr,
+          'intervalo': intervalo,
         },
-        fromJson: (json) =>
-            HistoricoResponse.fromJson(json as Map<String, dynamic>),
+        fromJson: (json) => HistoricoResponse.fromBackendJson(
+          json as Map<String, dynamic>,
+          sensorTipo: state.sensorSelecionado,
+          periodo: state.periodoSelecionado,
+        ),
       );
 
+      if (!mounted) return;
       state = state.copyWith(
         historico: response.data,
         isLoading: false,
       );
     } on NetworkException {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage:
@@ -96,6 +132,7 @@ class IoTHistoricoNotifier extends StateNotifier<IoTHistoricoState> {
       );
     } catch (e) {
       debugPrint('[IoTHistoricoNotifier] Erro ao buscar historico: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Erro ao carregar historico. Tente novamente.',

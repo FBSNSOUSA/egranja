@@ -44,11 +44,13 @@ class FinanceiroRepositoryImpl implements FinanceiroRepository {
     int page = 1,
   }) async {
     final response = await _apiClient.apiGet<List<Custo>>(
-      '/lotes/$loteId/financeiro/custos',
+      '/lotes/$loteId/custos',
       queryParams: {'page': page, 'per_page': _perPage},
-      fromJson: (json) => (json as List<dynamic>)
-          .map((e) => Custo.fromJson(e as Map<String, dynamic>))
-          .toList(),
+      fromJson: (json) => json == null
+          ? <Custo>[]
+          : (json as List<dynamic>)
+              .map((e) => Custo.fromJson(e as Map<String, dynamic>))
+              .toList(),
     );
     return (response.data, response.meta);
   }
@@ -56,7 +58,7 @@ class FinanceiroRepositoryImpl implements FinanceiroRepository {
   @override
   Future<Custo> criarCusto(String loteId, Map<String, dynamic> data) async {
     final response = await _apiClient.apiPost<Custo>(
-      '/lotes/$loteId/financeiro/custos',
+      '/lotes/$loteId/custos',
       data: data,
       fromJson: (json) => Custo.fromJson(json as Map<String, dynamic>),
     );
@@ -69,12 +71,16 @@ class FinanceiroRepositoryImpl implements FinanceiroRepository {
 
   @override
   Future<List<Remuneracao>> fetchRemuneracao(String loteId) async {
-    final response = await _apiClient.apiGet<List<Remuneracao>>(
-      '/lotes/$loteId/financeiro/remuneracoes',
-      fromJson: (json) => (json as List<dynamic>)
-          .map((e) => Remuneracao.fromJson(e as Map<String, dynamic>))
-          .toList(),
+    // O backend nao possui endpoint GET para listar remuneracoes.
+    // As remuneracoes sao retornadas dentro do relatorio financeiro.
+    final response = await _apiClient.apiGet<Map<String, dynamic>>(
+      '/lotes/$loteId/financeiro/relatorio',
+      fromJson: (json) => json as Map<String, dynamic>,
     );
-    return response.data;
+    final data = response.data;
+    final remuneracoesJson = data['remuneracoes'] as List<dynamic>? ?? [];
+    return remuneracoesJson
+        .map((e) => Remuneracao.fromJson(e as Map<String, dynamic>))
+        .toList();
   }
 }

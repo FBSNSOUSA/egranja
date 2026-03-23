@@ -43,16 +43,27 @@
       font-family: 'Roboto', sans-serif;
       color: #666;
       background-color: #fafafa;
+      /* Nao bloquear cliques no Flutter canvas por baixo */
+      pointer-events: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      z-index: 999;
     }
   </style>
 </head>
 <body>
   <div id="loading" class="loading">Carregando eGranja...</div>
   <script>
-    window.addEventListener('flutter-first-frame', function() {
+    // Remover loading quando Flutter renderizar o primeiro frame.
+    // Fallback de 8 segundos caso o evento nao dispare.
+    function removeLoading() {
       var loading = document.getElementById('loading');
       if (loading) loading.remove();
-    });
+    }
+    window.addEventListener('flutter-first-frame', removeLoading);
+    setTimeout(removeLoading, 8000);
   </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>

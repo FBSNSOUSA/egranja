@@ -34,14 +34,20 @@ class LoteAtivoInfo {
   factory LoteAtivoInfo.fromJson(Map<String, dynamic> json) {
     return LoteAtivoInfo(
       id: json['id'] as String,
-      avesVivas: json['aves_vivas'] as int? ?? 0,
-      diasDeVida: json['dias_de_vida'] as int? ?? 0,
+      avesVivas: (json['aves_vivas'] as num?)?.toInt() ?? 0,
+      diasDeVida: (json['dias_de_vida'] as num?)?.toInt() ?? 0,
     );
   }
 }
 
 /// Entidade que representa um galpao no mapa, com coordenadas e informacoes
 /// resumidas de IoT e lote ativo.
+///
+/// Backend DTO: GalpaoResponse
+///   { "id", "usuario_id", "granja_id", "nome", "capacidade",
+///     "latitude", "longitude", "orientacao_graus", "comprimento_m",
+///     "largura_m", "area_m2", "tipo_ventilacao", "lado_cortinas",
+///     "created_at", "updated_at" }
 class GalpaoMapa {
   final String id;
   final String nome;
@@ -69,17 +75,26 @@ class GalpaoMapa {
     this.iot,
   });
 
+  /// Cria a partir do JSON do backend (GalpaoResponse).
+  ///
+  /// Backend envia `tipo_ventilacao` (nao `ventilacao`) e
+  /// `lado_cortinas` (nao `cortinas`). `orientacao_graus` e *int no backend.
+  /// `lote_ativo` e `iot` nao sao enviados pelo backend neste endpoint.
   factory GalpaoMapa.fromJson(Map<String, dynamic> json) {
     return GalpaoMapa(
-      id: json['id'] as String,
-      nome: json['nome'] as String,
+      id: json['id']?.toString() ?? '',
+      nome: json['nome'] as String? ?? '',
       latitude: (json['latitude'] as num?)?.toDouble() ?? 0,
       longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
       orientacaoGraus: (json['orientacao_graus'] as num?)?.toDouble() ?? 0,
       larguraM: (json['largura_m'] as num?)?.toDouble() ?? 0,
       comprimentoM: (json['comprimento_m'] as num?)?.toDouble() ?? 0,
-      ventilacao: json['ventilacao'] as String? ?? '',
-      cortinas: json['cortinas'] as String? ?? '',
+      ventilacao: json['tipo_ventilacao'] as String? ??
+          json['ventilacao'] as String? ??
+          '',
+      cortinas: json['lado_cortinas'] as String? ??
+          json['cortinas'] as String? ??
+          '',
       loteAtivo: json['lote_ativo'] != null
           ? LoteAtivoInfo.fromJson(json['lote_ativo'] as Map<String, dynamic>)
           : null,

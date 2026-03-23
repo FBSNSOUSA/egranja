@@ -71,23 +71,28 @@ class MedicamentosNotifier extends StateNotifier<MedicamentosState> {
       final response = await _api.apiGet<List<Medicamento>>(
         '/lotes/$_loteId/medicamentos',
         queryParams: {'page': 1, 'per_page': 20},
-        fromJson: (json) => (json as List<dynamic>)
-            .map((e) => Medicamento.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        fromJson: (json) => json == null
+            ? <Medicamento>[]
+            : (json as List<dynamic>)
+                .map((e) => Medicamento.fromJson(e as Map<String, dynamic>))
+                .toList(),
       );
 
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         medicamentos: response.data,
         pagination: response.meta,
       );
     } on NetworkException {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Sem conexao. Tente novamente.',
       );
     } catch (e) {
       debugPrint('[MedicamentosNotifier] Erro ao buscar medicamentos: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Erro ao carregar medicamentos.',
@@ -106,11 +111,14 @@ class MedicamentosNotifier extends StateNotifier<MedicamentosState> {
       final response = await _api.apiGet<List<Medicamento>>(
         '/lotes/$_loteId/medicamentos',
         queryParams: {'page': nextPage, 'per_page': 20},
-        fromJson: (json) => (json as List<dynamic>)
-            .map((e) => Medicamento.fromJson(e as Map<String, dynamic>))
-            .toList(),
+        fromJson: (json) => json == null
+            ? <Medicamento>[]
+            : (json as List<dynamic>)
+                .map((e) => Medicamento.fromJson(e as Map<String, dynamic>))
+                .toList(),
       );
 
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         medicamentos: [...state.medicamentos, ...response.data],
@@ -118,20 +126,29 @@ class MedicamentosNotifier extends StateNotifier<MedicamentosState> {
       );
     } catch (e) {
       debugPrint('[MedicamentosNotifier] Erro ao carregar mais: $e');
+      if (!mounted) return;
       state = state.copyWith(isLoading: false);
     }
   }
 
   /// Cria novo medicamento.
+  ///
+  /// Backend expects CreateMedicamentoRequest:
+  /// - data_inicio (YYYY-MM-DD) - required
+  /// - medicamento - required
+  /// - data_fim - optional
+  /// - dosagem - optional
+  /// - via - optional
+  /// - periodo_carencia_dias - optional
+  /// - responsavel - optional
+  /// - observacao - optional
   Future<bool> criar({
-    required String nome,
-    String? principioAtivo,
-    String? dosagem,
-    String? viaAdministracao,
-    int? duracaoTratamentoDias,
-    int? periodoCarenciaDias,
-    String? dataInicio,
+    required String medicamento,
+    required String dataInicio,
     String? dataFim,
+    String? dosagem,
+    String? via,
+    int? periodoCarenciaDias,
     String? responsavel,
     String? observacao,
   }) async {
@@ -141,16 +158,14 @@ class MedicamentosNotifier extends StateNotifier<MedicamentosState> {
       await _api.apiPost<Medicamento>(
         '/lotes/$_loteId/medicamentos',
         data: {
-          'nome': nome,
-          if (principioAtivo != null && principioAtivo.isNotEmpty)
-            'principio_ativo': principioAtivo,
+          'data_inicio': dataInicio,
+          'medicamento': medicamento,
+          if (dataFim != null && dataFim.isNotEmpty) 'data_fim': dataFim,
           if (dosagem != null && dosagem.isNotEmpty) 'dosagem': dosagem,
-          if (viaAdministracao != null && viaAdministracao.isNotEmpty)
-            'via_administracao': viaAdministracao,
-          'duracao_tratamento_dias': ?duracaoTratamentoDias,
-          'periodo_carencia_dias': ?periodoCarenciaDias,
-          'data_inicio': ?dataInicio,
-          'data_fim': ?dataFim,
+          if (via != null && via.isNotEmpty) 'via': via,
+          // ignore: use_null_aware_elements
+          if (periodoCarenciaDias != null)
+            'periodo_carencia_dias': periodoCarenciaDias,
           if (responsavel != null && responsavel.isNotEmpty)
             'responsavel': responsavel,
           if (observacao != null && observacao.isNotEmpty)
@@ -160,6 +175,7 @@ class MedicamentosNotifier extends StateNotifier<MedicamentosState> {
             Medicamento.fromJson(json as Map<String, dynamic>),
       );
 
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         successMessage: 'Medicamento registrado com sucesso!',
@@ -167,6 +183,7 @@ class MedicamentosNotifier extends StateNotifier<MedicamentosState> {
       await fetch();
       return true;
     } on NetworkException {
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         successMessage: 'Salvo localmente. Sera sincronizado quando online.',
@@ -174,6 +191,7 @@ class MedicamentosNotifier extends StateNotifier<MedicamentosState> {
       return true;
     } catch (e) {
       debugPrint('[MedicamentosNotifier] Erro ao criar medicamento: $e');
+      if (!mounted) return false;
       state = state.copyWith(
         isSaving: false,
         errorMessage: 'Erro ao salvar medicamento. Tente novamente.',

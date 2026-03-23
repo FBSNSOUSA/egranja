@@ -1,4 +1,7 @@
 /// Registro de recebimento de racao para um lote.
+///
+/// Campos mapeados a partir do endpoint GET /lotes/{id}/feed_receipts
+/// e do DTO FeedReceiptResponse do backend Go.
 class RecebimentoRacao {
   final String id;
   final String loteId;
@@ -7,9 +10,16 @@ class RecebimentoRacao {
   /// Quantidade recebida em kg.
   final double quantidadeKg;
 
+  /// ID do tipo de racao (opcional).
   final String? tipoRacaoId;
+
+  /// Nome do tipo de racao (opcional, retornado pelo backend via join).
   final String? tipoRacaoNome;
+
+  /// Fornecedor da racao (opcional).
   final String? fornecedor;
+
+  /// Numero do lote da racao (opcional).
   final String? loteRacao;
 
   /// Origem do recebimento: 'compra', 'remanescente_anterior', 'sobra_final'.
@@ -40,7 +50,7 @@ class RecebimentoRacao {
       tipoRacaoNome: json['tipo_racao_nome'] as String?,
       fornecedor: json['fornecedor'] as String?,
       loteRacao: json['lote_racao'] as String?,
-      origem: json['origem'] as String,
+      origem: json['origem'] as String? ?? 'compra',
       createdAt: json['created_at'] as String,
     );
   }
@@ -51,10 +61,10 @@ class RecebimentoRacao {
       'lote_id': loteId,
       'data_recebimento': dataRecebimento,
       'quantidade_kg': quantidadeKg,
-      'tipo_racao_id': tipoRacaoId,
-      'tipo_racao_nome': tipoRacaoNome,
-      'fornecedor': fornecedor,
-      'lote_racao': loteRacao,
+      if (tipoRacaoId != null) 'tipo_racao_id': tipoRacaoId,
+      if (tipoRacaoNome != null) 'tipo_racao_nome': tipoRacaoNome,
+      if (fornecedor != null) 'fornecedor': fornecedor,
+      if (loteRacao != null) 'lote_racao': loteRacao,
       'origem': origem,
       'created_at': createdAt,
     };
@@ -62,6 +72,9 @@ class RecebimentoRacao {
 }
 
 /// Registro de consumo diario de racao de um lote.
+///
+/// Campos mapeados a partir do endpoint GET /lotes/{id}/feed_consumptions
+/// e do DTO FeedConsumptionResponse do backend Go.
 class ConsumoRacao {
   final String id;
   final String loteId;

@@ -139,8 +139,8 @@ class SyncService {
 
     final responseData = response.data!;
     final results = responseData['results'] as List<dynamic>;
-    final synced = responseData['synced'] as int;
-    final failed = responseData['failed'] as int;
+    final synced = (responseData['synced'] as num).toInt();
+    final failed = (responseData['failed'] as num).toInt();
 
     // Process results: mark completed or keep as pending
     final errors = <String>[];

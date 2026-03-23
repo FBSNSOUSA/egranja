@@ -17,8 +17,9 @@ class ChatRepositoryImpl implements ChatRepository {
   @override
   Future<List<Conversa>> fetchConversas() async {
     final response = await _apiClient.apiGet<List<ConversaModel>>(
-      '/chat/conversas',
+      '/lotes',
       fromJson: (json) {
+        if (json == null) return <ConversaModel>[];
         final list = json as List<dynamic>;
         return list
             .map((e) => ConversaModel.fromJson(e as Map<String, dynamic>))
@@ -34,12 +35,13 @@ class ChatRepositoryImpl implements ChatRepository {
     int page = 1,
   }) async {
     final response = await _apiClient.apiGet<List<MensagemModel>>(
-      '/chat/lotes/$loteId/mensagens',
+      '/lotes/$loteId/mensagens',
       queryParams: {
         'page': page,
-        'limit': _pageSize,
+        'per_page': _pageSize,
       },
       fromJson: (json) {
+        if (json == null) return <MensagemModel>[];
         final list = json as List<dynamic>;
         return list
             .map((e) => MensagemModel.fromJson(e as Map<String, dynamic>))
@@ -57,7 +59,7 @@ class ChatRepositoryImpl implements ChatRepository {
     Map<String, dynamic> data,
   ) async {
     final response = await _apiClient.apiPost<MensagemModel>(
-      '/chat/lotes/$loteId/mensagens',
+      '/lotes/$loteId/mensagens',
       data: data,
       fromJson: (json) =>
           MensagemModel.fromJson(json as Map<String, dynamic>),
@@ -66,9 +68,9 @@ class ChatRepositoryImpl implements ChatRepository {
   }
 
   @override
-  Future<void> marcarComoLida(String loteId) async {
-    await _apiClient.apiPost<Map<String, dynamic>>(
-      '/chat/lotes/$loteId/lida',
+  Future<void> marcarComoLida(String messageId) async {
+    await _apiClient.apiPatch<Map<String, dynamic>>(
+      '/mensagens/$messageId/lida',
       fromJson: (json) => json as Map<String, dynamic>,
     );
   }

@@ -2,57 +2,58 @@
 ///
 /// Cada item corresponde a uma tarefa de manejo que deve ser verificada
 /// pelo produtor ou tecnico durante a vistoria do galpao.
+///
+/// No backend, checklist items sao objetos JSON simples armazenados
+/// dentro do campo `itens` (JSONB) do checklist principal.
 class ChecklistItem {
-  final String id;
-  final String loteId;
   final String descricao;
-  final String categoria;
-  final bool concluido;
+  final bool completado;
   final String? observacao;
-  final String? concluidoPor;
-  final String? concluidoEm;
-  final String createdAt;
+  final String? fotoUrl;
 
   const ChecklistItem({
-    required this.id,
-    required this.loteId,
     required this.descricao,
-    required this.categoria,
-    required this.concluido,
+    required this.completado,
     this.observacao,
-    this.concluidoPor,
-    this.concluidoEm,
-    required this.createdAt,
+    this.fotoUrl,
   });
 
   /// Cria uma copia com campos alterados.
   ChecklistItem copyWith({
-    String? id,
-    String? loteId,
     String? descricao,
-    String? categoria,
-    bool? concluido,
+    bool? completado,
     String? observacao,
-    String? concluidoPor,
-    String? concluidoEm,
-    String? createdAt,
+    String? fotoUrl,
     bool clearObservacao = false,
-    bool clearConcluidoPor = false,
-    bool clearConcluidoEm = false,
+    bool clearFotoUrl = false,
   }) {
     return ChecklistItem(
-      id: id ?? this.id,
-      loteId: loteId ?? this.loteId,
       descricao: descricao ?? this.descricao,
-      categoria: categoria ?? this.categoria,
-      concluido: concluido ?? this.concluido,
+      completado: completado ?? this.completado,
       observacao: clearObservacao ? null : (observacao ?? this.observacao),
-      concluidoPor:
-          clearConcluidoPor ? null : (concluidoPor ?? this.concluidoPor),
-      concluidoEm:
-          clearConcluidoEm ? null : (concluidoEm ?? this.concluidoEm),
-      createdAt: createdAt ?? this.createdAt,
+      fotoUrl: clearFotoUrl ? null : (fotoUrl ?? this.fotoUrl),
     );
+  }
+
+  /// Cria a partir de JSON do backend.
+  factory ChecklistItem.fromJson(Map<String, dynamic> json) {
+    return ChecklistItem(
+      descricao: json['descricao'] as String? ?? '',
+      completado: json['completado'] as bool? ?? false,
+      observacao: json['observacao'] as String?,
+      fotoUrl: json['foto_url'] as String?,
+    );
+  }
+
+  /// Converte para JSON do backend.
+  Map<String, dynamic> toJson() {
+    return {
+      'descricao': descricao,
+      'completado': completado,
+      if (observacao != null && observacao!.isNotEmpty)
+        'observacao': observacao,
+      if (fotoUrl != null && fotoUrl!.isNotEmpty) 'foto_url': fotoUrl,
+    };
   }
 
   @override
@@ -60,12 +61,16 @@ class ChecklistItem {
       identical(this, other) ||
       other is ChecklistItem &&
           runtimeType == other.runtimeType &&
-          id == other.id;
+          descricao == other.descricao &&
+          completado == other.completado &&
+          observacao == other.observacao &&
+          fotoUrl == other.fotoUrl;
 
   @override
-  int get hashCode => id.hashCode;
+  int get hashCode => Object.hash(descricao, completado, observacao, fotoUrl);
 
   @override
   String toString() =>
-      'ChecklistItem(id: $id, descricao: $descricao, concluido: $concluido)';
+      'ChecklistItem(descricao: $descricao, completado: $completado, '
+      'observacao: $observacao, fotoUrl: $fotoUrl)';
 }

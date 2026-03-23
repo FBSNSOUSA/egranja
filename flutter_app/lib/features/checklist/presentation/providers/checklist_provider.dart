@@ -60,13 +60,13 @@ class ChecklistState {
   /// Percentual de conclusao como valor entre 0.0 e 1.0.
   double get progressFraction {
     if (checklist == null || checklist!.totalItens == 0) return 0.0;
-    return checklist!.itensConcluidos / checklist!.totalItens;
+    return checklist!.itensCompletados / checklist!.totalItens;
   }
 
   /// Texto de progresso no formato "X/Y".
   String get progressText {
     if (checklist == null) return '0/0';
-    return '${checklist!.itensConcluidos}/${checklist!.totalItens}';
+    return '${checklist!.itensCompletados}/${checklist!.totalItens}';
   }
 
   /// Verifica se a data selecionada e hoje.
@@ -127,6 +127,7 @@ class ChecklistNotifier extends StateNotifier<ChecklistState> {
     try {
       final dataStr = _apiDateFormat.format(state.selectedDate);
       final checklist = await _repository.fetchChecklist(_loteId, dataStr);
+      if (!mounted) return;
       state = state.copyWith(
         checklist: checklist,
         isLoading: false,
@@ -134,6 +135,7 @@ class ChecklistNotifier extends StateNotifier<ChecklistState> {
       );
     } catch (e) {
       debugPrint('[ChecklistNotifier] Erro ao buscar checklist: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         error: _extractErrorMessage(e),
@@ -141,27 +143,90 @@ class ChecklistNotifier extends StateNotifier<ChecklistState> {
     }
   }
 
-  /// Alterna o estado de conclusao de um item.
-  Future<void> toggleItem(String itemId, bool concluido,
-      {String? observacao}) async {
+  /// Alterna o estado de conclusao de um item por indice.
+  ///
+  /// Constroi a lista completa de itens com o item no [itemIndex]
+  /// alternado e envia ao backend via PATCH /lotes/{loteId}/checklists/{data}.
+  Future<void> toggleItem(int itemIndex, bool concluido) async {
     final checklist = state.checklist;
     if (checklist == null || checklist.id.isEmpty) return;
+    if (itemIndex < 0 || itemIndex >= checklist.itens.length) return;
 
     state = state.copyWith(isTogglingItem: true, clearError: true);
 
     try {
-      final updated = await _repository.marcarItem(
-        checklist.id,
-        itemId,
-        concluido,
-        observacao,
+      // Construir lista de itens com o item alterado
+      final updatedItens = checklist.itens.asMap().entries.map((entry) {
+        if (entry.key == itemIndex) {
+          return entry.value.copyWith(completado: concluido);
+        }
+        return entry.value;
+      }).toList();
+
+      // Extrair a data no formato YYYY-MM-DD do checklist
+      final dataStr = checklist.data.substring(0, 10);
+
+      final updated = await _repository.atualizarItens(
+        _loteId,
+        dataStr,
+        updatedItens,
       );
+      if (!mounted) return;
       state = state.copyWith(
         checklist: updated,
         isTogglingItem: false,
       );
     } catch (e) {
       debugPrint('[ChecklistNotifier] Erro ao marcar item: $e');
+      if (!mounted) return;
+      state = state.copyWith(
+        isTogglingItem: false,
+        error: _extractErrorMessage(e),
+      );
+    }
+  }
+
+  /// Atualiza observacao e/ou foto de um item.
+  Future<void> updateItemDetails(
+    int itemIndex, {
+    String? observacao,
+    String? fotoUrl,
+    bool clearFoto = false,
+  }) async {
+    final checklist = state.checklist;
+    if (checklist == null || checklist.id.isEmpty) return;
+    if (itemIndex < 0 || itemIndex >= checklist.itens.length) return;
+
+    state = state.copyWith(isTogglingItem: true, clearError: true);
+
+    try {
+      final updatedItens = checklist.itens.asMap().entries.map((entry) {
+        if (entry.key == itemIndex) {
+          return entry.value.copyWith(
+            observacao: observacao ?? entry.value.observacao,
+            fotoUrl: fotoUrl,
+            clearFotoUrl: clearFoto,
+          );
+        }
+        return entry.value;
+      }).toList();
+
+      final dataStr = checklist.data.substring(0, 10);
+
+      final updated = await _repository.atualizarItens(
+        _loteId,
+        dataStr,
+        updatedItens,
+      );
+      if (!mounted) return;
+      state = state.copyWith(
+        checklist: updated,
+        isTogglingItem: false,
+        successMessage: 'Detalhes atualizados.',
+      );
+    } catch (e) {
+      debugPrint('[ChecklistNotifier] Erro ao atualizar detalhes: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isTogglingItem: false,
         error: _extractErrorMessage(e),

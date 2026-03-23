@@ -7,7 +7,7 @@ import '../entities/visitante.dart';
 /// Contrato do repositorio para o feature sanidade.
 ///
 /// Define operacoes de leitura e escrita para vacinacoes,
-/// medicamentos e visitantes de um lote.
+/// medicamentos e visitantes.
 abstract class SanidadeRepository {
   // ==========================================
   // VACINACOES
@@ -45,15 +45,20 @@ abstract class SanidadeRepository {
   // VISITANTES
   // ==========================================
 
-  /// Busca visitantes do lote com paginacao.
+  /// Busca visitantes da granja com paginacao.
+  /// [granjaId] identificador da granja (not loteId).
   Future<(List<Visitante>, PaginationMeta?)> fetchVisitantes(
-    String loteId, {
+    String granjaId, {
     int page = 1,
   });
 
   /// Cria um novo visitante.
+  /// [granjaId] identificador da granja (not loteId).
   Future<Visitante> criarVisitante(
-    String loteId,
+    String granjaId,
     Map<String, dynamic> data,
   );
+
+  /// Registra a saida de um visitante.
+  Future<void> registrarSaida(String granjaId, String visitanteId);
 }

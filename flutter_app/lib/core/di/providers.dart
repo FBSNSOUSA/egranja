@@ -4,9 +4,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../auth/auth_service.dart';
 import '../auth/secure_storage.dart';
+import '../constants/api_constants.dart';
+import '../database/app_database.dart';
+import '../database/daos/pesagens_dao.dart';
 import '../network/api_client.dart';
 import '../network/network_info.dart';
+import '../utils/media_upload_helper.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
+
+// ── Database ────────────────────────────────────────────────────────────
+/// Singleton do banco de dados local Drift.
+final databaseProvider = Provider<AppDatabase>((ref) => AppDatabase());
+
+/// DAO de pesagens e itens de pesagem.
+final pesagensDaoProvider = Provider<PesagensDao>((ref) {
+  return ref.watch(databaseProvider).pesagensDao;
+});
 
 // ── Auth ────────────────────────────────────────────────────────────────
 /// Estado de autenticacao derivado do [authNotifierProvider].
@@ -43,13 +56,20 @@ final apiClientProvider = Provider<ApiClient>((ref) {
 final dioProvider = Provider<Dio>((ref) {
   final dio = Dio(
     BaseOptions(
-      baseUrl: 'http://localhost:8080/api/v1',
-      connectTimeout: const Duration(seconds: 15),
-      receiveTimeout: const Duration(seconds: 15),
+      baseUrl: ApiConstants.baseUrl,
+      connectTimeout: ApiConstants.connectTimeout,
+      receiveTimeout: ApiConstants.receiveTimeout,
       headers: {'Content-Type': 'application/json'},
     ),
   );
   return dio;
+});
+
+// ── Media Upload ───────────────────────────────────────────────────
+/// Helper para upload de midias (fotos e audios).
+final mediaUploadHelperProvider = Provider<MediaUploadHelper>((ref) {
+  final apiClient = ref.watch(apiClientProvider);
+  return MediaUploadHelper(apiClient: apiClient);
 });
 
 // ── Connectivity ───────────────────────────────────────────────────────

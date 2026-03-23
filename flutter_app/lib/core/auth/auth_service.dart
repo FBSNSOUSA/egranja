@@ -16,22 +16,31 @@ class User {
   final String nome;
   final String tipo; // 'produtor' ou 'tecnico'
   final bool ativo;
+  final String email;
+  final String telefone;
+  final String fotoUrl;
 
   const User({
     required this.id,
-    required this.login,
+    this.login = '',
     required this.nome,
     required this.tipo,
-    required this.ativo,
+    this.ativo = true,
+    this.email = '',
+    this.telefone = '',
+    this.fotoUrl = '',
   });
 
   factory User.fromJson(Map<String, dynamic> json) {
     return User(
       id: json['id'] as String,
-      login: json['login'] as String,
+      login: (json['login'] as String?) ?? '',
       nome: json['nome'] as String,
       tipo: json['tipo'] as String,
-      ativo: json['ativo'] as bool,
+      ativo: (json['ativo'] as bool?) ?? true,
+      email: (json['email'] as String?) ?? '',
+      telefone: (json['telefone'] as String?) ?? '',
+      fotoUrl: (json['foto_url'] as String?) ?? '',
     );
   }
 
@@ -42,7 +51,32 @@ class User {
       'nome': nome,
       'tipo': tipo,
       'ativo': ativo,
+      'email': email,
+      'telefone': telefone,
+      'foto_url': fotoUrl,
     };
+  }
+
+  User copyWith({
+    String? id,
+    String? login,
+    String? nome,
+    String? tipo,
+    bool? ativo,
+    String? email,
+    String? telefone,
+    String? fotoUrl,
+  }) {
+    return User(
+      id: id ?? this.id,
+      login: login ?? this.login,
+      nome: nome ?? this.nome,
+      tipo: tipo ?? this.tipo,
+      ativo: ativo ?? this.ativo,
+      email: email ?? this.email,
+      telefone: telefone ?? this.telefone,
+      fotoUrl: fotoUrl ?? this.fotoUrl,
+    );
   }
 
   @override
@@ -76,8 +110,8 @@ class _JWTPayload {
   factory _JWTPayload.fromJson(Map<String, dynamic> json) {
     return _JWTPayload(
       sub: json['sub'] as String,
-      exp: json['exp'] as int,
-      iat: json['iat'] as int,
+      exp: (json['exp'] as num).toInt(),
+      iat: (json['iat'] as num).toInt(),
       tipo: json['tipo'] as String,
     );
   }
@@ -152,13 +186,19 @@ class AuthService {
       final data = body['data'] as Map<String, dynamic>;
       final accessToken = data['access_token'] as String;
       final refreshTokenValue = data['refresh_token'] as String;
-      final userJson = data['user'] as Map<String, dynamic>;
+      final userJson = data['usuario'] as Map<String, dynamic>;
 
       // Salvar tokens de forma segura
-      await Future.wait([
-        _storage.saveAccessToken(accessToken),
-        _storage.saveRefreshToken(refreshTokenValue),
-      ]);
+      try {
+        await Future.wait([
+          _storage.saveAccessToken(accessToken),
+          _storage.saveRefreshToken(refreshTokenValue),
+        ]);
+      } catch (storageError) {
+        debugPrint('[Auth] Erro ao salvar tokens: $storageError');
+        // Em caso de falha no storage, continuar com login
+        // (tokens nao persistidos = sem auto-login na proxima sessao)
+      }
 
       return User.fromJson(userJson);
     } on DioException catch (e) {
@@ -213,9 +253,120 @@ class AuthService {
     } on ServerException {
       rethrow;
     } catch (e) {
-      throw const ServerException(
+      debugPrint('[Auth] Erro inesperado no login: $e');
+      throw ServerException(
         code: 'UNKNOWN_ERROR',
-        message: 'Ocorreu um erro inesperado. Tente novamente.',
+        message: 'Erro: ${e.runtimeType}: $e',
+      );
+    }
+  }
+
+  /// Registra um novo usuario no sistema.
+  ///
+  /// Envia dados para o endpoint POST /auth/register.
+  /// Retorna mensagem de sucesso ou lanca excecao.
+  Future<String> register({
+    required String nome,
+    required String email,
+    required String telefone,
+    required String senha,
+    required String tipo,
+  }) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/auth/register',
+        data: {
+          'nome': nome,
+          'email': email,
+          'telefone': telefone,
+          'senha': senha,
+          'tipo': tipo,
+        },
+        options: Options(
+          sendTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
+        ),
+      );
+
+      final body = response.data;
+      if (body == null || body['success'] != true || body['data'] == null) {
+        throw const ServerException(
+          code: 'REGISTER_ERROR',
+          message: 'Erro ao criar conta. Tente novamente.',
+        );
+      }
+
+      final data = body['data'] as Map<String, dynamic>;
+      return (data['message'] as String?) ?? 'Conta criada com sucesso!';
+    } on DioException catch (e) {
+      if (e.response == null) {
+        throw const NetworkException(
+          code: 'NETWORK_ERROR',
+          message:
+              'Sem conexao com a internet. Verifique sua conexao e tente novamente.',
+        );
+      }
+
+      final status = e.response?.statusCode;
+      if (status == 409) {
+        throw const ServerException(
+          code: 'EMAIL_EXISTS',
+          message: 'Este email ja esta cadastrado.',
+        );
+      }
+
+      if (status == 422) {
+        throw const ServerException(
+          code: 'VALIDATION_ERROR',
+          message: 'Verifique os dados informados e tente novamente.',
+        );
+      }
+
+      throw const ServerException(
+        code: 'REGISTER_ERROR',
+        message: 'Erro ao criar conta. Tente novamente.',
+      );
+    }
+  }
+
+  /// Solicita reset de senha via email.
+  ///
+  /// Envia email para o endpoint POST /auth/forgot-password.
+  /// Retorna mensagem informativa.
+  Future<String> forgotPassword(String email) async {
+    try {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/auth/forgot-password',
+        data: {'email': email},
+        options: Options(
+          sendTimeout: const Duration(seconds: 15),
+          receiveTimeout: const Duration(seconds: 15),
+        ),
+      );
+
+      final body = response.data;
+      if (body == null || body['success'] != true || body['data'] == null) {
+        throw const ServerException(
+          code: 'FORGOT_PASSWORD_ERROR',
+          message: 'Erro ao processar solicitacao. Tente novamente.',
+        );
+      }
+
+      final data = body['data'] as Map<String, dynamic>;
+      return (data['message'] as String?) ??
+          'Se o email estiver cadastrado, voce recebera instrucoes para redefinir sua senha.';
+    } on DioException catch (e) {
+      if (e.response == null) {
+        throw const NetworkException(
+          code: 'NETWORK_ERROR',
+          message:
+              'Sem conexao com a internet. Verifique sua conexao e tente novamente.',
+        );
+      }
+
+      throw const ServerException(
+        code: 'FORGOT_PASSWORD_ERROR',
+        message: 'Erro ao processar solicitacao. Tente novamente.',
       );
     }
   }

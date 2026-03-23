@@ -1,30 +1,23 @@
 /// Registro de remuneracao de um lote.
 ///
 /// Representa o pagamento recebido pela integradora, incluindo
-/// valor base, bonificacoes, descontos, valor liquido, periodo
-/// e status do pagamento.
+/// valor, tipo de remuneracao, data de pagamento e observacao.
 class Remuneracao {
   final String id;
   final String loteId;
-  final double valorBase;
-  final double bonificacoes;
-  final double descontos;
-  final double valorLiquido;
-  final String periodoInicio;
-  final String periodoFim;
-  final String status;
+  final double valor;
+  final String? tipo;
+  final String? dataPagamento;
+  final String? observacao;
   final String createdAt;
 
   const Remuneracao({
     required this.id,
     required this.loteId,
-    required this.valorBase,
-    required this.bonificacoes,
-    required this.descontos,
-    required this.valorLiquido,
-    required this.periodoInicio,
-    required this.periodoFim,
-    required this.status,
+    required this.valor,
+    this.tipo,
+    this.dataPagamento,
+    this.observacao,
     required this.createdAt,
   });
 
@@ -32,14 +25,11 @@ class Remuneracao {
     return Remuneracao(
       id: json['id'] as String,
       loteId: json['lote_id'] as String,
-      valorBase: (json['valor_base'] as num).toDouble(),
-      bonificacoes: (json['bonificacoes'] as num).toDouble(),
-      descontos: (json['descontos'] as num).toDouble(),
-      valorLiquido: (json['valor_liquido'] as num).toDouble(),
-      periodoInicio: json['periodo_inicio'] as String,
-      periodoFim: json['periodo_fim'] as String,
-      status: json['status'] as String,
-      createdAt: json['created_at'] as String,
+      valor: (json['valor'] as num?)?.toDouble() ?? 0.0,
+      tipo: json['tipo'] as String?,
+      dataPagamento: json['data_pagamento'] as String?,
+      observacao: json['observacao'] as String?,
+      createdAt: json['created_at'] as String? ?? '',
     );
   }
 
@@ -47,25 +37,23 @@ class Remuneracao {
     return {
       'id': id,
       'lote_id': loteId,
-      'valor_base': valorBase,
-      'bonificacoes': bonificacoes,
-      'descontos': descontos,
-      'valor_liquido': valorLiquido,
-      'periodo_inicio': periodoInicio,
-      'periodo_fim': periodoFim,
-      'status': status,
+      'valor': valor,
+      if (tipo != null) 'tipo': tipo,
+      if (dataPagamento != null) 'data_pagamento': dataPagamento,
+      if (observacao != null) 'observacao': observacao,
       'created_at': createdAt,
     };
   }
 
-  /// Label legivel para o status da remuneracao.
-  static String statusLabel(String status) {
+  /// Label legivel para o tipo de remuneracao.
+  static String tipoLabel(String? tipo) {
+    if (tipo == null) return 'Nao informado';
     const labels = {
-      'pendente': 'Pendente',
-      'pago': 'Pago',
-      'atrasado': 'Atrasado',
-      'cancelado': 'Cancelado',
+      'por_kg': 'Por kg',
+      'por_ave': 'Por ave',
+      'por_iep': 'Por IEP',
+      'outro': 'Outro',
     };
-    return labels[status] ?? status;
+    return labels[tipo] ?? tipo;
   }
 }

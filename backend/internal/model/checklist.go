@@ -10,8 +10,10 @@ import (
 
 // ChecklistItem representa um item individual do checklist diario.
 type ChecklistItem struct {
-	Descricao  string `json:"descricao"`
-	Completado bool   `json:"completado"`
+	Descricao  string  `json:"descricao"`
+	Completado bool    `json:"completado"`
+	Observacao *string `json:"observacao,omitempty"`
+	FotoURL    *string `json:"foto_url,omitempty"`
 }
 
 // Checklist representa o checklist diario de manejo de um lote.

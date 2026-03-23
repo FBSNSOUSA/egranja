@@ -29,7 +29,6 @@ class _FinalizarLoteScreenState
   final _pesoTotalController = TextEditingController();
   final _sobraRacaoController = TextEditingController();
   DateTime _dataFinalizacao = DateTime.now();
-  bool _transferirSobra = false;
 
   Future<void> _showConfirmDialog() async {
     if (!_formKey.currentState!.validate()) return;
@@ -75,8 +74,7 @@ class _FinalizarLoteScreenState
       dataFinalizacao: dataFormatted,
       avesEntregues: int.parse(_avesController.text),
       pesoTotalEntregue: double.parse(_pesoTotalController.text),
-      sobraRacao: sobraRacao,
-      transferirSobraProximoLote: _transferirSobra,
+      sobraRacaoKg: sobraRacao,
     );
 
     final success = await ref
@@ -86,24 +84,42 @@ class _FinalizarLoteScreenState
     if (success && mounted) {
       final message =
           ref.read(loteDetailProvider(widget.loteId)).successMessage;
-      if (message != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message)),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.check_circle, color: AppColors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(message ?? 'Lote finalizado com sucesso!'),
+              ),
+            ],
+          ),
+          backgroundColor: AppColors.success,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 3),
+        ),
+      );
       // Volta para a tela anterior (lote detail)
       context.pop();
     } else if (mounted) {
       final error =
           ref.read(loteDetailProvider(widget.loteId)).errorMessage;
-      if (error != null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error),
-            backgroundColor: AppColors.danger,
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              const Icon(Icons.error_outline, color: AppColors.white, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(error ?? 'Erro ao finalizar lote.'),
+              ),
+            ],
           ),
-        );
-      }
+          backgroundColor: AppColors.danger,
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
     }
   }
 
@@ -120,140 +136,127 @@ class _FinalizarLoteScreenState
     final state = ref.watch(loteDetailProvider(widget.loteId));
     final theme = Theme.of(context);
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Finalizar Lote'),
-      ),
-      body: Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            // Aviso
-            Card(
-              color: AppColors.warningLight,
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.warning_amber,
-                      color: AppColors.warning,
+    return Form(
+      key: _formKey,
+      child: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          // Aviso
+          Card(
+            color: AppColors.warningLight,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  const Icon(
+                    Icons.warning_amber,
+                    color: AppColors.warning,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Ao finalizar o lote, nao sera possivel adicionar novos registros.',
+                      style: theme.textTheme.bodySmall,
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        'Ao finalizar o lote, nao sera possivel adicionar novos registros.',
-                        style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+
+          DatePickerField(
+            label: 'Data da Finalizacao',
+            value: _dataFinalizacao,
+            required: true,
+            maximumDate: DateTime.now(),
+            onChange: (date) =>
+                setState(() => _dataFinalizacao = date),
+          ),
+          const SizedBox(height: 16),
+
+          FormFieldWidget(
+            label: 'Aves Entregues',
+            placeholder: 'Quantidade de aves entregues ao abate',
+            keyboardType: TextInputType.number,
+            controller: _avesController,
+            required: true,
+            validator: (v) {
+              if (v == null || v.isEmpty) {
+                return 'Informe a quantidade de aves';
+              }
+              if (int.tryParse(v) == null || int.parse(v) <= 0) {
+                return 'Quantidade invalida';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+
+          FormFieldWidget(
+            label: 'Peso Total Entregue',
+            placeholder: 'Peso total em kg',
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+            suffix: 'kg',
+            controller: _pesoTotalController,
+            required: true,
+            validator: (v) {
+              if (v == null || v.isEmpty) {
+                return 'Informe o peso total';
+              }
+              if (double.tryParse(v) == null || double.parse(v) <= 0) {
+                return 'Peso invalido';
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 16),
+
+          FormFieldWidget(
+            label: 'Sobra de Racao',
+            placeholder: 'Quantidade em kg (opcional)',
+            keyboardType:
+                const TextInputType.numberWithOptions(decimal: true),
+            suffix: 'kg',
+            controller: _sobraRacaoController,
+            validator: (v) {
+              if (v != null && v.isNotEmpty) {
+                if (double.tryParse(v) == null || double.parse(v) < 0) {
+                  return 'Valor invalido';
+                }
+              }
+              return null;
+            },
+          ),
+          const SizedBox(height: 24),
+
+          SizedBox(
+            width: double.infinity,
+            height: 52,
+            child: FilledButton.icon(
+              onPressed:
+                  state.isFinalizando ? null : _showConfirmDialog,
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primary,
+              ),
+              icon: state.isFinalizando
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: AppColors.white,
                       ),
-                    ),
-                  ],
-                ),
+                    )
+                  : const Icon(Icons.check_circle_outline),
+              label: Text(
+                state.isFinalizando ? 'Finalizando...' : 'Finalizar Lote',
+                style: const TextStyle(fontSize: 16),
               ),
             ),
-            const SizedBox(height: 24),
-
-            DatePickerField(
-              label: 'Data da Finalizacao',
-              value: _dataFinalizacao,
-              required: true,
-              maximumDate: DateTime.now(),
-              onChange: (date) =>
-                  setState(() => _dataFinalizacao = date),
-            ),
-            const SizedBox(height: 16),
-
-            FormFieldWidget(
-              label: 'Aves Entregues',
-              placeholder: 'Quantidade de aves entregues ao abate',
-              keyboardType: TextInputType.number,
-              controller: _avesController,
-              required: true,
-              validator: (v) {
-                if (v == null || v.isEmpty) {
-                  return 'Informe a quantidade de aves';
-                }
-                if (int.tryParse(v) == null || int.parse(v) <= 0) {
-                  return 'Quantidade invalida';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            FormFieldWidget(
-              label: 'Peso Total Entregue',
-              placeholder: 'Peso total em kg',
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              suffix: 'kg',
-              controller: _pesoTotalController,
-              required: true,
-              validator: (v) {
-                if (v == null || v.isEmpty) {
-                  return 'Informe o peso total';
-                }
-                if (double.tryParse(v) == null || double.parse(v) <= 0) {
-                  return 'Peso invalido';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            FormFieldWidget(
-              label: 'Sobra de Racao',
-              placeholder: 'Quantidade em kg (opcional)',
-              keyboardType:
-                  const TextInputType.numberWithOptions(decimal: true),
-              suffix: 'kg',
-              controller: _sobraRacaoController,
-              validator: (v) {
-                if (v != null && v.isNotEmpty) {
-                  if (double.tryParse(v) == null || double.parse(v) < 0) {
-                    return 'Valor invalido';
-                  }
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 16),
-
-            // Switch transferir sobra
-            SwitchListTile(
-              title: const Text('Transferir sobra para proximo lote'),
-              subtitle: const Text(
-                'A sobra de racao sera alocada automaticamente no proximo lote deste galpao.',
-              ),
-              value: _transferirSobra,
-              onChanged: (v) => setState(() => _transferirSobra = v),
-              contentPadding: EdgeInsets.zero,
-            ),
-            const SizedBox(height: 24),
-
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed:
-                    state.isFinalizando ? null : _showConfirmDialog,
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppColors.primary,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                ),
-                child: state.isFinalizando
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: AppColors.white,
-                        ),
-                      )
-                    : const Text('Finalizar Lote'),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

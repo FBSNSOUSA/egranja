@@ -2,11 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'package:egranja_flutter/core/router/route_names.dart';
 import 'package:egranja_flutter/core/widgets/empty_state.dart';
-import 'package:egranja_flutter/core/widgets/fab_menu.dart';
 import 'package:egranja_flutter/core/widgets/loading_skeleton.dart';
 import 'package:egranja_flutter/core/widgets/error_widget.dart';
-import 'package:egranja_flutter/core/router/route_names.dart';
 import 'package:egranja_flutter/features/lote_detail/domain/entities/racao.dart';
 import '../../providers/racao_provider.dart';
 
@@ -42,33 +41,7 @@ class _LoteRacaoTabState extends ConsumerState<LoteRacaoTab>
     final state = ref.watch(racaoProvider(widget.loteId));
     final theme = Theme.of(context);
 
-    return Scaffold(
-      body: _buildBody(state, theme),
-      floatingActionButton: FABMenu(
-        actions: [
-          FABAction(
-            label: 'Novo Recebimento',
-            icon: Icons.move_to_inbox,
-            onPress: () {
-              context.pushNamed(
-                RouteNames.novoRecebimento,
-                pathParameters: {'loteId': widget.loteId},
-              );
-            },
-          ),
-          FABAction(
-            label: 'Novo Consumo',
-            icon: Icons.restaurant,
-            onPress: () {
-              context.pushNamed(
-                RouteNames.novoConsumo,
-                pathParameters: {'loteId': widget.loteId},
-              );
-            },
-          ),
-        ],
-      ),
-    );
+    return _buildBody(state, theme);
   }
 
   Widget _buildBody(RacaoState state, ThemeData theme) {
@@ -206,7 +179,8 @@ class _RecebimentoCard extends StatelessWidget {
             Wrap(
               spacing: 12,
               children: [
-                if (recebimento.tipoRacaoNome != null)
+                if (recebimento.tipoRacaoNome != null &&
+                    recebimento.tipoRacaoNome!.isNotEmpty)
                   Text(
                     recebimento.tipoRacaoNome!,
                     style: theme.textTheme.bodySmall,

@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
-import 'package:egranja_flutter/core/theme/indicator_colors.dart';
+import 'package:egranja_flutter/core/router/route_names.dart';
 import 'package:egranja_flutter/core/widgets/empty_state.dart';
-import 'package:egranja_flutter/core/widgets/fab_menu.dart';
 import 'package:egranja_flutter/core/widgets/loading_skeleton.dart';
 import 'package:egranja_flutter/core/widgets/error_widget.dart';
-import 'package:egranja_flutter/core/router/route_names.dart';
 import 'package:egranja_flutter/features/lote_detail/domain/entities/mortalidade.dart';
 import '../../providers/mortalidade_provider.dart';
 
@@ -60,23 +58,7 @@ class _LoteMortalidadeTabState extends ConsumerState<LoteMortalidadeTab>
     final state = ref.watch(mortalidadeProvider(widget.loteId));
     final theme = Theme.of(context);
 
-    return Scaffold(
-      body: _buildBody(state, theme),
-      floatingActionButton: FABMenu(
-        actions: [
-          FABAction(
-            label: 'Nova Mortalidade',
-            icon: Icons.warning_amber,
-            onPress: () {
-              context.pushNamed(
-                RouteNames.novaMortalidade,
-                pathParameters: {'loteId': widget.loteId},
-              );
-            },
-          ),
-        ],
-      ),
-    );
+    return _buildBody(state, theme);
   }
 
   Widget _buildBody(MortalidadeState state, ThemeData theme) {
@@ -158,10 +140,6 @@ class _MortalidadeCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    final mortalidadeColor = mortalidade.percentualDia != null
-        ? IndicatorColors.getMortalityColor(mortalidade.percentualDia!)
-        : null;
-
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: Padding(
@@ -169,7 +147,7 @@ class _MortalidadeCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header: data + percentual
+            // Header: data
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -177,22 +155,6 @@ class _MortalidadeCard extends StatelessWidget {
                   _formatDate(mortalidade.data),
                   style: theme.textTheme.titleSmall,
                 ),
-                if (mortalidade.percentualDia != null)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: mortalidadeColor?.withAlpha(30),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      '${mortalidade.percentualDia!.toStringAsFixed(2)}%',
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: mortalidadeColor,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
               ],
             ),
             const SizedBox(height: 8),

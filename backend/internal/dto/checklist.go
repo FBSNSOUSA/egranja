@@ -9,8 +9,10 @@ import (
 
 // ChecklistItemDTO representa um item do checklist.
 type ChecklistItemDTO struct {
-	Descricao  string `json:"descricao" validate:"required"`
-	Completado bool   `json:"completado"`
+	Descricao  string  `json:"descricao" validate:"required"`
+	Completado bool    `json:"completado"`
+	Observacao *string `json:"observacao,omitempty"`
+	FotoURL    *string `json:"foto_url,omitempty"`
 }
 
 // CreateChecklistRequest representa o payload de criacao/atualizacao de um checklist.

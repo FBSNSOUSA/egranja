@@ -98,6 +98,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         loteId,
         page: 1,
       );
+      if (!mounted) return;
       state = state.copyWith(
         mensagens: mensagens,
         isLoading: false,
@@ -106,6 +107,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       );
     } catch (e) {
       debugPrint('[ChatNotifier] Erro ao buscar mensagens: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         error: _extractErrorMessage(e),
@@ -125,6 +127,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
         loteId,
         page: nextPage,
       );
+      if (!mounted) return;
       state = state.copyWith(
         mensagens: [...state.mensagens, ...mensagens],
         isLoadingMore: false,
@@ -133,6 +136,7 @@ class ChatNotifier extends StateNotifier<ChatState> {
       );
     } catch (e) {
       debugPrint('[ChatNotifier] Erro ao carregar mais mensagens: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoadingMore: false,
         error: _extractErrorMessage(e),
@@ -148,16 +152,18 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
     try {
       final mensagem = await _repository.enviarMensagem(loteId, {
-        'type': 'text',
-        'content': texto.trim(),
+        'tipo': 'texto',
+        'conteudo': texto.trim(),
       });
 
+      if (!mounted) return;
       state = state.copyWith(
         mensagens: [mensagem, ...state.mensagens],
         isSending: false,
       );
     } catch (e) {
       debugPrint('[ChatNotifier] Erro ao enviar mensagem: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isSending: false,
         error: _extractErrorMessage(e),
@@ -173,16 +179,18 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
     try {
       final mensagem = await _repository.enviarMensagem(loteId, {
-        'type': 'photo',
-        'media_url': mediaUrl,
+        'tipo': 'foto',
+        'midia_url': mediaUrl,
       });
 
+      if (!mounted) return;
       state = state.copyWith(
         mensagens: [mensagem, ...state.mensagens],
         isSending: false,
       );
     } catch (e) {
       debugPrint('[ChatNotifier] Erro ao enviar foto: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isSending: false,
         error: _extractErrorMessage(e),
@@ -198,16 +206,18 @@ class ChatNotifier extends StateNotifier<ChatState> {
 
     try {
       final mensagem = await _repository.enviarMensagem(loteId, {
-        'type': 'audio',
-        'media_url': mediaUrl,
+        'tipo': 'audio',
+        'midia_url': mediaUrl,
       });
 
+      if (!mounted) return;
       state = state.copyWith(
         mensagens: [mensagem, ...state.mensagens],
         isSending: false,
       );
     } catch (e) {
       debugPrint('[ChatNotifier] Erro ao enviar audio: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isSending: false,
         error: _extractErrorMessage(e),
@@ -216,9 +226,21 @@ class ChatNotifier extends StateNotifier<ChatState> {
   }
 
   /// Marca as mensagens como lidas no servidor.
+  ///
+  /// O backend marca mensagens individualmente (PATCH /mensagens/{id}/lida).
+  /// Aqui marcamos todas as mensagens nao lidas do lote de uma vez.
   Future<void> marcarComoLida() async {
     try {
-      await _repository.marcarComoLida(loteId);
+      for (final m in state.mensagens) {
+        if (!mounted) return;
+        if (!m.lida) {
+          try {
+            await _repository.marcarComoLida(m.id);
+          } catch (_) {
+            // Ignora erros individuais
+          }
+        }
+      }
     } catch (e) {
       debugPrint('[ChatNotifier] Erro ao marcar como lida: $e');
     }

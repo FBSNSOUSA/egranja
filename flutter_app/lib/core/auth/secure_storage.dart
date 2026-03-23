@@ -1,56 +1,39 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'secure_storage_native.dart' if (dart.library.js_interop) 'secure_storage_web.dart'
+    as platform_storage;
 
-/// Wrapper em torno do [FlutterSecureStorage] para gerenciar tokens JWT.
+/// Wrapper para gerenciar tokens JWT.
 ///
-/// Armazena access token e refresh token de forma segura usando
-/// Keychain (iOS) / Keystore (Android). Na web, usa localStorage
-/// via flutter_secure_storage_web.
+/// No mobile, usa FlutterSecureStorage (Keychain/Keystore).
+/// Na web, usa localStorage simples (sem criptografia client-side).
 class SecureStorage {
-  final FlutterSecureStorage _storage;
+  static const String accessTokenKey = 'egranja_access_token';
+  static const String refreshTokenKey = 'egranja_refresh_token';
 
-  static const String _accessTokenKey = 'access_token';
-  static const String _refreshTokenKey = 'refresh_token';
-
-  SecureStorage({FlutterSecureStorage? storage})
-      : _storage = storage ??
-            FlutterSecureStorage(
-              aOptions: kIsWeb
-                  ? const AndroidOptions()
-                  : const AndroidOptions(encryptedSharedPreferences: true),
-              webOptions: const WebOptions(
-                dbName: 'egranja_auth',
-                publicKey: 'egranja_web_key',
-              ),
-            );
-
-  /// Salva o access token no armazenamento seguro.
+  /// Salva o access token.
   Future<void> saveAccessToken(String token) async {
-    await _storage.write(key: _accessTokenKey, value: token);
+    await platform_storage.write(key: accessTokenKey, value: token);
   }
 
   /// Recupera o access token armazenado.
-  /// Retorna `null` se nao houver token salvo.
   Future<String?> getAccessToken() async {
-    return _storage.read(key: _accessTokenKey);
+    return platform_storage.read(key: accessTokenKey);
   }
 
-  /// Salva o refresh token no armazenamento seguro.
+  /// Salva o refresh token.
   Future<void> saveRefreshToken(String token) async {
-    await _storage.write(key: _refreshTokenKey, value: token);
+    await platform_storage.write(key: refreshTokenKey, value: token);
   }
 
   /// Recupera o refresh token armazenado.
-  /// Retorna `null` se nao houver token salvo.
   Future<String?> getRefreshToken() async {
-    return _storage.read(key: _refreshTokenKey);
+    return platform_storage.read(key: refreshTokenKey);
   }
 
-  /// Remove todos os tokens do armazenamento seguro.
+  /// Remove todos os tokens.
   Future<void> clearTokens() async {
     await Future.wait([
-      _storage.delete(key: _accessTokenKey),
-      _storage.delete(key: _refreshTokenKey),
+      platform_storage.delete(key: accessTokenKey),
+      platform_storage.delete(key: refreshTokenKey),
     ]);
   }
 }

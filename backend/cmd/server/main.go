@@ -166,13 +166,19 @@ func main() {
 	auth := api.Group("/auth")
 	{
 		auth.POST("/login", loginLimiter.Middleware(), authHandler.Login)
+		auth.POST("/register", authHandler.Register)
 		auth.POST("/refresh", authHandler.Refresh)
+		auth.POST("/forgot-password", authHandler.ForgotPassword)
 	}
 
 	// Rotas protegidas (requerem JWT)
 	protected := api.Group("")
 	protected.Use(middleware.AuthMiddleware(cfg.JWTSecret, logger))
 	{
+		// Perfil do usuario autenticado
+		protected.GET("/auth/profile", authHandler.GetProfile)
+		protected.PATCH("/auth/profile", authHandler.UpdateProfile)
+
 		// Granjas
 		protected.GET("/granjas", granjaHandler.List)
 		protected.POST("/granjas", granjaHandler.Create)
@@ -273,6 +279,10 @@ func main() {
 		// Relatorios
 		protected.GET("/lotes/:id/relatorio/fechamento", relatorioHandler.Fechamento)
 		protected.GET("/lotes/:id/relatorio/comparativo", relatorioHandler.Comparativo)
+		protected.GET("/lotes/:id/relatorio/pesagens", relatorioHandler.Pesagens)
+		protected.GET("/lotes/:id/relatorio/mortalidade", relatorioHandler.Mortalidade)
+		protected.GET("/lotes/:id/relatorio/conversao", relatorioHandler.ConversaoAlimentar)
+		protected.GET("/lotes/:id/relatorio/consumo", relatorioHandler.Consumo)
 		protected.GET("/lotes/:id/exportar/csv", relatorioHandler.ExportCSV)
 
 		// Tecnico (requer tipo 'tecnico')

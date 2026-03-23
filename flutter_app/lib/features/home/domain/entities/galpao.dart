@@ -1,13 +1,19 @@
 /// Entidade de dominio que representa um galpao de aves.
+///
+/// Campos mapeados a partir do endpoint GET /galpaos do backend Go.
+/// Backend retorna: id, usuario_id, granja_id, nome, capacidade,
+/// tipo_ventilacao, created_at, updated_at.
 class Galpao {
   final String id;
   final String nome;
   final int? capacidade;
+  final String? tipoVentilacao;
 
   const Galpao({
     required this.id,
     required this.nome,
     this.capacidade,
+    this.tipoVentilacao,
   });
 
   @override

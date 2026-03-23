@@ -11,6 +11,23 @@ abstract class AuthRepository {
   /// Lanca [AuthException], [NetworkException] ou [ServerException] em caso de erro.
   Future<User> login(String username, String password);
 
+  /// Registra um novo usuario no sistema.
+  ///
+  /// Retorna uma mensagem de sucesso.
+  /// Lanca [ServerException] se o email ja estiver cadastrado.
+  Future<String> register({
+    required String nome,
+    required String email,
+    required String telefone,
+    required String senha,
+    required String tipo,
+  });
+
+  /// Solicita reset de senha via email.
+  ///
+  /// Retorna uma mensagem informativa (sempre sucesso por seguranca).
+  Future<String> forgotPassword(String email);
+
   /// Realiza logout, removendo tokens armazenados.
   Future<void> logout();
 

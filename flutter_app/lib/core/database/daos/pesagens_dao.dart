@@ -73,4 +73,30 @@ class PesagensDao extends DatabaseAccessor<AppDatabase>
   /// Delete all items for a given [pesagemId].
   Future<int> deleteItemsByPesagemId(String pesagemId) =>
       (delete(pesagemItems)..where((t) => t.pesagemId.equals(pesagemId))).go();
+
+  // ---------------------------------------------------------------------------
+  // Draft helpers
+  // ---------------------------------------------------------------------------
+
+  /// Get draft pesagem (serverId is null) for a given [loteId] and [date].
+  Future<Pesagen?> getDraft(String loteId, DateTime date) async {
+    final startOfDay = DateTime(date.year, date.month, date.day);
+    final endOfDay = startOfDay.add(const Duration(days: 1));
+    return (select(pesagens)
+          ..where((t) => t.loteId.equals(loteId))
+          ..where((t) => t.serverId.isNull())
+          ..where((t) => t.data.isBetweenValues(startOfDay, endOfDay)))
+        .getSingleOrNull();
+  }
+
+  /// Delete a draft pesagem and all its items in a transaction.
+  Future<void> deleteDraftWithItems(int pesagemLocalId) async {
+    await transaction(() async {
+      final pesagem = await getById(pesagemLocalId);
+      if (pesagem != null) {
+        await deleteItemsByPesagemId(pesagemLocalId.toString());
+      }
+      await deleteById(pesagemLocalId);
+    });
+  }
 }

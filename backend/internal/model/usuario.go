@@ -14,8 +14,13 @@ type Usuario struct {
 	Login          string    `gorm:"type:varchar(100);not null;uniqueIndex" json:"login" validate:"required,min=3,max=100"`
 	PasswordDigest string    `gorm:"type:varchar(255);not null;column:password_digest" json:"-"`
 	Nome           string    `gorm:"type:varchar(200)" json:"nome" validate:"max=200"`
+	Email          string    `gorm:"type:varchar(200)" json:"email"`
+	Telefone       string    `gorm:"type:varchar(20)" json:"telefone"`
+	FotoURL        string    `gorm:"type:varchar(500)" json:"foto_url"`
 	Tipo           string    `gorm:"type:varchar(20);not null;default:'produtor'" json:"tipo" validate:"required,oneof=produtor tecnico"`
 	Ativo          bool      `gorm:"not null;default:true" json:"ativo"`
+	ResetToken     string    `gorm:"type:varchar(255)" json:"-"`
+	ResetTokenExp  *time.Time `gorm:"type:timestamptz" json:"-"`
 	CreatedAt      time.Time `gorm:"not null;default:now()" json:"created_at"`
 	UpdatedAt      time.Time `gorm:"not null;default:now()" json:"updated_at"`
 

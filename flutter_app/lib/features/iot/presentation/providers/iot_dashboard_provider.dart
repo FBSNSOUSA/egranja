@@ -62,15 +62,19 @@ class IoTDashboardNotifier extends StateNotifier<IoTDashboardState> {
     required String galpaoId,
   })  : _api = api,
         _galpaoId = galpaoId,
-        super(const IoTDashboardState()) {
-    _startAutoRefresh();
-  }
+        super(const IoTDashboardState());
 
   /// Inicia o timer de auto-refresh a cada 30 segundos.
-  void _startAutoRefresh() {
+  ///
+  /// Deve ser chamado explicitamente apos a construcao do notifier,
+  /// nao no construtor, para evitar side effects durante a inicializacao.
+  void startAutoRefresh() {
+    _refreshTimer?.cancel();
     _refreshTimer = Timer.periodic(
       const Duration(seconds: 30),
-      (_) => fetch(),
+      (_) {
+        if (mounted) fetch();
+      },
     );
   }
 
@@ -87,6 +91,7 @@ class IoTDashboardNotifier extends StateNotifier<IoTDashboardState> {
             IoTLatestResponse.fromJson(json as Map<String, dynamic>),
       );
 
+      if (!mounted) return;
       state = state.copyWith(
         sensores: response.data.sensores,
         ultimaLeitura: response.data.ultimaLeitura,
@@ -94,6 +99,7 @@ class IoTDashboardNotifier extends StateNotifier<IoTDashboardState> {
         errorMessage: null,
       );
     } on NetworkException {
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage:
@@ -101,6 +107,7 @@ class IoTDashboardNotifier extends StateNotifier<IoTDashboardState> {
       );
     } catch (e) {
       debugPrint('[IoTDashboardNotifier] Erro ao buscar sensores: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         errorMessage: 'Erro ao carregar sensores. Tente novamente.',

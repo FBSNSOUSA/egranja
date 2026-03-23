@@ -97,6 +97,7 @@ class HomeNotifier extends StateNotifier<HomeState> {
 
     try {
       final (lotes, meta) = await _repository.fetchLotesAtivos(page: 1);
+      if (!mounted) return;
       state = state.copyWith(
         lotesAtivos: lotes,
         pagination: meta,
@@ -104,6 +105,7 @@ class HomeNotifier extends StateNotifier<HomeState> {
       );
     } catch (e) {
       debugPrint('[HomeNotifier] Erro ao buscar lotes: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoading: false,
         error: _extractErrorMessage(e),
@@ -121,6 +123,7 @@ class HomeNotifier extends StateNotifier<HomeState> {
       final nextPage = (state.pagination?.page ?? 0) + 1;
       final (lotes, meta) =
           await _repository.fetchLotesAtivos(page: nextPage);
+      if (!mounted) return;
       state = state.copyWith(
         lotesAtivos: [...state.lotesAtivos, ...lotes],
         pagination: meta,
@@ -128,6 +131,7 @@ class HomeNotifier extends StateNotifier<HomeState> {
       );
     } catch (e) {
       debugPrint('[HomeNotifier] Erro ao carregar mais lotes: $e');
+      if (!mounted) return;
       state = state.copyWith(
         isLoadingMore: false,
         error: _extractErrorMessage(e),
@@ -139,12 +143,14 @@ class HomeNotifier extends StateNotifier<HomeState> {
   Future<void> refresh() async {
     try {
       final (lotes, meta) = await _repository.fetchLotesAtivos(page: 1);
+      if (!mounted) return;
       state = HomeState(
         lotesAtivos: lotes,
         pagination: meta,
       );
     } catch (e) {
       debugPrint('[HomeNotifier] Erro ao recarregar lotes: $e');
+      if (!mounted) return;
       state = state.copyWith(
         error: _extractErrorMessage(e),
       );

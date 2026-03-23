@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/FBSNSOUSA/egranja/backend/internal/dto"
+	"github.com/FBSNSOUSA/egranja/backend/internal/middleware"
 	"github.com/FBSNSOUSA/egranja/backend/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
@@ -113,6 +114,188 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 		}
 		h.logger.Error("Erro ao renovar token", zap.Error(err))
 		dto.RespondInternalError(c, "Erro interno ao renovar token.")
+		return
+	}
+
+	dto.RespondSuccess(c, http.StatusOK, result)
+}
+
+// Register godoc
+// @Summary      Registro de usuario
+// @Description  Cria um novo usuario (produtor ou tecnico) no sistema
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body body dto.RegisterRequest true "Dados de registro"
+// @Success      201 {object} dto.SuccessResponse{data=dto.RegisterResponse}
+// @Failure      400 {object} dto.ErrorResponse
+// @Failure      409 {object} dto.ErrorResponse
+// @Failure      422 {object} dto.ErrorResponse
+// @Router       /auth/register [post]
+func (h *AuthHandler) Register(c *gin.Context) {
+	var req dto.RegisterRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "Corpo da requisicao invalido.")
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		var validationErrors validator.ValidationErrors
+		if errors.As(err, &validationErrors) {
+			details := make([]dto.ErrorDetail, 0, len(validationErrors))
+			for _, fe := range validationErrors {
+				details = append(details, dto.ErrorDetail{
+					Field:   fe.Field(),
+					Message: translateValidationError(fe),
+				})
+			}
+			dto.RespondValidationError(c, details)
+			return
+		}
+		dto.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "Erro de validacao.")
+		return
+	}
+
+	result, err := h.authService.Register(req)
+	if err != nil {
+		if errors.Is(err, service.ErrEmailAlreadyExists) {
+			dto.RespondError(c, http.StatusConflict, "EMAIL_EXISTS", "Este email ja esta cadastrado.")
+			return
+		}
+		h.logger.Error("Erro no registro", zap.Error(err))
+		dto.RespondInternalError(c, "Erro interno ao processar registro.")
+		return
+	}
+
+	dto.RespondSuccess(c, http.StatusCreated, result)
+}
+
+// ForgotPassword godoc
+// @Summary      Solicitar reset de senha
+// @Description  Gera um token de reset de senha e envia por email (quando SMTP configurado)
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Param        body body dto.ForgotPasswordRequest true "Email do usuario"
+// @Success      200 {object} dto.SuccessResponse{data=dto.ForgotPasswordResponse}
+// @Failure      400 {object} dto.ErrorResponse
+// @Router       /auth/forgot-password [post]
+func (h *AuthHandler) ForgotPassword(c *gin.Context) {
+	var req dto.ForgotPasswordRequest
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "Corpo da requisicao invalido.")
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		var validationErrors validator.ValidationErrors
+		if errors.As(err, &validationErrors) {
+			details := make([]dto.ErrorDetail, 0, len(validationErrors))
+			for _, fe := range validationErrors {
+				details = append(details, dto.ErrorDetail{
+					Field:   fe.Field(),
+					Message: translateValidationError(fe),
+				})
+			}
+			dto.RespondValidationError(c, details)
+			return
+		}
+		dto.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "Erro de validacao.")
+		return
+	}
+
+	result, err := h.authService.ForgotPassword(req)
+	if err != nil {
+		h.logger.Error("Erro ao processar forgot password", zap.Error(err))
+		dto.RespondInternalError(c, "Erro interno ao processar solicitacao.")
+		return
+	}
+
+	dto.RespondSuccess(c, http.StatusOK, result)
+}
+
+// GetProfile godoc
+// @Summary      Obter perfil do usuario
+// @Description  Retorna os dados do perfil do usuario autenticado
+// @Tags         auth
+// @Produce      json
+// @Security     BearerAuth
+// @Success      200 {object} dto.SuccessResponse{data=dto.ProfileResponse}
+// @Failure      401 {object} dto.ErrorResponse
+// @Router       /auth/profile [get]
+func (h *AuthHandler) GetProfile(c *gin.Context) {
+	userID, ok := middleware.GetUserIDFromContext(c)
+	if !ok {
+		dto.RespondUnauthorized(c, "Usuario nao autenticado.")
+		return
+	}
+
+	result, err := h.authService.GetProfile(userID)
+	if err != nil {
+		if errors.Is(err, service.ErrUserNotFound) {
+			dto.RespondNotFound(c, "Usuario nao encontrado.")
+			return
+		}
+		h.logger.Error("Erro ao obter perfil", zap.Error(err))
+		dto.RespondInternalError(c, "Erro interno ao obter perfil.")
+		return
+	}
+
+	dto.RespondSuccess(c, http.StatusOK, result)
+}
+
+// UpdateProfile godoc
+// @Summary      Atualizar perfil do usuario
+// @Description  Atualiza nome, email, telefone e/ou foto do usuario autenticado
+// @Tags         auth
+// @Accept       json
+// @Produce      json
+// @Security     BearerAuth
+// @Param        body body dto.UpdateProfileRequest true "Dados para atualizar"
+// @Success      200 {object} dto.SuccessResponse{data=dto.ProfileResponse}
+// @Failure      400 {object} dto.ErrorResponse
+// @Failure      401 {object} dto.ErrorResponse
+// @Router       /auth/profile [patch]
+func (h *AuthHandler) UpdateProfile(c *gin.Context) {
+	userID, ok := middleware.GetUserIDFromContext(c)
+	if !ok {
+		dto.RespondUnauthorized(c, "Usuario nao autenticado.")
+		return
+	}
+
+	var req dto.UpdateProfileRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		dto.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "Corpo da requisicao invalido.")
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		var validationErrors validator.ValidationErrors
+		if errors.As(err, &validationErrors) {
+			details := make([]dto.ErrorDetail, 0, len(validationErrors))
+			for _, fe := range validationErrors {
+				details = append(details, dto.ErrorDetail{
+					Field:   fe.Field(),
+					Message: translateValidationError(fe),
+				})
+			}
+			dto.RespondValidationError(c, details)
+			return
+		}
+		dto.RespondError(c, http.StatusBadRequest, "BAD_REQUEST", "Erro de validacao.")
+		return
+	}
+
+	result, err := h.authService.UpdateProfile(userID, req)
+	if err != nil {
+		if errors.Is(err, service.ErrUserNotFound) {
+			dto.RespondNotFound(c, "Usuario nao encontrado.")
+			return
+		}
+		h.logger.Error("Erro ao atualizar perfil", zap.Error(err))
+		dto.RespondInternalError(c, "Erro interno ao atualizar perfil.")
 		return
 	}
 

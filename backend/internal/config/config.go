@@ -51,6 +51,13 @@ type Config struct {
 	WeatherProvider       string
 	WeatherFallbackAPIKey string
 	WeatherCronSchedule   string
+
+	// SMTP (Email - Reset de Senha)
+	SMTPHost string
+	SMTPPort int
+	SMTPUser string
+	SMTPPass string
+	SMTPFrom string
 }
 
 // Load carrega as configuracoes a partir de variaveis de ambiente.
@@ -91,6 +98,12 @@ func Load() *Config {
 		WeatherProvider:       getEnv("WEATHER_PROVIDER", "open-meteo"),
 		WeatherFallbackAPIKey: getEnv("WEATHER_FALLBACK_API_KEY", ""),
 		WeatherCronSchedule:   getEnv("WEATHER_CRON_SCHEDULE", "0 6,18 * * *"),
+
+		SMTPHost: getEnv("SMTP_HOST", ""),
+		SMTPPort: getEnvInt("SMTP_PORT", 587),
+		SMTPUser: getEnv("SMTP_USER", ""),
+		SMTPPass: getEnv("SMTP_PASS", ""),
+		SMTPFrom: getEnv("SMTP_FROM", "noreply@egranja.com.br"),
 	}
 
 	return cfg

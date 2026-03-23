@@ -25,8 +25,8 @@ class LoteHistorico {
       id: json['id'] as String,
       dataAlojamento: json['data_alojamento'] as String? ?? '',
       dataFinalizacao: json['data_finalizacao'] as String?,
-      quantidade: json['quantidade'] as int? ?? 0,
-      avesEntregues: json['aves_entregues'] as int?,
+      quantidade: (json['quantidade'] as num?)?.toInt() ?? 0,
+      avesEntregues: (json['aves_entregues'] as num?)?.toInt(),
       status: json['status'] as String? ?? 'ativo',
       mortalidadePct: (json['mortalidade_pct'] as num?)?.toDouble(),
       pesoMedioFinal: (json['peso_medio_final'] as num?)?.toDouble(),
@@ -49,7 +49,7 @@ class ClimaGalpao {
   factory ClimaGalpao.fromJson(Map<String, dynamic> json) {
     return ClimaGalpao(
       ventoVelocidade: (json['vento_velocidade'] as num?)?.toDouble() ?? 0,
-      ventoDirecao: json['vento_direcao'] as int? ?? 0,
+      ventoDirecao: (json['vento_direcao'] as num?)?.toInt() ?? 0,
       temperaturaExterna:
           (json['temperatura_externa'] as num?)?.toDouble() ?? 0,
     );
@@ -57,6 +57,14 @@ class ClimaGalpao {
 }
 
 /// Entidade detalhada de um galpao com historico de lotes e clima.
+///
+/// Backend DTO: GalpaoResponse
+///   { "id", "usuario_id", "granja_id", "nome", "capacidade",
+///     "latitude", "longitude", "orientacao_graus", "comprimento_m",
+///     "largura_m", "area_m2", "tipo_ventilacao", "lado_cortinas",
+///     "created_at", "updated_at" }
+///
+/// O backend nao envia `orientacao_texto`, `cortinas_abertas`, `lotes` ou `clima`.
 class GalpaoDetalhe {
   final String id;
   final String nome;
@@ -90,20 +98,34 @@ class GalpaoDetalhe {
     this.clima,
   });
 
+  /// Cria a partir do JSON do backend (GalpaoResponse).
+  ///
+  /// Backend envia `tipo_ventilacao` (nao `ventilacao`),
+  /// `lado_cortinas` (nao `cortinas`), `orientacao_graus` como int,
+  /// `capacidade` como nullable int.
+  /// Campos `orientacao_texto`, `cortinas_abertas`, `lotes`, `clima`
+  /// nao sao enviados pelo backend.
   factory GalpaoDetalhe.fromJson(Map<String, dynamic> json) {
+    final orientGraus = (json['orientacao_graus'] as num?)?.toDouble() ?? 0;
+
     return GalpaoDetalhe(
-      id: json['id'] as String,
+      id: json['id']?.toString() ?? '',
       nome: json['nome'] as String? ?? '',
       larguraM: (json['largura_m'] as num?)?.toDouble() ?? 0,
       comprimentoM: (json['comprimento_m'] as num?)?.toDouble() ?? 0,
-      orientacaoGraus: (json['orientacao_graus'] as num?)?.toDouble() ?? 0,
-      orientacaoTexto: json['orientacao_texto'] as String? ?? '',
-      ventilacao: json['ventilacao'] as String? ?? '',
-      cortinas: json['cortinas'] as String? ?? '',
+      orientacaoGraus: orientGraus,
+      orientacaoTexto: json['orientacao_texto'] as String? ??
+          _orientacaoTexto(orientGraus),
+      ventilacao: json['tipo_ventilacao'] as String? ??
+          json['ventilacao'] as String? ??
+          '',
+      cortinas: json['lado_cortinas'] as String? ??
+          json['cortinas'] as String? ??
+          '',
       cortinasAbertas: json['cortinas_abertas'] as bool? ?? false,
       latitude: (json['latitude'] as num?)?.toDouble() ?? 0,
       longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
-      capacidade: json['capacidade'] as int? ?? 0,
+      capacidade: (json['capacidade'] as num?)?.toInt() ?? 0,
       lotes: json['lotes'] != null
           ? (json['lotes'] as List<dynamic>)
               .map((e) => LoteHistorico.fromJson(e as Map<String, dynamic>))
@@ -113,6 +135,23 @@ class GalpaoDetalhe {
           ? ClimaGalpao.fromJson(json['clima'] as Map<String, dynamic>)
           : null,
     );
+  }
+
+  /// Deriva o texto de orientacao a partir dos graus.
+  static String _orientacaoTexto(double graus) {
+    if (graus < 0) return '';
+    const direcoes = [
+      'Norte',
+      'Nordeste',
+      'Leste',
+      'Sudeste',
+      'Sul',
+      'Sudoeste',
+      'Oeste',
+      'Noroeste',
+    ];
+    final idx = ((graus + 22.5) % 360 / 45).floor();
+    return direcoes[idx % direcoes.length];
   }
 
   /// Retorna o lote ativo (status == 'ativo'), se existir.
